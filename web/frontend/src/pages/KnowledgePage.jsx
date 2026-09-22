@@ -38,6 +38,7 @@ import {
   CloseCircleFilled,
   DeleteOutlined,
   FileTextOutlined,
+  FolderOpenOutlined,
   InboxOutlined,
 } from '@ant-design/icons';
 import { deleteKnowledgeFile, fetchKnowledgeList } from '../api/knowledgeApi.js';
@@ -390,7 +391,6 @@ export default function KnowledgePage() {
           <Upload.Dragger
             accept={UPLOAD_EXTENSIONS.join(',')}
             multiple
-            directory
             showUploadList={false}
             disabled={batch && batch.phase !== 'done'}
             beforeUpload={beforeUpload}
@@ -406,12 +406,38 @@ export default function KnowledgePage() {
                   ? '文件已上传，正在解析并写入向量库…'
                   : batch?.phase === 'polling'
                     ? `大文件后台处理中（${batch.percent}%）…`
-                    : '点击或拖拽文件 / 文件夹到此处上传'}
+                    : '点击选择文件，或拖拽文件 / 文件夹到此处上传'}
             </p>
             <p className="ant-upload-hint">
               支持 {UPLOAD_EXTENSIONS.join(' / ')}，单文件不超过 {UPLOAD_MAX_MB}MB，
-              可上传单个文件或整个文件夹（自动遍历其中文件）
+              可多选单个文件；如需上传整个文件夹（自动遍历其中文件）请点下方按钮
             </p>
+            {/*
+              文件夹选择入口：外层 Dragger 已去掉 directory（点击主体走普通文件
+              选择框）；此处内嵌一个 directory Upload 专门选文件夹。独立 div 包裹
+              （antd Upload 外层渲染为 div，不能放进上方 <p> 内，否则 DOM 嵌套非法），
+              并截停点击冒泡，避免同时触发外层 Dragger 的文件选择框。
+            */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ textAlign: 'center' }}
+            >
+              <Upload
+                directory
+                multiple
+                showUploadList={false}
+                disabled={batch && batch.phase !== 'done'}
+                beforeUpload={beforeUpload}
+              >
+                <Button
+                  size="small"
+                  icon={<FolderOpenOutlined />}
+                  disabled={batch && batch.phase !== 'done'}
+                >
+                  选择文件夹
+                </Button>
+              </Upload>
+            </div>
           </Upload.Dragger>
         )}
 
@@ -448,9 +474,8 @@ export default function KnowledgePage() {
             message={
               batch.resultType === 'success'
                 ? `${batch.items.length} 个文件全部成功入库`
-                : `${batch.items.filter((i) => i.status === 'success').length} 个成功，${
-                    batch.items.filter((i) => i.status === 'fail').length
-                  } 个失败${batch.error ? `：${batch.error}` : ''}`
+                : `${batch.items.filter((i) => i.status === 'success').length} 个成功，${batch.items.filter((i) => i.status === 'fail').length
+                } 个失败${batch.error ? `：${batch.error}` : ''}`
             }
             description={
               batch.items.some((i) => i.status === 'fail') ? (
