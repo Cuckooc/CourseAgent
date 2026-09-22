@@ -1,0 +1,17 @@
+# Alertmanager 告警分发（占位配置：默认 webhook，接入渠道见下方注释）
+route:
+  receiver: default
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: default
+    webhook_configs:
+      # TODO 替换为实际接收端：
+      # - 钉钉机器人：https://open.dingtalk.com/oa/webhook/... (需 prometheus-webhook-dingtalk 转换)
+      # - 飞书机器人：https://open.feishu.cn/open-apis/bot/v2/hook/xxx (需转换器或原生卡片适配)
+      # - 自建服务：POST JSON（alertmanager 标准负载）自行处理
+      - url: http://host.docker.internal:5000/alerts
+        send_resolved: true

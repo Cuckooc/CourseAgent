@@ -1,0 +1,116 @@
+# 生产编排：MySQL 8.0 + Redis + API（多 worker）+ Nginx（TLS 终结 / SSE 透传）
+# 用法：docker compose up -d --build
+#
+# 前置准备：
+# 1. env/config.env 中 host 需改为 compose 服务名 mysql（容器网络内可达）
+# 2. TLS 证书放置 ./nginx/certs/{fullchain.pem, privkey.pem}：
+#    - 公网域名：certbot 签发（Let's Encrypt）
+#    - 内网测试自签：
+#      openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+#        -keyout nginx/certs/privkey.pem -out nginx/certs/fullchain.pem \
+#        -subj "/CN=course.example.com"
+# 3. MySQL root 密码通过环境变量注入（compose 会因缺省直接报错拒绝启动）
+#
+# 网络策略：仅 nginx 暴露 80/443；api/mysql/redis 全部内网互通、不对宿主机暴露
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      # :? 强制显式注入，禁止默认弱口令上生产
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env or shell}
+      MYSQL_DATABASE: db_course
+      TZ: Asia/Shanghai
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    expose:
+      - "3306" # 仅容器网络内可达
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # 首次初始化自动执行建表脚本
+      - ./course.sql:/docker-entrypoint-initdb.d/01_course.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # AOF 持久化：短期记忆/限流/验证码状态重启不丢
+    command: redis-server --appendonly yes
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      # uvicorn worker 数（按 CPU 调整；flusher 已有 Redis 周期锁互斥，多 worker 安全）
+      WEB_CONCURRENCY: "4"
+    expose:
+      - "8000" # 仅供 nginx 反代，不对宿主机暴露
+    volumes:
+      - ./env:/app/env:ro
+      - chromadb_data:/app/chromadb_data
+      - file_data:/app/file_analysis
+      - uploads_data:/app/uploads # 上传文件持久化（缺失会导致重建容器后文件全变孤儿）
+      - ./logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck: # slim 镜像无 curl，用 python 探活
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 指标抓取 + 告警评估（指标来自 core/metrics.py：HTTP RED + LLM 用量）
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090" # 仅宿主机回环可访问 UI；公网需反代+鉴权
+    restart: unless-stopped
+
+  # 告警分发（接收端配置 monitoring/alertmanager.yml，默认 webhook 占位）
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "127.0.0.1:9093:9093"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+  chromadb_data:
+  uploads_data:
+  prometheus_data:

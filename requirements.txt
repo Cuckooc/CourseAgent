@@ -1,0 +1,42 @@
+# 运行时依赖（锁定真实运行环境 Python 3.8 实测版本）
+fastapi==0.121.0
+uvicorn==0.33.0
+pydantic==2.10.6
+SQLAlchemy==2.0.43
+PyMySQL==1.1.2
+# 47.0.0 = Python 3.8 可用的最高版本（48.0.1+ 需 py>=3.9），修复 42.x 已知全部
+# OpenSSL/PKCS12 相关 CVE；本库仅作传递依赖，代码无直接 import（2026-09 供应链扫描）
+cryptography==47.0.0
+bcrypt==5.0.0
+# 已知漏洞（OSV 扫描 2026-09）均为不可升级接受风险（修复版需 py>=3.9/3.10，
+# 被 Python 3.8 硬约束锁死），CI 以 --ignore-vuln 显式登记：
+# - PyJWT 2.9.0：crit 扩展/无界 Base64 DoS 等（修复 ≥2.12 需 py3.9；缓解：
+#   core/security.py 令牌长度护栏 + 仅对称 HS256、无 JWKS 路径）
+# - python-multipart 0.0.20：multipart 头 DoS 等（修复 ≥0.0.26 需 py3.10；缓解：
+#   nginx client_max_body_size 60m + 50MB 业务上限）
+# - python-dotenv 1.0.1：set_key 符号链接覆盖（本项目只 load_dotenv 读环境，不可利用）
+# - langchain 0.2.x / chromadb 0.5.23：SSRF/XXE/模板注入等（升级需 py3.10+；
+#   本项目不使用 XML 加载器、legacy load_prompt、图像 token 统计、LangSmith
+#   拉取，chromadb 为内嵌模式无服务面）——Python 3.10 升级后整体移除
+PyJWT==2.9.0
+python-dotenv==1.0.1
+python-multipart==0.0.20
+redis==5.3.1
+
+# 可观测性
+loguru==0.7.2
+prometheus_client==0.21.1
+
+# AI / RAG
+langchain==0.2.17
+langchain-core==0.2.43
+langchain-community==0.2.19
+langchain-openai==0.1.25
+langchain-chroma==0.1.4
+langchain-text-splitters==0.2.4
+chromadb==0.5.23
+dashscope==1.27.4
+tenacity==8.5.0
+numpy==1.24.4
+jieba==0.42.1
+PyMuPDF==1.24.11

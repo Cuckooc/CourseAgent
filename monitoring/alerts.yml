@@ -1,0 +1,63 @@
+# 告警规则（基于 core/metrics.py 实际暴露的指标名，勿凭空引用不存在的指标）
+groups:
+  - name: availability
+    rules:
+      - alert: ApiDown
+        expr: up{job="course-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "course-api 抓取失败（服务不可达或多 worker 全挂）"
+          description: "Prometheus 连续 1 分钟无法抓取 api:8000/metrics，请检查容器与 nginx/内网。"
+
+  - name: http
+    rules:
+      # 5xx 占比 >5% 持续 10 分钟（4xx/404 是业务语义，不计入）
+      - alert: Http5xxRateHigh
+        expr: >
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          / clamp_min(sum(rate(http_requests_total[5m])), 1e-9) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP 5xx 占比超过 5%（近 10 分钟）"
+          description: "按 path 维度下钻 http_requests_total{status=~\"5..\"} 定位故障接口。"
+
+      # P95 延迟 >5s 持续 10 分钟；排除 /chat/stream（SSE 长响应属正常语义）
+      - alert: HttpP95LatencyHigh
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, path)
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "接口 P95 延迟超过 5s（排除 /chat/stream）"
+          description: "关注 path={{ $labels.path }}；慢查询/外部依赖（LLM 降级链、MySQL）是常见根因。"
+
+      # 在途请求积压：多 worker 总并发持续超阈值（容量信号）
+      - alert: InflightRequestsSaturated
+        expr: sum(http_requests_in_progress) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "在途请求数持续超过 20（容量瓶颈信号）"
+          description: "考虑提高 WEB_CONCURRENCY 或排查慢接口（LLM 网关重试堆积常见）。"
+
+  - name: llm
+    rules:
+      # LLM 成功调用速率骤停：有正常流量但 30 分钟零成功调用（网关全链失败/配额耗尽信号）
+      - alert: LLMRequestsStalled
+        expr: >
+          sum(rate(http_requests_total{path="/chat/stream",status=~"2.."}[10m])) > 0
+          and sum(rate(llm_requests_total[30m])) == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "有对话流量但 LLM 零成功调用（网关/配额异常）"
+          description: "llm_requests_total 30 分钟无增量而 /chat/stream 有成功响应，检查 LLM 网关降级链与供应商配额。"

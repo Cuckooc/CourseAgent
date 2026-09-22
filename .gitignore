@@ -1,0 +1,48 @@
+# 环境变量与密钥（禁止入库，仅保留 .example 模板）
+env/*.env
+!env/*.env.example
+
+# 测试套件与测试辅助脚本（不入库，本地保留）
+tests/
+scripts/dev/
+scripts/maintenance/
+
+# 项目梳理/分析文档（不入库，本地保留）
+docs/
+/agent-architecture-gap-analysis.md
+/pytest套件固化报告.md
+/代码精简分析报告.md
+/企业级目录架构调整方案.md
+/全流程测试报告.md
+/后端API深度测试报告.md
+/安全并发边界对抗测试报告.md
+/数据库层测试报告.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 运行时数据
+chromadb_data/
+uploads/
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 运行时日志（compose 挂载，不入库）
+logs/
+
+# 本地调试 / 验证临时产物
+.t.txt
+.test_token
+*_drift_result*.txt
+pytest_full.out
+phase8_llm_answers.txt

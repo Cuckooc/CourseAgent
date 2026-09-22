@@ -1,0 +1,154 @@
+# CI：ruff 静态检查 + 供应链漏洞审计 + pytest 回归
+#
+# 说明：
+# - Python 3.8 工具链在 ubuntu-24.04 已移除，必须 pin ubuntu-22.04；
+# - ruff 为代码风格检查工具，单独安装（不属运行时依赖）；
+# - pytest 套件运行数据库/API 测试（DB 层 + RBAC 层），需要 MySQL 服务；
+#   -m slow 的真实 LLM 调用用例不在 CI 中跑（需 DashScope 密钥）。
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+          cache: pip
+
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Lint (ruff)
+        run: python -m ruff check .
+
+  # 供应链漏洞审计（pip-audit 查 PyPI Advisory DB / OSV 同源；npm audit 门禁 high+）。
+  # --ignore-vuln 登记的是「接受风险」：修复版本要求 py>=3.9/3.10，被项目
+  # Python 3.8 硬约束锁死；风险评估见 requirements.txt 注释。升级 py3.10 后
+  # 需删除对应 ignore 并核实清零。
+  supply-chain:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+          cache: pip
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      - name: Audit Python dependencies (pip-audit)
+        run: >-
+          pip-audit -r requirements.txt
+          --ignore-vuln PYSEC-2025-183
+          --ignore-vuln PYSEC-2026-120
+          --ignore-vuln PYSEC-2026-175
+          --ignore-vuln PYSEC-2026-176
+          --ignore-vuln PYSEC-2026-177
+          --ignore-vuln PYSEC-2026-178
+          --ignore-vuln PYSEC-2026-179
+          --ignore-vuln PYSEC-2026-2270
+          --ignore-vuln PYSEC-2026-1852
+          --ignore-vuln PYSEC-2026-3036
+          --ignore-vuln PYSEC-2026-3037
+          --ignore-vuln PYSEC-2026-3038
+          --ignore-vuln PYSEC-2026-3039
+          --ignore-vuln PYSEC-2026-3040
+          --ignore-vuln PYSEC-2026-3041
+          --ignore-vuln PYSEC-2026-2192
+          --ignore-vuln PYSEC-2026-2555
+          --ignore-vuln PYSEC-2026-1518
+          --ignore-vuln PYSEC-2026-2193
+          --ignore-vuln PYSEC-2026-2562
+          --ignore-vuln PYSEC-2026-2563
+          --ignore-vuln PYSEC-2026-2564
+          --ignore-vuln PYSEC-2026-373
+          --ignore-vuln PYSEC-2024-115
+          --ignore-vuln PYSEC-2026-1515
+          --ignore-vuln PYSEC-2026-76
+          --ignore-vuln PYSEC-2026-1520
+          --ignore-vuln PYSEC-2026-77
+          --ignore-vuln PYSEC-2026-3813
+          --ignore-vuln PYSEC-2026-3814
+          --ignore-vuln PYSEC-2026-3815
+          --ignore-vuln PYSEC-2026-3553
+          --ignore-vuln PYSEC-2026-3554
+          --ignore-vuln GHSA-537c-gmf6-5ccf
+          --ignore-vuln GHSA-jwv3-5hgf-82ww
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Audit frontend dependencies (npm audit, gate high+)
+        working-directory: web/frontend
+        run: npm audit --package-lock-only --registry=https://registry.npmjs.org --audit-level=high
+
+  # 数据库层 pytest 回归：在 MySQL 8 服务上跑 tests/test_db_integrity.py。
+  # 不依赖后端启动，直接走 SQLAlchemy text() + INFORMATION_SCHEMA。
+  # slow 用例（真实 LLM 调用）不纳入 CI（需 DashScope 密钥）。
+  pytest-db:
+    runs-on: ubuntu-22.04
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_TEST_PASSWORD || 'testpw123' }}
+          MYSQL_DATABASE: db_course
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      host: 127.0.0.1
+      port: "3306"
+      user: root
+      password: ${{ secrets.MYSQL_TEST_PASSWORD || 'testpw123' }}
+      database: db_course
+      charset: utf8mb4
+      jwt_secret: ci-test-jwt-secret-do-not-use-in-prod
+      redis_url: ""
+      app_env: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Apply Alembic migrations
+        run: |
+          # 等待 MySQL 完全就绪
+          for i in {1..30}; do
+            python -c "import pymysql; pymysql.connect(host='127.0.0.1', port=3306, user='root', password='${{ env.password }}', database='db_course')" && break
+            sleep 2
+          done
+          # 跑 Alembic 迁移：migrations/ 目录含 0001_baseline → 0003_user_profile
+          python -m alembic upgrade head
+
+      - name: Run DB integrity tests
+        run: python -m pytest tests/test_db_integrity.py -v --tb=short
