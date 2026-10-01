@@ -31,6 +31,7 @@ from control.knowledge_control import knowledge_router
 from control.profile_control import profile_router
 from control.review_control import review_router
 from core.config import settings
+from core.version import __version__
 from core.logging_config import setup_logging
 from core.metrics import METRICS_CONTENT_TYPE, MetricsMiddleware, render_metrics
 from core.responses import BizException
@@ -118,7 +119,7 @@ async def lifespan(app: FastAPI):
 
 # 全局 FastAPI 应用实例：uvicorn 启动目标（control.app:app），下方所有中间件、
 # 异常处理器、业务路由与 SPA 兜底路由均注册到该对象
-app = FastAPI(title="智能课程咨询服务", version="2.0", lifespan=lifespan)
+app = FastAPI(title="智能课程咨询服务", version=__version__, lifespan=lifespan)
 
 # 请求链路追踪（P1）：request_id 写入 contextvar + 回写 X-Request-ID 响应头
 app.add_middleware(RequestIdMiddleware)

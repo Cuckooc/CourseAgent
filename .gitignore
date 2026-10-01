@@ -2,8 +2,7 @@
 env/*.env
 !env/*.env.example
 
-# 测试套件与测试辅助脚本（不入库，本地保留）
-tests/
+# 测试辅助脚本（不入库，本地保留）；tests/ 测试套件随仓库分发
 scripts/dev/
 scripts/maintenance/
 

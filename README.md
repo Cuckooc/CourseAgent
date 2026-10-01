@@ -8,6 +8,8 @@
 [![LangChain](https://img.shields.io/badge/LangChain-0.2-informational.svg)](https://www.langchain.com)
 [![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev)
 [![Docker](https://img.shields.io/badge/Docker-Compose%20Deploy-2496ED.svg)](https://docs.docker.com/compose/)
+[![License](https://img.shields.io/badge/License-MIT-orange.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-Pytest%20Suite-success.svg)](tests/)
 
 ## 🚀 快速开始
 
@@ -201,7 +203,22 @@ docker compose up -d --build
 
 ## 🧪 测试与质量
 
-### ✅ **质量工具链**
+### ✅ **运行测试**
+```bash
+# 运行全部套件（默认排除 slow 端到端用例）
+pytest
+
+# 仅需要后端在线的用例 / 含真实 LLM 的端到端用例
+pytest -m backend
+pytest -m "slow"
+
+# 生成覆盖率报告
+pytest --cov=. --cov-report=term-missing
+```
+
+测试覆盖安全/对抗/并发/边界/RBAC/端到端/数据库完整性/文件上传八个维度，详见 [tests/README.md](tests/README.md)。
+
+### 🔍 **质量工具链**
 ```bash
 # Lint 检查（ruff 配置见 ruff.toml）
 ruff check .
@@ -283,5 +300,3 @@ GitHub Actions 自动执行 lint 与依赖漏洞扫描（见 `.github/workflows/
 <div align="center">
 
 **🎓 让课程咨询更智能，让学习路径更清晰 ✨**
-
-</div>
