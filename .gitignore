@@ -7,13 +7,13 @@ tests/
 scripts/dev/
 scripts/maintenance/
 
-# 项目文档（仅随仓库分发部署文档与用户使用说明，其余不入库）
+# 项目文档（随仓库分发部署文档、用户使用说明与文档索引，其余内部文档不入库）
 docs/*
 !docs/部署文档.md
 !docs/用户使用说明.md
+!docs/README.md
 /web/ARCHITECTURE.md
 /data/LearnPlan_Dialogue_Collection/README.md
-/migrations/README
 
 # 本地项目梳理/测试/分析报告（不入库，本地保留）
 /agent-architecture-gap-analysis.md
