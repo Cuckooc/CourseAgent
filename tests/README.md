@@ -29,22 +29,33 @@ tests/
     └── test_tool_layer_p1.py      # P1 纯单元套件（注册表越权/参数钳制/Dispatcher 横切，无外部依赖）
 ```
 
-> **执行模型差异**：根目录 8 个套件为标准 pytest 用例；`phase/` 为脚本式用例（模块导入即顺序执行，PASS/FAIL 计数 + 退出码反映成败，pytest 收集时按脚本执行）；`tools/` 为纯单元测试（无网络/LLM/数据库依赖，CI 可直接运行）。
+> **执行模型差异**：根目录 8 个套件为标准 pytest 用例；`phase/` 为脚本式用例（模块导入即顺序执行，PASS/FAIL 计数 + 退出码反映成败，**pytest 收集会触发执行且失败时引发 INTERNALERROR，故不纳入 pytest 默认收集范围**）；`tools/` 为纯单元测试（无网络/LLM/数据库依赖，CI 直接运行）。
 
-## 🧪 运行方式
+## 🧪 运行方式（标准 pytest 套件）
 
 ```bash
-# 运行全部套件（默认排除 slow；后端/DB 不可达的用例自行 skip 或失败）
-pytest
+# 运行全部标准 pytest 套件（默认排除 slow；backend/db 不可达的用例自行 skip 或失败）
+pytest tests/
 
 # 仅需要后端 :8000 在线的用例
-pytest -m backend
+pytest tests/ -m backend
 
 # 需要 MySQL 连通的用例
-pytest -m db
+pytest tests/ -m db
 
 # 含真实 LLM/向量库的端到端用例（显式加入）
-pytest -m "slow"
+pytest tests/ -m "slow"
+
+# CI 无依赖单元（仅 tools 层 P1，适合裸环境）
+pytest tests/tools/test_tool_layer_p1.py -v
+```
+
+## 🧪 运行方式（phase/ 脚本式用例）
+
+```bash
+# phase/ 脚本式用例（模块导入即执行，不走 pytest 收集）
+python tests/phase/test_all_changes.py
+python tests/phase/test_tool_layer_p1.py
 ```
 
 ## ⚙️ 约定说明

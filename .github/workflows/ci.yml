@@ -1,9 +1,10 @@
-# CI：ruff 静态检查 + 供应链漏洞审计
+# CI：ruff 静态检查 + 无依赖单元测试 + 供应链漏洞审计
 #
 # 说明：
 # - Python 3.8 工具链在 ubuntu-24.04 已移除，必须 pin ubuntu-22.04；
 # - ruff 为代码风格检查工具，单独安装（不属运行时依赖）；
-# - 单元/集成测试套件不随公开仓库分发，故 CI 不执行 pytest。
+# - test job 仅运行无外部依赖（无网络/LLM/MySQL/Redis）的纯单元套件，
+#   需后端/数据库在线的套件（markers: backend/db/slow）暂不纳入 CI。
 name: CI
 
 on:
@@ -29,6 +30,32 @@ jobs:
 
       - name: Lint (ruff)
         run: python -m ruff check .
+
+  # 无外部依赖单元测试：仅 tools 工具层 P1 套件。
+  # 该套件声明无网络/LLM/embedding/数据库依赖（见 docstring），
+  # 可在 CI 裸环境直接运行；注入最小环境变量保证 core/config.py 导入期安全。
+  # 其余套件（backend/db/slow 标记）需 MySQL/Redis/LLM 在线，暂不纳入 CI。
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests (no external deps)
+        env:
+          app_env: dev
+          jwt_secret: ci-test-only-secret
+          metrics_enabled: "false"
+        run: pytest tests/tools/test_tool_layer_p1.py -v
 
   # 供应链漏洞审计（pip-audit 查 PyPI Advisory DB / OSV 同源；npm audit 门禁 high+）。
   # --ignore-vuln 登记的是「接受风险」：修复版本要求 py>=3.9/3.10，被项目
