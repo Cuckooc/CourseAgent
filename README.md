@@ -245,6 +245,8 @@ GitHub Actions 自动执行 lint 与依赖漏洞扫描（见 `.github/workflows/
 
 ## 🤝 贡献指南
 
+> 📋 **准备贡献代码？** 请先阅读 **[CONTRIBUTING.md](CONTRIBUTING.md)** —— 包含分层约束、代码规范、测试要求与 PR 自检清单。
+
 ### 🐛 **问题报告**
 - 提供详细的错误信息、复现步骤与 request_id
 - 说明操作系统、Python 版本与部署方式
