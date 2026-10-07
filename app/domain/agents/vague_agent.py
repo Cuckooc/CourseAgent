@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.vague_agent
+模块名：app.domain.agents.vague_agent
 
 作用：
     流水线阶段 1 的意图模糊判定 Agent。单次 LLM 调用判断用户问题是
@@ -43,7 +43,7 @@ class VagueAgent(BaseAgent):
         - bus：本次请求专属 MessageBus（由编排层注入），用于发布判定结果；
         - memory：记忆管理器（预留，调用方未传，基类存为 None）；
         - tools：工具管理器（预留，调用方未传，基类存为 None）；
-        - history_summary：早期对话摘要（来源：memory/context_memory
+        - history_summary：早期对话摘要（来源：app/domain/memory/context_memory
           经 ChatService 透传），注入 prompt 以消解多轮承接式提问中的
           指代（如"那它呢"）；无摘要时为 None，模板内回填"无"。
         关键属性去向：self.prompt 供 create_agent 构建 PromptTemplate；

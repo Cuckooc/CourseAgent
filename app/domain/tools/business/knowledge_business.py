@@ -1,5 +1,5 @@
 """
-模块名：tools.business.knowledge_business
+模块名：app.domain.tools.business.knowledge_business
 
 作用：
     知识库检索类工具的业务函数所在地（function calling 工具层的业务层）。
@@ -12,7 +12,7 @@
 
 本模块为纯业务实现：不含任何"要不要检索"的决策，不 import 任何 Agent，
 可被 ToolDispatcher、未来的 HTTP 接口、单元测试直接调用。
-检索算法原样复用 multi_agent.retrieval.retrieve_scoped
+检索算法原样复用 app.domain.agents.retrieval.retrieve_scoped
 （向量+关键词混合检索 → RRF 融合 → gte-rerank 精排，Small-to-Big 父块取回）。
 
 主要成员：
@@ -23,13 +23,13 @@
       超时 settings.TOOL_DEFAULT_TIMEOUT_SECONDS、失败可降级空结果）。
 
 被谁使用（间接调用链）：
-    - tools/registry.py 首次查询时 import tools.business → 本模块完成注册；
-    - tools/dispatcher.py 的 ToolDispatcher._run_one() 经 ToolSpec.business_fn
-      回调这两个函数（上游入口为 StructuredTool 直调或 tools/shadow.py）；
-    - tests/tools/test_tool_layer_p1.py 直接构造参数模型与 ToolContext 调用；
+    - app/domain/tools/registry.py 首次查询时 import app.domain.tools.business → 本模块完成注册；
+    - app/domain/tools/dispatcher.py 的 ToolDispatcher._run_one() 经 ToolSpec.business_fn
+      回调这两个函数（上游入口为 StructuredTool 直调或 app/domain/tools/shadow.py）；
+    - tests/app/domain/tools/test_tool_layer_p1.py 直接构造参数模型与 ToolContext 调用；
     - 数据源依赖：service/vector_store.get_persistent_db（持久 Chroma 库）、
       service/temp_knowledge_store.get_temp_store（会话临时库注册表）、
-      multi_agent/retrieval.retrieve_scoped（检索算法）。
+      app/domain/agents/retrieval.retrieve_scoped（检索算法）。
 """
 from __future__ import annotations
 
@@ -37,17 +37,17 @@ import logging
 
 from langchain_core.documents import Document
 
-from multi_agent.retrieval import retrieve_scoped
+from app.domain.agents.retrieval import retrieve_scoped
 from service.temp_knowledge_store import get_temp_store
 from service.vector_store import get_persistent_db
-from tools.protocol import (
+from app.domain.tools.protocol import (
     KnowledgeSearchArgs,
     SessionFileSearchArgs,
     ToolContext,
     ToolResult,
     ToolSpec,
 )
-from tools.registry import register_tool
+from app.domain.tools.registry import register_tool
 
 logger = logging.getLogger(__name__)
 
@@ -85,19 +85,19 @@ def knowledge_search_fn(
           private）由 user_id 在检索层（retrieve_scoped → build_scope_filter）
           强制过滤，LLM 无法越权访问他人私有库。
     被谁调用：不由外部直接 import 调用；注册为 ToolSpec.business_fn 后，
-              由 tools/dispatcher.py 的 ToolDispatcher._run_one() 在线程池中
-              回调（影子模式经 tools/shadow.py，未来主链路经 Agent function
-              calling）；tests/tools/test_tool_layer_p1.py 单测直调。
+              由 app/domain/tools/dispatcher.py 的 ToolDispatcher._run_one() 在线程池中
+              回调（影子模式经 app/domain/tools/shadow.py，未来主链路经 Agent function
+              calling）；tests/app/domain/tools/test_tool_layer_p1.py 单测直调。
     工具名/入参 schema：knowledge_search；入参模型 KnowledgeSearchArgs
               （{"query": str, "top_k": int=3}，dispatcher 已完成 query 截断
               200 字、top_k 钳制 [1,10]）。
     参数：args 为校验后的入参模型（query 来源 LLM 决策的检索词，top_k 召回条数）；
           ctx 为服务端注入上下文（user_id 是 scope 过滤的唯一身份来源）。
     数据源：service/vector_store.get_persistent_db() 返回的持久 Chroma 库；
-            检索算法 multi_agent/retrieval.retrieve_scoped。
+            检索算法 app/domain/agents/retrieval.retrieve_scoped。
     返回：ToolResult，data 为 [{"content", "metadata"}, ...]（content 优先取
           metadata.output），去向为回灌 Agent 拼入 LLM prompt / SSE 答案，
-          影子模式下供 tools/shadow.py 做指纹对比；query 为空时返回成功空集。
+          影子模式下供 app/domain/tools/shadow.py 做指纹对比；query 为空时返回成功空集。
     显式不传 session_id：retrieve_scoped 仅在 session_id 非空时合并临时库，
           临时库归属 FileAgent 域，避免同一片段被两路重复召回。
     """
@@ -133,15 +133,15 @@ def session_file_search_fn(
     功能：在 {user_id}_{session_id} 物理隔离的会话临时向量库中检索本会话
           上传文件切片；只认当前会话，不跨会话、不触达他人临时库。
     被谁调用：注册为 ToolSpec.business_fn 后由
-              tools/dispatcher.py 的 ToolDispatcher._run_one() 回调
-              （影子模式经 tools/shadow.py）；tests/tools 单测直调。
+              app/domain/tools/dispatcher.py 的 ToolDispatcher._run_one() 回调
+              （影子模式经 app/domain/tools/shadow.py）；tests/tools 单测直调。
     工具名/入参 schema：session_file_search；入参模型 SessionFileSearchArgs
               （{"query": str, "top_k": int=3}，同样经 dispatcher 钳制）。
     参数：args.query 来源 LLM 决策的检索词；ctx.user_id/ctx.session_id 为
           服务端注入的临时库定位键（LLM 参数中伪造一律无效）。
     数据源：service/temp_knowledge_store.get_temp_store() 的会话临时库注册表
             （has_session 判断物理库是否存在、retrieve_scoped 内部 get_db 加载），
-            检索算法仍为 multi_agent/retrieval.retrieve_scoped。
+            检索算法仍为 app/domain/agents/retrieval.retrieve_scoped。
     返回：ToolResult，data 为 [{"content", "metadata"}, ...]（正文取
           page_content，prefer_output=False）；以下三种情形返回成功空集：
           ①query 为空；②ctx 缺 user_id/session_id；③该会话无临时库。
@@ -177,7 +177,7 @@ def session_file_search_fn(
 
 
 # ──────────────────────────────────────────────────────────────
-# 自注册（import tools.business 时生效）
+# 自注册（import app.domain.tools.business 时生效）
 # ──────────────────────────────────────────────────────────────
 # —— 工具 1：knowledge_search（风险/超时/角色/降级均取 ToolSpec 默认值：
 #    T0 只读、默认角色 user/teacher/admin、超时 TOOL_DEFAULT_TIMEOUT_SECONDS、失败可降级空集）

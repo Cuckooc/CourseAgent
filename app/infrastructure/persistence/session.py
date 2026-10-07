@@ -21,7 +21,7 @@
     - 全部 DAO：dao/user.py、history.py、information.py、session.py、read.py、
       profile.py、feedback.py、chain_log.py、session_keyword.py、
       document_review.py、soft_delete.py（统一 with session_scope() as session）；
-    - core/purge_scheduler.py（注销硬删除定时任务）、memory/session_rollover.py、
+    - core/purge_scheduler.py（注销硬删除定时任务）、app/domain/memory/session_rollover.py、
       scripts/maintenance/cleanup_web.py；
     - control/app.py 启动/关闭时引用 engine 做连通性检查与连接池处置；
     - migrations/env.py 复用 _DB_URL 作为 alembic 迁移连接串；
@@ -74,7 +74,7 @@ def session_scope() -> Iterator[Session]:
     commit → 任意异常自动 rollback 后重新抛出（保证事务原子性，如 core/sql_guard
     拦截非法 SQL 时整条事务随异常回滚）→ finally 始终 close 归还连接池。
     被谁调用：dao/ 下全部 DAO 的写/读方法、core/purge_scheduler.py、
-    memory/session_rollover.py、scripts/maintenance/cleanup_web.py 及测试夹具。
+    app/domain/memory/session_rollover.py、scripts/maintenance/cleanup_web.py 及测试夹具。
     返回：产出 SQLAlchemy Session（Iterator[Session]），仅在 with 块内有效，
     去向 DAO 内 text() 原生 SQL / ORM 操作；块结束后不得继续使用。
     """

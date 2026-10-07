@@ -91,7 +91,7 @@ class Settings:
 
     # ================= 文件上传 =================
     # 被 control/file_control.py（HTTP 大小/扩展名校验、线程池）、service/file_service.py、
-    # service/knowledge_service.py、tools/function_tools.py、service/temp_knowledge_store.py 读取。
+    # service/knowledge_service.py、app/domain/tools/function_app.domain.tools.py、service/temp_knowledge_store.py 读取。
     # upload_max_mb：单文件大小上限（MB），默认 50；经 UPLOAD_MAX_BYTES property 换算后用于 413 拦截。
     UPLOAD_MAX_MB: Final[int] = int(os.getenv("upload_max_mb", "50"))
     # upload_allowed_ext：允许上传的扩展名，逗号分隔，默认 ".pdf,.txt,.md"
@@ -104,9 +104,9 @@ class Settings:
     UPLOAD_WORKERS: Final[int] = max(1, int(os.getenv("upload_workers", "4")))
 
     # ================= 记忆模块 =================
-    # 本组字段全部由 memory 子包读取：short_term_* → memory/short_term.py、memory/long_term.py；
-    # context_* → memory/context_memory.py；session_auto_rollover_* → memory/session_rollover.py；
-    # profile_* → memory/profile_service.py；session_keyword_* → memory/session_keyword_service.py。
+    # 本组字段全部由 memory 子包读取：short_term_* → app/domain/memory/short_term.py、app/domain/memory/long_term.py；
+    # context_* → app/domain/memory/context_app.domain.memory.py；session_auto_rollover_* → app/domain/memory/session_rollover.py；
+    # profile_* → app/domain/memory/profile_service.py；session_keyword_* → app/domain/memory/session_keyword_service.py。
     # 短期记忆：会话级滑动保留时间（秒）。会话在该时间内无新对话即过期清理；
     # 每次在原会话继续对话都会重新计时（滑动过期）。
     SHORT_TERM_TTL_SECONDS: Final[int] = int(os.getenv("short_term_ttl_seconds", "1800"))
@@ -272,7 +272,7 @@ class Settings:
 
     # ================= 工具调用层（function calling） =================
     # 被 tools 子包读取（protocol.py 的 ToolSpec 边界、dispatcher.py 的调度与超时、
-    # function_tools.py 的具体工具）；multi_agent/rag_agent.py、file_agent.py 亦读取。
+    # function_app.domain.tools.py 的具体工具）；app/domain/agents/rag_agent.py、file_agent.py 亦读取。
     # 影子模式：开启后 RAGAgent/FileAgent 在旧检索链路之外旁路执行新工具决策链，
     # 仅记录 tool_calls 与新旧结果差异，不改变实际回答（P1 灰度验证用，默认关闭）
     TOOL_SHADOW_MODE: Final[bool] = os.getenv("tool_shadow_mode", "false").lower() in (
@@ -316,7 +316,7 @@ class Settings:
         return p if p.is_absolute() else BASE_DIR / p
 
     # chroma_dir：Chroma 持久化目录（相对 BASE_DIR 或绝对路径），默认 storage/chromadb。
-    # 公共知识库向量库（service/vector_store）与文件演示库（multi_agent/file_agent）共用此定位；
+    # 公共知识库向量库（service/vector_store）与文件演示库（app/domain/agents/file_agent）共用此定位；
     # 取代历史上散落在各模块的 ../chromadb_data/ 相对路径（CWD 依赖）。
     CHROMA_DIR_NAME: Final[str] = os.getenv("chroma_dir", "storage/chromadb")
 

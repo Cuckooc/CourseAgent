@@ -1,5 +1,5 @@
 """
-模块名：tools.shadow
+模块名：app.domain.tools.shadow
 
 作用：
     P1 阶段 function calling 改造的影子模式（Shadow Mode）运行器。
@@ -16,9 +16,9 @@
     永不影响主流程。P2 主链路切换后本文件删除（决策逻辑内联到
     RAGAgent/FileAgent）。
 
-差异日志去向：仅写入本模块 logger（logger 名 "tools.shadow"），
+差异日志去向：仅写入本模块 logger（logger 名 "app.domain.tools.shadow"），
     正常一致为 info 级；零交集/降级/错误为 warning 级，供灰度期间人工关注；
-    报告 dict 同时返回给调用方（Agent 不消费，测试 tests/tools/
+    报告 dict 同时返回给调用方（Agent 不消费，测试 tests/app/domain/tools/
     test_tool_layer_p1.py 做断言）。
 
 主要成员：
@@ -30,11 +30,11 @@
     - _DEFAULT_TOOL：各决策层的兜底工具名；_COMPARE_PREFIX：指纹截取长度。
 
 被谁使用：
-    - multi_agent/rag_agent.py 的 RAGAgent._run_shadow()（旧链路完成后，
+    - app/domain/agents/rag_agent.py 的 RAGAgent._run_shadow()（旧链路完成后，
       settings.TOOL_SHADOW_MODE 开启且有消息时调用，owner_agent="RAGAgent"）；
-    - multi_agent/file_agent.py 的 FileAgent._run_shadow()（额外要求本会话
+    - app/domain/agents/file_agent.py 的 FileAgent._run_shadow()（额外要求本会话
       has_uploaded_files 时才调用，owner_agent="FileAgent"）；
-    - tests/tools/test_tool_layer_p1.py：影子决策与兜底/对比逻辑单测。
+    - tests/app/domain/tools/test_tool_layer_p1.py：影子决策与兜底/对比逻辑单测。
 """
 from __future__ import annotations
 
@@ -43,15 +43,15 @@ from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import HumanMessage
 
-from tools.dispatcher import get_tool_dispatcher
-from tools.protocol import ToolContext
-from tools.registry import tools_for
+from app.domain.tools.dispatcher import get_tool_dispatcher
+from app.domain.tools.protocol import ToolContext
+from app.domain.tools.registry import tools_for
 
 logger = logging.getLogger(__name__)
 
 # 各决策层在模型未产出 tool_calls 时的保守兜底工具：
 # 键为决策层名（ToolSpec.owner_agent），值为注册表中的工具名，
-# 必须与 tools/business/knowledge_business.py 注册的工具名一致
+# 必须与 app/domain/tools/business/knowledge_business.py 注册的工具名一致
 _DEFAULT_TOOL = {
     "RAGAgent": "knowledge_search",       # RAGAgent 域兜底：持久知识库检索
     "FileAgent": "session_file_search",   # FileAgent 域兜底：当前会话临时库检索
@@ -160,7 +160,7 @@ def run_shadow(owner_agent: str, llm, payload: Dict[str, Any],
     流程：提取 query → 取本决策层工具 → bind_tools 单轮决策 → 规范化调用
           → ToolDispatcher 真实执行 → 新旧结果指纹交集 → 组装报告并按差异
           级别写日志。全程旁路：报告不回灌 LLM、不推送 SSE、不改变实际回答。
-    被谁调用：multi_agent/rag_agent.py、multi_agent/file_agent.py 各自的
+    被谁调用：app/domain/agents/rag_agent.py、app/domain/agents/file_agent.py 各自的
               _run_shadow()（外层 try/except 已兜底）；tests/tools 单测直调。
     参数：
         owner_agent：决策层名（"RAGAgent"/"FileAgent"），决定可见工具与兜底工具；

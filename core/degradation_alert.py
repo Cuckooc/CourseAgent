@@ -17,9 +17,9 @@
     - _SINK_ID：模块级全局单例，已注册 sink 的 id（None=未注册/注册失败）。
 
 被谁使用：
-    - multi_agent/summary_agent.py、service/agent_service.py、service/chat_service.py
+    - app/domain/agents/summary_agent.py、service/agent_service.py、service/chat_service.py
       调用 alert_degradation 记录各 agent 环节降级；
-    - multi_agent/fallback.py 在全链路兜底失败时调用 alert_chain_failure。
+    - app/domain/agents/fallback.py 在全链路兜底失败时调用 alert_chain_failure。
 """
 import json
 import logging
@@ -112,7 +112,7 @@ def alert_degradation(
     功能：写一条结构化降级日志（logs/degradation.log），并对 query/error 截断 500 字；
     severity=critical 且配置了 DEGRADE_WEBHOOK_URL 时额外异步推送 webhook。
     被谁调用：
-        - multi_agent/summary_agent.py（summary 环节降级）；
+        - app/domain/agents/summary_agent.py（summary 环节降级）；
         - service/agent_service.py（各 agent 执行失败/重试耗尽）；
         - service/chat_service.py（对话链路降级，如 retrieval 失败）。
 
@@ -167,7 +167,7 @@ def alert_chain_failure(
 
     功能：所有 agent 环节与兜底均失败时记录一条 chain_failure 事件（含完整链路日志），
     并在配置 webhook 时无条件异步推送。
-    被谁调用：multi_agent/fallback.py（全链路兜底的最终失败分支）。
+    被谁调用：app/domain/agents/fallback.py（全链路兜底的最终失败分支）。
 
     与 alert_degradation 的区别：
     - 包含完整 chain_log（各 agent 状态转换 + 输出/错误快照）

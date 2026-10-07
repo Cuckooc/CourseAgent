@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.fallback
+模块名：app.domain.agents.fallback
 
 作用：
     两级兜底处理器：当关键 Agent 失败且 FailureDiagnoser 判定为缺信息，
@@ -26,13 +26,13 @@
   _run_critical_agent 调 handle_missing_info/handle_final_fallback；
   run_agent 包装兜底结果调 handle_fallback；_stream_fallback 调
   handle_fallback 生成 SSE delta/error 帧。
-- 依赖 multi_agent.state_machine.AgentState 的 FALLBACK_CLARIFY /
+- 依赖 app.domain.agents.state_machine.AgentState 的 FALLBACK_CLARIFY /
   FALLBACK_ERROR 两个状态。
 """
 import logging
 from typing import Any, Dict, Optional
 
-from multi_agent.state_machine import AgentState
+from app.domain.agents.state_machine import AgentState
 
 logger = logging.getLogger(__name__)
 

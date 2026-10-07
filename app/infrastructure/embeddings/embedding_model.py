@@ -15,7 +15,7 @@
 被谁使用（Grep "embedding.embedding_model" 确认）：
     - service/chat_service.py：get_embedding() 用于上下文相关性判定
       （embed_query 计算 query 与上下文的余弦相似度）。
-    注意入库/检索主链路（service/vector_store.py、multi_agent/retrieval.py）使用
+    注意入库/检索主链路（service/vector_store.py、app/domain/agents/retrieval.py）使用
     embedding/text_embedding.py 的 get_embedding（裸客户端）；两者均锁定
     text-embedding-v2（1536 维），向量维度保持一致。
 

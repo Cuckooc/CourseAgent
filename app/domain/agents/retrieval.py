@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.retrieval
+模块名：app.domain.agents.retrieval
 
 作用：
 统一知识库检索入口（供 RAGAgent / FileAgent 复用）——父子块两阶段检索 + 重排序精排。
@@ -34,10 +34,10 @@
   召回数量、精排成本与融合平滑度。
 
 被谁使用（Grep 模块名结果）：
-- multi_agent/rag_agent.py：RAGAgent.handle 以应用级共享持久库为 db；
-- multi_agent/file_agent.py：FileAgent.handle 以 PDF 演示库（可 None）
+- app/domain/agents/rag_agent.py：RAGAgent.handle 以应用级共享持久库为 db；
+- app/domain/agents/file_agent.py：FileAgent.handle 以 PDF 演示库（可 None）
   + 会话临时库检索；
-- tools/business/knowledge_business.py：function calling 新工具链的
+- app/domain/tools/business/knowledge_business.py：function calling 新工具链的
   knowledge_search / session_file_search 原样复用本算法；
 - scripts/maintenance、scripts/dev/debug：运维/排障脚本直接调用。
 
@@ -56,7 +56,6 @@ from typing import Dict, List, Optional, Tuple
 from langchain_core.documents import Document
 
 from app.infrastructure.embeddings.text_embedding import MAX_L2_DISTANCE, build_scope_filter, get_embedding
-from service.temp_knowledge_store import get_temp_store
 
 logger = logging.getLogger(__name__)
 
@@ -382,9 +381,9 @@ def retrieve_scoped(
     融合：Reciprocal Rank Fusion (RRF) 合并两路候选；
     精排：DashScope gte-rerank cross-encoder 取 top_k。
 
-    被谁调用：multi_agent/rag_agent.py 的 RAGAgent.handle（db=共享持久库）、
-              multi_agent/file_agent.py 的 FileAgent.handle（db=PDF 演示库
-              或 None），以及 tools/business/knowledge_business.py 的新旧
+    被谁调用：app/domain/agents/rag_agent.py 的 RAGAgent.handle（db=共享持久库）、
+              app/domain/agents/file_agent.py 的 FileAgent.handle（db=PDF 演示库
+              或 None），以及 app/domain/tools/business/knowledge_business.py 的新旧
               工具检索函数与运维/排障脚本。
     参数：
     - db：持久 Chroma 实例（来源：service/vector_store 共享库；None 时
@@ -420,6 +419,8 @@ def retrieve_scoped(
     # 2. 当前会话临时库向量检索（避免与传入 db 重复查询同一库）
     if session_id is not None and user_id is not None:
         try:
+            from service.temp_knowledge_store import get_temp_store  # 局部导入：领域层不硬依赖业务层
+
             store = get_temp_store()
             if store.has_session(user_id, session_id):
                 temp_db = store.get_db(user_id, session_id)
@@ -446,6 +447,8 @@ def retrieve_scoped(
                 logger.warning("persistent keyword search failed: %s", e)
         if session_id is not None and user_id is not None:
             try:
+                from service.temp_knowledge_store import get_temp_store  # 局部导入：领域层不硬依赖业务层
+
                 store = get_temp_store()
                 if store.has_session(user_id, session_id):
                     temp_db = store.get_db(user_id, session_id)

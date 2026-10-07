@@ -12,7 +12,7 @@
     - service/chat_service.py 的 ChatService.__init__ 中实例化
       （self.history_dao = Information_history()），并在 _save_information()
       中即时持久化 AI 生成的会话标题；
-    - memory/long_term.py 的长期记忆落库任务构造时实例化（_history_dao），
+    - app/domain/memory/long_term.py 的长期记忆落库任务构造时实例化（_history_dao），
       短期记忆转长期记忆时写入/刷新会话历史条目。
 
 使用 INSERT ... ON DUPLICATE KEY UPDATE 幂等写入：
@@ -36,7 +36,7 @@ class Information_history(BaseInformation):
     承担会话历史条目的幂等 upsert（INSERT ... ON DUPLICATE KEY UPDATE），
     不承担查询与删除（查询见 dao/session.py，软删除见 dao/soft_delete.py）。
     实例化位置：service/chat_service.py 的 ChatService.__init__
-    （self.history_dao）、memory/long_term.py 的 LongTermMemory 构造
+    （self.history_dao）、app/domain/memory/long_term.py 的 LongTermMemory 构造
     （self._history_dao）。__init__ 无形参，仅调用父类 ABC 构造；
     不持有数据库连接，会话在 save_information() 内通过 session_scope() 获取。
     """
@@ -57,7 +57,7 @@ class Information_history(BaseInformation):
         被谁调用：
         - service/chat_service.py 的 ChatService._save_information()
           （文件.函数：chat_service.ChatService._save_information，标题即时持久化）；
-        - memory/long_term.py 的长期记忆落库逻辑
+        - app/domain/memory/long_term.py 的长期记忆落库逻辑
           （文件.函数：long_term.LongTermMemory 内的落库方法）。
         参数：
             data: 字段字典，由 service 层传入：

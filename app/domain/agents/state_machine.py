@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.state_machine
+模块名：app.domain.agents.state_machine
 
 作用：
 多 Agent 流水线状态机。
@@ -20,7 +20,7 @@
   _run_critical_agent / _run_non_critical_agent /
   _run_summary_with_relevance / _run_retrieval / _retry_chat_for_rollback
   等编排方法全程调用其 transition/record_*/can_retry/is_looping；
-- multi_agent/fallback.py：import AgentState 用于切换 FALLBACK_* 兜底态；
+- app/domain/agents/fallback.py：import AgentState 用于切换 FALLBACK_* 兜底态；
 - tests/phase/test_phase8_agent_eval.py：测试导入 PipelineStateMachine、MAX_RETRIES。
 
 状态转移图（文字版；每步输入来源与输出去向）：

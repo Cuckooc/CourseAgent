@@ -48,7 +48,7 @@ class LLM(ABC):
         关键属性去向：
             model_name/api_key/base_url 取自 config.setting.llm
             （env/qianwen_config.env 的 model/api_key/base_url），同时在
-            multi_agent/base_agent.py 等 Agent 基类中被记录用于日志展示；
+            app/domain/agents/base_agent.py 等 Agent 基类中被记录用于日志展示；
             self.llm 为 LLMGateway 实例，去向子类组装 LangChain chain
             （prompt | self.llm）后的 invoke / stream 调用。
         """

@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # 按用户 ID 的 Redis 键模式（含会话级子键，用 SCAN 清理）
 # 含义：注销用户时需要逐模式 SCAN 并删除的全部残留键；{uid} 占位在使用时
 # format 为目标用户 ID。各子键分别对应短期记忆、上下文记忆、画像暂存/节流、
-# 月度 token 用量与会话号发号锁（键的写入方分布在 memory/ 与 core/usage.py）。
+# 月度 token 用量与会话号发号锁（键的写入方分布在 app/domain/memory/ 与 core/usage.py）。
 _REDIS_PATTERNS = (
     "mem:short:{uid}:*",       # 短期记忆（含 :meta）
     "mem:ctx:{uid}:*",         # 上下文记忆

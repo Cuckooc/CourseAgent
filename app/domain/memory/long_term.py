@@ -1,14 +1,14 @@
 """
-模块：memory.long_term —— 长期记忆落库器：短期记忆 → MySQL 长期记忆的转变通道。
+模块：app.domain.memory.long_term —— 长期记忆落库器：短期记忆 → MySQL 长期记忆的转变通道。
 
-作用：承接 memory/short_term 的 Redis 短期记忆，在会话静默临期或消息条数
+作用：承接 app/domain/memory/short_term 的 Redis 短期记忆，在会话静默临期或消息条数
 逼近缓存上限时，把未落库消息批量持久化到 MySQL。数据链路：
 短期记忆（Redis，滑动 TTL）→ 本模块后台扫描/落库 → MySQL 长期记忆
 （dao/information.Information.save_messages_batch 写 session_information；
  dao/history.Information_history.save_information upsert history_information
  的会话标题）→ 读取侧 control/history_control 拼 MySQL + 未落库部分返回，
- memory/context_memory 未命中短期记忆时回源 MySQL 并 warm_up 回填。
-注意：落库后的对话消息不进入文档 RAG 检索（multi_agent/retrieval.py 的 RAG
+ app/domain/memory/context_memory 未命中短期记忆时回源 MySQL 并 warm_up 回填。
+注意：落库后的对话消息不进入文档 RAG 检索（app/domain/agents/retrieval.py 的 RAG
 只检索上传文档的 Chroma 向量）；长期记忆服务于历史回看与上下文重建。
 
 产品语义：长期记忆由短期记忆转变而来。对话期间只写 Redis 短期记忆，
@@ -39,7 +39,7 @@ warm_up 回填，落库删除 key 后该回源路径自然接管。
 被谁使用（全仓 import 位置）：
 - control/app.py 的 lifespan 启动钩子：get_long_term_flusher()
   .start_background_flusher() 启动守护线程（启动时先补扫一次）；
-- memory/short_term.py 不反向依赖本模块；本模块单向调用 ShortTermStore 的
+- app/domain/memory/short_term.py 不反向依赖本模块；本模块单向调用 ShortTermStore 的
   scan_sessions/pending_count/pending_messages/get_title/mark_flushed/drop。
 """
 import logging
@@ -51,7 +51,7 @@ from core.config import settings
 from app.infrastructure.redis.locks import try_acquire_cycle_lock
 from app.infrastructure.persistence.repositories.history import Information_history
 from app.infrastructure.persistence.repositories.information import Information
-from memory.short_term import get_short_term_store
+from app.domain.memory.short_term import get_short_term_store
 
 logger = logging.getLogger(__name__)
 

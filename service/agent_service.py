@@ -2,7 +2,7 @@
 模块名：service.agent_service
 作用：Agent 自动化流程服务（状态机编排版），是对话主链路的核心编排层。
       对上向 service/chat_service.py 暴露非流式 run_agent() 与流式
-      run_agent_stream() 两个入口；对下协调 multi_agent/ 下各 Agent、
+      run_agent_stream() 两个入口；对下协调 app/domain/agents/ 下各 Agent、
       PipelineStateMachine 状态机、失败诊断/意图校验/兜底处理器，
       并把全链路日志异步落 MySQL（dao/chain_log.py）。
 
@@ -38,23 +38,23 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from typing import Any, Dict, Optional
 
-from multi_agent.message_bus import MessageBus
-from multi_agent.summary_agent import SummaryAgent
-from multi_agent.vague_agent import VagueAgent
-from multi_agent.analysis_agent import AnalysisAgent
-from multi_agent.file_agent import FileAgent
-from multi_agent.rag_agent import RAGAgent
-from multi_agent.chat_agent import ChatAgent
-from multi_agent.state_machine import (
+from app.domain.agents.message_bus import MessageBus
+from app.domain.agents.summary_agent import SummaryAgent
+from app.domain.agents.vague_agent import VagueAgent
+from app.domain.agents.analysis_agent import AnalysisAgent
+from app.domain.agents.file_agent import FileAgent
+from app.domain.agents.rag_agent import RAGAgent
+from app.domain.agents.chat_agent import ChatAgent
+from app.domain.agents.state_machine import (
     AgentState,
     PipelineStateMachine,
     MAX_RETRIES,
     RESUME_STATES,
     RETRYING_STATES,
 )
-from multi_agent.failure_diagnoser import FailureDiagnoser
-from multi_agent.verifier import IntentVerifier
-from multi_agent.fallback import FallbackHandler
+from app.domain.agents.failure_diagnoser import FailureDiagnoser
+from app.domain.agents.verifier import IntentVerifier
+from app.domain.agents.fallback import FallbackHandler
 from app.infrastructure.llm.gateway import LLMUnavailableError
 from core.config import settings
 from core.degradation_alert import alert_degradation
@@ -169,9 +169,9 @@ class AgentService:
           ChatService 上下文改写）。
         - user_id：JWT 注入的当前用户 ID（LLM 用量计量/画像/检索隔离用）。
         - session_id：会话号（per-user 序列，会话临时库与记忆隔离用）。
-        - history：早期摘要 + 最近 N 轮原文（来源：memory/context_memory）。
-        - session_keywords：会话累积关键词注入前缀（memory/session_keyword_service）。
-        - user_profile：用户画像注入前缀（memory/profile_service）。
+        - history：早期摘要 + 最近 N 轮原文（来源：app/domain/memory/context_memory）。
+        - session_keywords：会话累积关键词注入前缀（app/domain/memory/session_keyword_service）。
+        - user_profile：用户画像注入前缀（app/domain/memory/profile_service）。
         - history_summary：早期对话摘要（供意图判定消解多轮指代）。
         返回：dict——键为 bus/vague/analysis/rag/file/summary/chat，
               各自对应 MessageBus 与 Agent 实例；去向：编排流程各阶段按名取用。
@@ -443,8 +443,8 @@ class AgentService:
                 # 相关性通过：把汇总抽取出的关键词累积进会话关键词（Redis），供后续轮次注入
                 if summary_kws and sm.user_id and sm.session_id:
                     try:
-                        from memory.session_keyword_service import get_session_keyword_service
-                        # 数据去向：memory/session_keyword_service 的会话关键词缓存
+                        from app.domain.memory.session_keyword_service import get_session_keyword_service
+                        # 数据去向：app/domain/memory/session_keyword_service 的会话关键词缓存
                         get_session_keyword_service().accumulate(sm.user_id, sm.session_id, summary_kws)
                     except Exception:
                         pass
@@ -513,7 +513,7 @@ class AgentService:
           的用户输入经 ChatService 上下文改写。
         - user_id (int|None)：JWT 注入的用户 ID。
         - session_id (int|None)：当前会话 ID（per-user 序列）。
-        - history (str|None)：上下文记忆注入文本（memory/context_memory）。
+        - history (str|None)：上下文记忆注入文本（app/domain/memory/context_memory）。
         - session_keywords (str|None)：会话关键词前缀。
         - user_profile (str|None)：用户画像前缀。
         - history_summary (str|None)：早期对话摘要。

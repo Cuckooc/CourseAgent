@@ -1,5 +1,5 @@
 """
-模块名：tools.registry
+模块名：app.domain.tools.registry
 
 作用：
     工具注册中心（对接层）。采用"业务包导入即自注册"机制：业务模块在导入时
@@ -7,10 +7,10 @@
     本模块再按决策层（owner_agent）生成 bind_tools 可用的 LangChain 工具。
 
 注册机制：
-    - 显式注册（非装饰器）：tools/business/knowledge_business.py 在模块尾部
+    - 显式注册（非装饰器）：app/domain/tools/business/knowledge_business.py 在模块尾部
       直接调用 register_tool(ToolSpec(...))；
-    - 惰性加载：首次查询时由 _ensure_business_loaded() 导入 tools.business 包
-      （tools/business/__init__.py 再导入各业务模块），导入动作即触发注册，
+    - 惰性加载：首次查询时由 _ensure_business_loaded() 导入 app.domain.tools.business 包
+      （app/domain/tools/business/__init__.py 再导入各业务模块），导入动作即触发注册，
       以此规避 registry ↔ business ↔ protocol 的循环导入；
     - 重复注册同名工具直接抛 ValueError，防止静默覆盖。
 
@@ -26,9 +26,9 @@
 LLM 无法通过参数伪造 user_id / session_id。
 
 被谁使用：
-    - tools/dispatcher.py：get_spec() 按 tool_name 查 ToolSpec；
-    - tools/shadow.py：tools_for() 取本决策层工具做 bind_tools 影子决策；
-    - tests/tools/test_tool_layer_p1.py：注册表隔离与工具层单测。
+    - app/domain/tools/dispatcher.py：get_spec() 按 tool_name 查 ToolSpec；
+    - app/domain/tools/shadow.py：tools_for() 取本决策层工具做 bind_tools 影子决策；
+    - tests/app/domain/tools/test_tool_layer_p1.py：注册表隔离与工具层单测。
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ from typing import Dict, List
 
 from langchain_core.tools import StructuredTool
 
-from tools.protocol import ToolContext, ToolSpec
+from app.domain.tools.protocol import ToolContext, ToolSpec
 
 logger = logging.getLogger(__name__)
 
@@ -52,13 +52,13 @@ def _ensure_business_loaded() -> None:
     """惰性导入业务包，触发 register_tool 显式自注册（避免循环导入）。
 
     被谁调用：get_spec/all_specs/specs_for/tools_for 四个查询函数的入口处，
-    保证任何查询之前 tools.business 已导入、全部 ToolSpec 已登记。
+    保证任何查询之前 app.domain.tools.business 已导入、全部 ToolSpec 已登记。
     异常：业务模块导入失败会原样上抛（导入期错误属于配置/代码错误，不吞）。
     """
     global _business_loaded
     if _business_loaded:
         return
-    from tools import business  # noqa: F401  导入即注册
+    from app.domain.tools import business  # noqa: F401  导入即注册
 
     _business_loaded = True
 
@@ -66,7 +66,7 @@ def _ensure_business_loaded() -> None:
 def register_tool(spec: ToolSpec) -> ToolSpec:
     """注册一个工具（业务模块导入时调用）。重复注册直接报错，防止静默覆盖。
 
-    被谁调用：tools/business/knowledge_business.py 模块尾部两次
+    被谁调用：app/domain/tools/business/knowledge_business.py 模块尾部两次
     （knowledge_search、session_file_search）；未来新业务模块同法调用。
     参数：spec 为待登记的工具声明，先经 ToolSpec.validate() 强校验。
     返回：原 spec（便于链式/模块级表达式使用）。
@@ -84,7 +84,7 @@ def register_tool(spec: ToolSpec) -> ToolSpec:
 def get_spec(name: str) -> ToolSpec:
     """按工具名查询 ToolSpec；未注册时返回 None（不抛错，由 dispatcher 兜底）。
 
-    被谁调用：tools/dispatcher.py 的 ToolDispatcher.execute() 分发第一步查表。
+    被谁调用：app/domain/tools/dispatcher.py 的 ToolDispatcher.execute() 分发第一步查表。
     参数：name 为 LLM function calling 决策出的 tool_name。
     返回：命中的 ToolSpec；查无此工具时返回 None。
     """
@@ -117,9 +117,9 @@ def tools_for(owner_agent: str, ctx: ToolContext) -> List[StructuredTool]:
     """生成某决策层在本次请求中可绑定的 LangChain 工具列表。
 
     被谁调用：
-    - tools/shadow.py 的 run_shadow()：取工具喂给 llm.bind_tools 做影子决策；
+    - app/domain/tools/shadow.py 的 run_shadow()：取工具喂给 llm.bind_tools 做影子决策；
     - P2 主链路接入后将由 RAGAgent/FileAgent 在每轮决策前调用；
-    - tests/tools/test_tool_layer_p1.py：验证按决策层隔离。
+    - tests/app/domain/tools/test_tool_layer_p1.py：验证按决策层隔离。
     参数：
         owner_agent：决策层名，决定可见工具集合（跨域工具不出现在 Schema 中）；
         ctx：本次请求的服务端上下文，被闭包捕获注入执行通道，
@@ -140,7 +140,7 @@ def tools_for(owner_agent: str, ctx: ToolContext) -> List[StructuredTool]:
             def _run(**kwargs) -> str:
                 # StructuredTool 的标准执行入口：LLM 经 invoke 直调时走此闭包
                 # 惰性导入避免 registry <-> dispatcher 循环依赖
-                from tools.dispatcher import get_tool_dispatcher
+                from app.domain.tools.dispatcher import get_tool_dispatcher
 
                 # 单工具调用包装成统一的一批调用格式，仍走完整鉴权/钳制/超时/降级通道
                 results = get_tool_dispatcher().execute(

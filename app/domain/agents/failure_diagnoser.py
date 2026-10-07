@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.failure_diagnoser
+模块名：app.domain.agents.failure_diagnoser
 
 作用：
     失败诊断器：关键 Agent（vague/analysis）执行抛异常后，由编排层调用

@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.analysis_agent
+模块名：app.domain.agents.analysis_agent
 
 作用：
 意图分析 Agent：根据用户问题语义判断需要调用的下游 Agent（RAGAgent / FileAgent）。
@@ -49,7 +49,7 @@ class AnalysisAgent(BaseAgent):
         dict 经 MessageBus 发布给被选中的下游 Agent；附带检查当前
         用户/会话是否存在上传文件（has_uploaded_files）供下游参考。
     继承关系：实现 BaseAgent 抽象接口 create_agent（基类另一子类为
-        VagueAgent，见 multi_agent/base_agent.py）；LLM/总线等公共能力
+        VagueAgent，见 app/domain/agents/base_agent.py）；LLM/总线等公共能力
         由 BaseAgent.__init__ 构建。
     实例化位置：service/agent_service.py 的 AgentService._create_agents()，
         AnalysisAgent(bus=..., user_id=..., session_id=...,
@@ -61,7 +61,7 @@ class AnalysisAgent(BaseAgent):
           在 create_agent 中经 PromptTemplate 渲染；
         - self.user_id/self.session_id：来源编排层注入（JWT 用户/会话号），
           仅用于 _check_uploaded_files 的上传目录范围匹配；
-        - self.history_summary：早期对话摘要（来源 memory/context_memory
+        - self.history_summary：早期对话摘要（来源 app/domain/memory/context_memory
           经 ChatService 透传），注入 prompt 消解多轮指代。
     """
 
@@ -80,7 +80,7 @@ class AnalysisAgent(BaseAgent):
           检查的私有范围（{user_id}_ 前缀文件）；
         - session_id：会话号（来源：请求上下文），决定会话临时目录
           UPLOAD_DIR/temp/{user_id}_{session_id}/ 的检查范围；
-        - history_summary：早期对话摘要（来源：memory/context_memory），
+        - history_summary：早期对话摘要（来源：app/domain/memory/context_memory），
           无摘要时 create_agent 内回填"无"。
         """
         super().__init__(agent_name="AnalysisAgent", bus=bus, memory=memory, tools=tools)

@@ -8,7 +8,7 @@ prompt 检查只做字符串包含；agent 行为用本地临时目录；源码�
 
 覆盖段落（内嵌测试点是模块级语句，非 pytest test_ 函数）：
 1. retrieval.py — 混合检索（关键词提取、RRF 融合、candidate_key 去重、scope 过滤）
-2. function_tools.py — vague / course / file 工具语义判定（内联金标用例表）
+2. function_app.domain.tools.py — vague / course / file 工具语义判定（内联金标用例表）
 3. llm_business.py — 各 prompt 模板包含课程咨询领域语义指引
 4. analysis_agent.py — _check_uploaded_files 检查 UPLOAD_DIR 与 temp 会话目录
 5. file_agent.py — handle() 在 db=None 时仍可检索 temp store（不抛异常）
@@ -17,8 +17,8 @@ prompt 检查只做字符串包含；agent 行为用本地临时目录；源码�
 8. 安全机制 — SummaryAgent 相关性回退（0.6 阈值、最多 3 轮、降级空结果）
 9. verifier.py — score_relevance 存在且 LLM 不可用时默认 1.0 放行
 
-被测对象来源：multi_agent/（retrieval、analysis_agent、file_agent、
-message_bus、verifier、agent_service）、tools/function_tools.py、
+被测对象来源：app/domain/agents/（retrieval、analysis_agent、file_agent、
+message_bus、verifier、agent_service）、app/domain/tools/function_app.domain.tools.py、
 model_llm/llm_business.py、core/config.py 的 UPLOAD_DIR。
 
 运行方式：
@@ -56,7 +56,7 @@ def check(name, condition):
 # ====================== 1. retrieval.py ======================
 print("\n=== 1. retrieval.py — 混合检索 ===")
 
-from multi_agent.retrieval import (
+from app.domain.agents.retrieval import (
     _extract_keywords,
     _rrf_merge,
     _candidate_key,
@@ -108,10 +108,10 @@ check("scope 过滤: 本人 private 可见", _doc_matches_scope(doc_private_ok, 
 check("scope 过滤: 他人 private 不可见", _doc_matches_scope(doc_private_other, where) is False)
 
 
-# ====================== 2. function_tools.py ======================
-print("\n=== 2. function_tools.py — 工具语义判定 ===")
+# ====================== 2. function_app.domain.tools.py ======================
+print("\n=== 2. function_app.domain.tools.py — 工具语义判定 ===")
 
-from tools.function_tools import vague, course, file as file_tool
+from app.domain.tools.function_tools import vague, course, file as file_tool
 
 # 2.1 vague 工具
 # 金标数据（正常/边界）：(query, 期望模糊布尔, 意图说明)，前 3 组模糊正例、后 5 组明确负例
@@ -190,8 +190,8 @@ check("FileLLM: 临时文件检索", "临时文件" in file_prompt)
 # ====================== 4. analysis_agent.py ======================
 print("\n=== 4. analysis_agent.py — _check_uploaded_files ===")
 
-from multi_agent.analysis_agent import AnalysisAgent
-from multi_agent.message_bus import MessageBus
+from app.domain.agents.analysis_agent import AnalysisAgent
+from app.domain.agents.message_bus import MessageBus
 
 bus = MessageBus()
 agent = AnalysisAgent(bus=bus)
@@ -228,7 +228,7 @@ finally:
 # ====================== 5. file_agent.py ======================
 print("\n=== 5. file_agent.py — db=None 时仍可检索 ===")
 
-from multi_agent.file_agent import FileAgent
+from app.domain.agents.file_agent import FileAgent
 
 # 5.1 db=None 构造不抛异常
 try:
@@ -286,7 +286,7 @@ check("相关性回退: 回退时重新检索", "_run_retrieval" in source_summa
 # ====================== 9. verifier.score_relevance ======================
 print("\n=== 9. verifier — score_relevance 方法 ===")
 
-from multi_agent.verifier import IntentVerifier
+from app.domain.agents.verifier import IntentVerifier
 
 check("IntentVerifier.score_relevance 存在", hasattr(IntentVerifier, "score_relevance"))
 

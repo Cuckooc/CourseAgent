@@ -12,7 +12,7 @@
       save_messages_batch()（短期记忆转长期记忆时批量写入）。
 
 被谁使用：
-    - memory/long_term.py 的 LongTermMemory 构造时实例化
+    - app/domain/memory/long_term.py 的 LongTermMemory 构造时实例化
       （self._information_dao = information_dao or Information()），
       落库任务调用 save_messages_batch() 把 Redis 短期记忆一次性转存 MySQL。
       注：save_information() 为早期逐轮双条写入接口，当前主链路对话期间只写
@@ -33,7 +33,7 @@ class Information(BaseInformation):
 
     承担聊天消息的新增（单轮两条 INSERT 或批量 INSERT）；
     查询见 dao/read.py 与 dao/session.py，软删除见 dao/soft_delete.py。
-    实例化位置：memory/long_term.py 的 LongTermMemory.__init__
+    实例化位置：app/domain/memory/long_term.py 的 LongTermMemory.__init__
     （self._information_dao）。__init__ 无形参，仅调用父类 ABC 构造；
     不持有数据库连接，会话在各方法内通过 session_scope() 获取，
     随 with 块自动提交/回滚。
@@ -53,7 +53,7 @@ class Information(BaseInformation):
         core.sql_guard.safe_execute 执行，杜绝 SQL 注入。
 
         被谁调用：早期逐轮落库链路；当前生产主链路已由 Redis 短期记忆 +
-        save_messages_batch() 批量落库替代（memory/long_term.py），本方法保留兼容。
+        save_messages_batch() 批量落库替代（app/domain/memory/long_term.py），本方法保留兼容。
         参数：
             data: 字段字典，由 service 层传入：
                   - session_id：会话 ID（per-user 会话序号）；
@@ -116,7 +116,7 @@ class Information(BaseInformation):
         兜底为 "user"），session_id/user_id/content 均以绑定参数传入
         （safe_execute 收到 list 形参时按 executemany 批量执行），杜绝 SQL 注入。
 
-        被谁调用：memory/long_term.py 的落库逻辑
+        被谁调用：app/domain/memory/long_term.py 的落库逻辑
         （文件.函数：long_term.LongTermMemory 内的转存方法，调用点
         self._information_dao.save_messages_batch(...)）。
         参数：

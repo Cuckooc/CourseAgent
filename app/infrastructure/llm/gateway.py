@@ -12,7 +12,7 @@
    （ChatService 返回友好提示；上下文改写失败则退回原始 query，不阻断对话）；
 4. 致命错误（401/403/400 等）不重试、不换模型（同一密钥与参数下换模型无意义），快速失败。
 
-接口与 ChatOpenAI 完全一致（bind_tools/create_react_agent/chain 无感知）：
+接口与 ChatOpenAI 完全一致（bind_app/domain/tools/create_react_agent/chain 无感知）：
 非流式路径汇入 _generate、流式路径汇入 _stream，在此两处统一织入重试与降级。
 
 配置来源（build_chat_model 默认值，env/qianwen_config.env → config/setting.py
@@ -31,7 +31,7 @@
 - model_llm/llm.py 的 LLM 基类（llm_business 全部提示词类经此间接持有网关）；
 - multi_agent：base_agent.py（各 ReAct Agent 基类）、chat_agent.py、
   rag_agent.py、file_agent.py、summary_agent.py、verifier.py、failure_diagnoser.py；
-- service/preference_service.py、memory/profile_service.py、memory/context_memory.py、
+- service/preference_service.py、app/domain/memory/profile_service.py、app/domain/memory/context_app.domain.memory.py、
   util/context.py。
 
 与 embedding 侧的关键差异：chat 允许跨模型降级（不同 chat 模型输出同为文本，
@@ -360,10 +360,10 @@ def build_chat_model(**overrides: Any) -> LLMGateway:
     gateway_max_retries=llm.MAX_RETRIES（重试次数）、
     gateway_backoff_base=llm.BACKOFF_BASE_SECONDS（退避基数）。
     被谁调用：model_llm/llm.py 的 LLM 基类（llm_business 全部提示词类）；
-    multi_agent/base_agent.py、chat_agent.py、rag_agent.py、file_agent.py、
+    app/domain/agents/base_agent.py、chat_agent.py、rag_agent.py、file_agent.py、
     summary_agent.py、verifier.py、failure_diagnoser.py；
-    service/preference_service.py、memory/profile_service.py、
-    memory/context_memory.py、util/context.py。
+    service/preference_service.py、app/domain/memory/profile_service.py、
+    app/domain/memory/context_app.domain.memory.py、util/context.py。
     参数：**overrides —— 调用点覆盖项（如 temperature=self.temperature、
           failure_diagnoser 的更短 timeout），优先级高于配置默认值。
     返回：LLMGateway 实例（ChatOpenAI  drop-in 替代），去向各 Agent/chain

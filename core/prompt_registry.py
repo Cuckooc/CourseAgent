@@ -13,7 +13,7 @@
 被谁使用（Grep get_prompt_version）：
     - service/agent_service.py：诊断（diagnoser）、相关性判定（relevance）
       链路写 chain_log 时记录 prompt_version；
-    - multi_agent/state_machine.py：多智能体状态机在记录各 Agent 调用时
+    - app/domain/agents/state_machine.py：多智能体状态机在记录各 Agent 调用时
       写入对应 prompt_version。
 """
 
@@ -40,7 +40,7 @@ def get_prompt_version(agent_name):
 
     功能：从 PROMPT_VERSIONS 常量表中查询版本号。
     被谁调用：service/agent_service.py（diagnoser、relevance 链路）、
-        multi_agent/state_machine.py（各 Agent 调用落 chain_log 时）。
+        app/domain/agents/state_machine.py（各 Agent 调用落 chain_log 时）。
     参数：
         agent_name: Agent/Prompt 标识，来源为调用方硬编码的链路名
             （如 "diagnoser"、"relevance" 或状态机当前 agent_name）。

@@ -21,7 +21,7 @@
 
 被谁使用：
     - dao/session.py：会话取号序列 ``with distributed_lock(f"seq:{user_id}")``；
-    - memory/long_term.py、memory/profile_service.py、core/purge_scheduler.py：
+    - app/domain/memory/long_term.py、app/domain/memory/profile_service.py、core/purge_scheduler.py：
       后台 flusher/purge 周期任务用 try_acquire_cycle_lock 做多副本互斥。
 """
 import logging
@@ -118,8 +118,8 @@ def try_acquire_cycle_lock(key: str, interval_seconds: float) -> bool:
     因此 Redis 异常时按「可执行」放行；而抢锁失败严格返回 False，不允许并发跑。
 
     被谁调用：
-        - memory/long_term.py 的短期→长期记忆 flusher 循环；
-        - memory/profile_service.py 的用户画像落库循环；
+        - app/domain/memory/long_term.py 的短期→长期记忆 flusher 循环；
+        - app/domain/memory/profile_service.py 的用户画像落库循环；
         - core/purge_scheduler.py 的软删除/过期数据清理循环。
     参数：
         key: 周期任务锁的逻辑名（不含前缀），来源为各调用方定义的 *_FLUSH_LOCK_KEY 常量；

@@ -128,7 +128,7 @@ class UserProfile(Base):
     """用户画像表（长期记忆）：一个用户一条记录，MySQL 表名：user_profile。
 
     由 Base.metadata 建表，被 alembic 迁移 0003_user_profile（create_table）
-    与 dao/profile.py、memory/profile_service.py 使用；画像先在 Redis 暂存，
+    与 dao/profile.py、app/domain/memory/profile_service.py 使用；画像先在 Redis 暂存，
     间隔/到期后 flush 到本表，个人信息页展示与编辑读写 interests/topics。
     索引/外键：user_id 为主键且为外键 fk_profile_user → user_information.id
     （一对一，随用户删除而清理）。
@@ -198,7 +198,7 @@ class SessionKeyword(Base):
     MySQL 表名：session_keywords。
 
     由 Base.metadata 建表（对应 db/migrations/004_session_keywords.sql），
-    被 dao/session_keyword.py 与 multi_agent/summary_agent.py 的关键词产出
+    被 dao/session_keyword.py 与 app/domain/agents/summary_agent.py 的关键词产出
     链路使用；累积关键词注入 ChatLLM 提示词的 {session_keywords}，帮助
     模型锁定会话主题。
     索引/约束：(user_id, session_id) 唯一键 uk_user_session_kw。

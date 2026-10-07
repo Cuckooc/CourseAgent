@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.summary_agent
+模块名：app.domain.agents.summary_agent
 
 作用：
     流水线阶段 4 的检索结果汇总 Agent。订阅 MessageBus 中 RAGAgent /
@@ -25,7 +25,7 @@ Agent 间数据流：
       RAGAgent.handle / FileAgent.handle（payload 含 query/top_k/results）；
     - 输出（生产者）：bus.publish("SummaryAgent", "ChatAgent", output)，
       payload 含 answer（汇总文本/兜底文案）与 keywords（汇总关键词，
-      相关性通过后由编排层累积进 memory/session_keyword_service）。
+      相关性通过后由编排层累积进 app/domain/memory/session_keyword_service）。
 """
 from .message_bus import MessageBus
 from config.setting import llm,agent
@@ -48,7 +48,7 @@ def _parse_information_json(text: str) -> Tuple[str, List[str]]:
     返回：(summary, keywords)——
       - summary：汇总文本 str，去向 output["answer"] 交总线给 ChatAgent；
       - keywords：关键词 str 列表，去向 output["keywords"]，相关性通过后
-        由编排层累积进会话关键词（memory/session_keyword_service）。
+        由编排层累积进会话关键词（app/domain/memory/session_keyword_service）。
     解析策略（JSON 解析失败兜底）：Schema（core.output_validator.
       SummaryOutput）校验失败时先用 json.loads 宽松解析；再失败则把
       整段文本当作 summary、keywords 置空，保证汇总链路不因格式问题中断。

@@ -17,8 +17,8 @@
     - test_retrieval / test_retrieval_temp：持久化库 / 会话临时内存库检索。
 
 被谁使用（Grep "embedding.text_embedding" 确认）：
-    - multi_agent/rag_agent.py（JSON ETL 三步 + build_chromadb）、file_agent.py；
-    - multi_agent/retrieval.py（get_embedding / build_scope_filter / MAX_L2_DISTANCE）；
+    - app/domain/agents/rag_agent.py（JSON ETL 三步 + build_chromadb）、file_agent.py；
+    - app/domain/agents/retrieval.py（get_embedding / build_scope_filter / MAX_L2_DISTANCE）；
     - service/vector_store.py、file_service.py、temp_knowledge_store.py（get_embedding）；
     - file_analysis/file.py、util/context.py 及 scripts/ 下调试/维护脚本。
 
@@ -62,7 +62,7 @@ dashscope.api_key = os.getenv('api_key')
 def load_json_data(json_file_path:str)->list[dict]:
     """读取内置 JSON 问答知识库文件并解析为 dict 列表。
 
-    被谁调用：本模块 __main__ 离线建库流程；multi_agent/rag_agent.py 懒加载公共知识库。
+    被谁调用：本模块 __main__ 离线建库流程；app/domain/agents/rag_agent.py 懒加载公共知识库。
     参数：json_file_path —— JSON 文件路径（主流程来自 data/LearnPlan_Dialogue_Collection 目录）。
     返回：list[dict]，每条含 instruction/input/output 字段，去向 json_to_documents。
     异常：文件不存在或 JSON 非法时由 open/json.load 直接抛出（离线脚本无 fallback）。
@@ -76,7 +76,7 @@ def json_to_documents(json_data:list[dict])->list[Document]:
 
     功能：将每条记录拼成「用户问题 + 老师回答」文本作为 page_content，并把
     index/instruction/input/output 与 scope=public 写入 metadata。
-    被谁调用：本模块 __main__；multi_agent/rag_agent.py 构建公共知识库。
+    被谁调用：本模块 __main__；app/domain/agents/rag_agent.py 构建公共知识库。
     参数：json_data —— load_json_data 的解析结果（DAO/JSON 文件来源）。
     返回：list[Document]，去向 split_documents 分块后写入 Chroma。
     """
@@ -98,7 +98,7 @@ def split_documents(docs:list[Document])->list[Document]:
 
     功能：使用 RecursiveCharacterTextSplitter 按 512 字符切块、相邻块重叠 50
     字符，add_start_index 在 metadata 中记录块内起始偏移；长度函数为字符数 len。
-    被谁调用：本模块 __main__；multi_agent/rag_agent.py。
+    被谁调用：本模块 __main__；app/domain/agents/rag_agent.py。
     参数：docs —— json_to_documents 产出的 Document 列表。
     返回：分块后的 list[Document]，去向 build_chromadb 入库。
     说明：上传文件的父子分块（parent_child）是另一套策略，不在此函数处理。
@@ -118,7 +118,7 @@ def get_embedding():
 
     功能：构造 langchain DashScopeEmbeddings；@lru_cache(maxsize=1) 保证全进程
     只实例化一次，重复调用返回同一对象。
-    被谁调用：multi_agent/retrieval.py、rag_agent.py、service/vector_store.py、
+    被谁调用：app/domain/agents/retrieval.py、rag_agent.py、service/vector_store.py、
     file_service.py、temp_knowledge_store.py、file_analysis/file.py、util/context.py
     及 scripts 维护脚本，作为 Chroma 的 embedding_function。
     返回：DashScopeEmbeddings 实例（1536 维），去向 Chroma 建库/查询向量化，
@@ -138,7 +138,7 @@ def build_chromadb(docs:list[Document],embedding_model,persist_path:str=None)->C
 
     功能：persist_path 已存在且非空 → 直接打开（不重复入库），返回库内条数；
     否则新建 Chroma 并按 batch_size=25 分批 add_documents（控制单次 API 批量）。
-    被谁调用：本模块 __main__；multi_agent/rag_agent.py（公共库）、file_agent.py。
+    被谁调用：本模块 __main__；app/domain/agents/rag_agent.py（公共库）、file_agent.py。
     参数：docs —— 分块后的 Document（仅首次建库使用）；
           embedding_model —— get_embedding() 返回的嵌入客户端；
           persist_path —— Chroma 持久化目录；None 时取 settings.CHROMA_DIR
@@ -183,7 +183,7 @@ def build_scope_filter(user_id: int = None):
     曾导致登录用户的向量/关键词检索全部静默失效）。旧版本块改由检索层在
     Python 侧过滤（is_latest is False 丢弃，字段缺失或 True 保留）。
 
-    被谁调用：本模块 test_retrieval；multi_agent/retrieval.py 持久化库检索；
+    被谁调用：本模块 test_retrieval；app/domain/agents/retrieval.py 持久化库检索；
     scripts/dev/debug 下调试脚本与 tests/phase/test_dedup_version.py。
     参数：user_id —— 当前登录用户 ID（来源：登录态 JWT/DAO 透传）；None 表示
           未登录/公共场景，仅放行 public。
@@ -202,7 +202,7 @@ def build_scope_filter(user_id: int = None):
 
 # Chroma 默认 hnsw 空间为 L2 距离（越小越相似）。
 # 实测 DashScope embedding 下：强相关 0.5~1.1，无关 >=1.25，取 1.15 作为上限。
-# 含义：检索得分超过该值即判为不相关丢弃；被 test_retrieval 与 multi_agent/retrieval.py
+# 含义：检索得分超过该值即判为不相关丢弃；被 test_retrieval 与 app/domain/agents/retrieval.py
 # （legacy 距离阈值参数）读取。
 MAX_L2_DISTANCE = 1.15
 
@@ -212,7 +212,7 @@ def test_retrieval(db: Chroma, query: str, top_k: int = 3, user_id: int = None, 
     可见范围 = 公共(public) + 当前用户私有(private)。
     会话临时知识库(scope=temp)不持久化，由 service 层合并内存库结果。
 
-    被谁调用：本模块 __main__ 的离线自检（线上检索主路径在 multi_agent/retrieval.py，
+    被谁调用：本模块 __main__ 的离线自检（线上检索主路径在 app/domain/agents/retrieval.py，
     复用同样的过滤与阈值策略）。
     参数：db —— build_chromadb 加载的持久化 Chroma；
           query —— 用户问题文本（经上下文改写后传入 multi_agent）；
@@ -241,7 +241,7 @@ def test_retrieval_temp(db: Chroma, query: str, top_k: int = 3)->list[Document]:
     临时文件为用户在当前会话主动上传、库规模小，直接取最相似的 top_k，
     不套用持久化库的绝对距离阈值（避免短查询被杂糅 chunk 稀释后漏召回）。
 
-    被谁调用：预留的会话临时库检索入口（线上等价逻辑在 multi_agent/retrieval.py
+    被谁调用：预留的会话临时库检索入口（线上等价逻辑在 app/domain/agents/retrieval.py
     对 TempKnowledgeStore 内存库的检索分支）。
     参数：db —— service/temp_knowledge_store.get_db 产出的会话级 Chroma；
           query —— 用户问题；top_k —— 返回块数上限。

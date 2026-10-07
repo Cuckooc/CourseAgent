@@ -24,7 +24,7 @@
     - control/file_control.py 的 _process_saved_file() 对 temp 临时文件
       调 pdf_text 补提原文，用于用户偏好抽取；
     - embedding/parent_child.py 调 split_str 取父子切分的原子段落；
-    - multi_agent/file_agent.py 调 pdf_text/split_str/to_documents/
+    - app/domain/agents/file_agent.py 调 pdf_text/split_str/to_documents/
       build_chromadb 构建文件问答向量库；
     - 本文件 __main__ 块为本地一键自测入口。
 """
@@ -70,7 +70,7 @@ def  pdf_text(path:str)->str:
       类型 PDF（文件.函数：file_service._extract_text）；
     - control/file_control.py：_process_saved_file() 对 temp 文件补提
       原文做用户偏好抽取（文件.函数：file_control._process_saved_file）；
-    - multi_agent/file_agent.py：FileAgent 构建文件向量库；
+    - app/domain/agents/file_agent.py：FileAgent 构建文件向量库；
     - 本文件 __main__ 自测入口。
 
     参数：
@@ -126,7 +126,7 @@ def split_str(text:str,max_len=500,min_len=50)->list[str]:
     - embedding/parent_child.py：build_parent_child_chunks 内调用，
       split_str 的产出作为父块打包的原子单元
       （文件.函数：parent_child.build_parent_child_chunks）；
-    - multi_agent/file_agent.py：FileAgent 构建文件向量库；
+    - app/domain/agents/file_agent.py：FileAgent 构建文件向量库；
     - 本文件 __main__ 自测入口。
 
     参数：
@@ -174,7 +174,7 @@ def to_documents(chunks: list[str], source: str, scope: str = "private", user_id
     做权限过滤与知识库管理展示的依据。
 
     被谁调用：
-    - multi_agent/file_agent.py：FileAgent 构建文件向量库
+    - app/domain/agents/file_agent.py：FileAgent 构建文件向量库
       （文件.类.方法：file_agent.FileAgent，内部调 to_documents）；
     - 本文件 __main__ 自测入口；
     - 上传主链路中 service/file_service 另有带 file_id/content_hash 的
@@ -222,7 +222,7 @@ def build_chromadb(docs:list[Document],embedding_model,persist_path:str=None)->C
     file_agent 与本地自测场景。
 
     被谁调用：
-    - multi_agent/file_agent.py：FileAgent 构建/刷新文件向量库
+    - app/domain/agents/file_agent.py：FileAgent 构建/刷新文件向量库
       （文件.类.方法：file_agent.FileAgent）；
     - 本文件 __main__ 自测入口。
 

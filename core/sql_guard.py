@@ -28,7 +28,7 @@
 
 被谁使用（Grep safe_execute / from core.sql_guard）：
     dao 下全部数据访问模块（user/read/information/session/history/profile/
-    feedback/chain_log/soft_delete/session_keyword）、memory/session_rollover、
+    feedback/chain_log/soft_delete/session_keyword）、app/domain/memory/session_rollover、
     core/purge_scheduler。
 """
 import logging
@@ -198,7 +198,7 @@ def safe_execute(session, statement, params=None):
 
     功能：替代 DAO 中的 session.execute(text(...), params)，把两条安全
     规则收敛到一个必经入口；SELECT 被改写后重新构造成 text() 语句。
-    被谁调用：dao 包全部模块、memory/session_rollover、core/purge_scheduler
+    被谁调用：dao 包全部模块、app/domain/memory/session_rollover、core/purge_scheduler
         （Grep 结果见模块 docstring）。
     参数：
         session: SQLAlchemy 会话，来源为 db.session.session_scope()；

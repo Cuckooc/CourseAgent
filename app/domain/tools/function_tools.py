@@ -1,5 +1,5 @@
 """
-模块名：tools.function_tools
+模块名：app.domain.tools.function_tools
 
 作用：
     上一代 ReAct 形态的函数工具集（LangChain @tool 装饰器），供
@@ -31,7 +31,7 @@ v2 改造：将纯关键词硬匹配升级为「关键词 + 语义感知启发�
 
 被谁使用（现状）：
     - 早期由 VagueAgent / AnalysisAgent 经 ReAct（create_react_agent）调用；
-      当前主链路（multi_agent/、service/）已不再 import 本模块，判定改由
+      当前主链路（app/domain/agents/、service/）已不再 import 本模块，判定改由
       LLM 直出 + Agent 规则完成（vague_agent.py 内仅模拟 vague 工具的输出结构）；
     - 现仅作为"规则基线"被评估/回归脚本调用：
       tests/phase/test_all_changes.py（vague/course/file 语义判定）、
@@ -70,7 +70,7 @@ TOOL_CATEGORIES = {
 class ToolResult:
     """旧式 ReAct 工具执行结果的统一封装：标准化返回格式 + 耗时统计。
 
-    类作用：与 tools/protocol.py 的 ToolResult 同名但互不相干——本类服务于
+    类作用：与 app/domain/tools/protocol.py 的 ToolResult 同名但互不相干——本类服务于
     上一代 @tool 函数工具集，由 execute_tool() 统一产出，把"成功数据/失败
     原因/耗时/工具名/类别"收敛为固定结构，便于 ReAct Agent 或评估脚本一致消费。
     被谁使用：execute_tool() 构造；tests/phase/test_phase8_agent_eval.py
@@ -280,7 +280,7 @@ def vague(query: str) -> str:
     输出结构：固定中文结论文本（"…模糊…需要进一步澄清" 或 "…意图较为明确…"），
               消费方靠包含"模糊/明确"关键字解析布尔结论：早期为 VagueAgent 的
               ReAct 循环，现为 tests/phase/test_all_changes.py、
-              test_phase8_agent_eval.py 的金标准评估（multi_agent/vague_agent.py
+              test_phase8_agent_eval.py 的金标准评估（app/domain/agents/vague_agent.py
               仅模拟同款输出结构，不再 import 本工具）。
     """
     query = query.strip()

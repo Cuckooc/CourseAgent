@@ -1,5 +1,5 @@
 """
-模块：memory.session_rollover —— 会话自动滚换（长对话漂移治理）。
+模块：app.domain.memory.session_rollover —— 会话自动滚换（长对话漂移治理）。
 
 背景：实测单会话超过约 12 轮后，模型对长历史的利用开始劣化（机械复读摘要、
 事实泛化、回答膨胀），即使早期摘要中的事实并未丢失。达到设定轮数后把会话
@@ -36,7 +36,7 @@
 - service/chat_service.py：ChatService._maybe_rollover 在 handle/
   handle_stream 本轮落库后调用（唯一生产调用方）；返回的新会话 ID 写入
   响应/done 帧的 session_id（附 rolled_over/previous_session_id 交前端切换）；
-  multi_agent/ 不直接 import 本模块，滚换后由 chat_service 用新 sid 取
+  app/domain/agents/ 不直接 import 本模块，滚换后由 chat_service 用新 sid 取
   上下文/画像/关键词再注入。
 """
 import logging

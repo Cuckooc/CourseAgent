@@ -1,5 +1,5 @@
 """
-模块名：tests/tools/test_tool_layer_p1.py。
+模块名：tests/app/domain/tools/test_tool_layer_p1.py。
 
 P1 工具调用层单元测试套件（无网络 / 无 LLM / 无 embedding / 无数据库依赖），
 风险类型：工具注册表越权、参数越界、Dispatcher 横切缺口（未知工具/跨域/角色/
@@ -16,21 +16,21 @@ P1 工具调用层单元测试套件（无网络 / 无 LLM / 无 embedding / 无
   test_knowledge_search_empty_query、test_session_file_search_business、
   test_session_file_search_no_session
 - 影子对比器（fake LLM）：test_shadow_run_report、test_shadow_default_when_no_tool_calls
-夹具：echo_tool（向 tools.registry._REGISTRY 临时注册 ut_echo/ut_slow 两个
+夹具：echo_tool（向 app.domain.tools.registry._REGISTRY 临时注册 ut_echo/ut_slow 两个
 ToolSpec，yield 后 pop 清理）。
 
 被测对象来源：
-- tools/registry.py（get_spec/tools_for/_REGISTRY 注册表）；
-- tools/dispatcher.py（get_tool_dispatcher：归属/角色校验、身份字段剥离、
+- app/domain/tools/registry.py（get_spec/tools_for/_REGISTRY 注册表）；
+- app/domain/tools/dispatcher.py（get_tool_dispatcher：归属/角色校验、身份字段剥离、
   去重、超时降级为 ToolResult.degraded）；
-- tools/protocol.py（ToolSpec/ToolContext/ToolResult/KnowledgeSearchArgs、
+- app/domain/tools/protocol.py（ToolSpec/ToolContext/ToolResult/KnowledgeSearchArgs、
   RISK_READ/RISK_WRITE）；
-- tools/business.py（knowledge_search_fn/session_file_search_fn，
+- app/domain/tools/business.py（knowledge_search_fn/session_file_search_fn，
   retrieve_scoped/get_persistent_db/get_temp_store 三个外部依赖被替身）；
-- tools/shadow.py（run_shadow：tools_for/get_tool_dispatcher 被替身）。
+- app/domain/tools/shadow.py（run_shadow：tools_for/get_tool_dispatcher 被替身）。
 
 运行方式：
-    pytest tests/tools/test_tool_layer_p1.py
+    pytest tests/app/domain/tools/test_tool_layer_p1.py
     # 无自定义 marker、无需后端/DB/网络；纯进程内单测，可直接收集运行。
 """
 import time
@@ -38,15 +38,15 @@ import time
 import pytest
 from langchain_core.documents import Document
 
-from tools.protocol import (
+from app.domain.tools.protocol import (
     KnowledgeSearchArgs,
     ToolContext,
     ToolResult,
     ToolSpec,
 )
-from tools import registry as registry_mod
-from tools.dispatcher import get_tool_dispatcher
-from tools.business import knowledge_business
+from app.domain.tools import registry as registry_mod
+from app.domain.tools.dispatcher import get_tool_dispatcher
+from app.domain.tools.business import knowledge_business
 
 
 # ──────────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ def test_args_clamping():
 # ──────────────────────────────────────────────────────────────
 @pytest.fixture
 def echo_tool():
-    """夹具：向全局 tools.registry._REGISTRY 临时注册两个测试 ToolSpec。
+    """夹具：向全局 app.domain.tools.registry._REGISTRY 临时注册两个测试 ToolSpec。
 
     注册内容：ut_echo（回显 text 与 ctx.user_id，timeout 5s）与
     ut_slow（sleep 1s，timeout 0.2s，用于超时降级）；同时把
@@ -113,7 +113,7 @@ def echo_tool():
     消费者：test_dispatcher_cross_owner_denied/role_denied/
     identity_injection_stripped/dedup/timeout_degrades。
     """
-    from tools.protocol import RISK_READ, RISK_WRITE
+    from app.domain.tools.protocol import RISK_READ, RISK_WRITE
     from pydantic import BaseModel
 
     class EchoArgs(BaseModel):
@@ -344,7 +344,7 @@ def test_shadow_run_report(monkeypatch):
     tool_calls[0].name=="knowledge_search"。
     """
     from types import SimpleNamespace
-    from tools import shadow as shadow_mod
+    from app.domain.tools import shadow as shadow_mod
 
     # bind_tools(tools).invoke(...) 的假实现
     class FakeBound:
@@ -391,7 +391,7 @@ def test_shadow_default_when_no_tool_calls(monkeypatch):
     预期断言：归一化后 tool_calls[0].name 兜底为 "session_file_search"。
     """
     from types import SimpleNamespace
-    from tools import shadow as shadow_mod
+    from app.domain.tools import shadow as shadow_mod
 
     class FakeBound:
         def invoke(self, messages):

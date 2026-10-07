@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.file_agent
+模块名：app.domain.agents.file_agent
 
 作用：
     流水线阶段 3 的上传文件检索 Agent（File 路线）。消费 AnalysisAgent
@@ -46,13 +46,13 @@ from app.infrastructure.document.file import (
     build_chromadb,
 )
 from app.infrastructure.llm.gateway import build_chat_model
-from multi_agent.retrieval import retrieve_scoped
+from app.domain.agents.retrieval import retrieve_scoped
 from typing import Optional
 from langchain_chroma import Chroma
 import logging
 
 from core.config import settings
-from tools.protocol import ToolContext
+from app.domain.tools.protocol import ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -245,11 +245,11 @@ class FileAgent:
         - payload：上游 AnalysisAgent 的消息 dict（影子新链路的输入，
           含 query/user_id/session_id 等）；
         - legacy_result：旧链路刚产出的 result_msg（对比基准）。
-        返回：None。影子结果只用于观测对比（tools.shadow.run_shadow 内部
+        返回：None。影子结果只用于观测对比（app.domain.tools.shadow.run_shadow 内部
               记录/落库），任何异常都被吞掉记 debug 日志，绝不影响主链路。
         """
         try:
-            from tools.shadow import run_shadow
+            from app.domain.tools.shadow import run_shadow
 
             ctx = ToolContext(
                 user_id=self.user_id,

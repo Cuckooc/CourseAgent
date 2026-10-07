@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.message_bus
+模块名：app.domain.agents.message_bus
 
 作用：
 Agent 消息总线。

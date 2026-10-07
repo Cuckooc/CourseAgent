@@ -93,7 +93,7 @@ def soft_delete_session(user_id: int, session_id: int) -> bool:
                 deleted_at=str(time.time()),
             )
             try:
-                from memory.session_keyword_service import get_session_keyword_service
+                from app.domain.memory.session_keyword_service import get_session_keyword_service
                 get_session_keyword_service().clear(user_id, session_id)
             except Exception as e:
                 logger.warning("keyword clear on session delete failed: %s", e)

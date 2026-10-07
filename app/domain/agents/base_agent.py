@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.base_agent
+模块名：app.domain.agents.base_agent
 
 作用：
     定义多 Agent 流水线中"判定类 Agent"的抽象基类 BaseAgent，统一封装
@@ -11,8 +11,8 @@
       send_message 两个通用模板方法。
 
 被谁使用（Grep 结果）：
-    - multi_agent/vague_agent.py：class VagueAgent(BaseAgent)
-    - multi_agent/analysis_agent.py：class AnalysisAgent(BaseAgent)
+    - app/domain/agents/vague_agent.py：class VagueAgent(BaseAgent)
+    - app/domain/agents/analysis_agent.py：class AnalysisAgent(BaseAgent)
     （ChatAgent / RAGAgent / FileAgent / SummaryAgent 为独立实现，
       不继承本基类；它们在 service/agent_service.py 中由
       AgentService._create_agents() 直接实例化。）
@@ -34,9 +34,9 @@ class BaseAgent(ABC):
         可选复用的通用模板方法。
 
     接口契约（子类实现情况，Grep `(BaseAgent)` 结果）：
-        - VagueAgent（multi_agent/vague_agent.py）：意图模糊判定，
+        - VagueAgent（app/domain/agents/vague_agent.py）：意图模糊判定，
           输出经 MessageBus 分流到 ChatAgent（模糊）或 AnalysisAgent（明确）；
-        - AnalysisAgent（multi_agent/analysis_agent.py）：下游工具分发判定，
+        - AnalysisAgent（app/domain/agents/analysis_agent.py）：下游工具分发判定，
           输出 need_RAGAgent/need_FileAgent 标志并向 RAGAgent/FileAgent 发消息。
 
     实例化位置：

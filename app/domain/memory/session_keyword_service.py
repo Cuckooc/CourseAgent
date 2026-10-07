@@ -1,10 +1,10 @@
 """
-模块：memory.session_keyword_service —— 会话关键词累积服务（每轮对话提取
+模块：app.domain.memory.session_keyword_service —— 会话关键词累积服务（每轮对话提取
 关键词，按会话隔离保存，注入模型输入防压缩丢失）。
 
 作用：把分散在各轮（以及上下文压缩、RAG 汇总环节）产出的主题词累积为
 会话级关键词集合，读取时渲染为【会话关键词】前缀注入 LLM prompt
-（经 service/chat_service → AgentService → multi_agent/ChatAgent 的
+（经 service/chat_service → AgentService → app/domain/agents/ChatAgent 的
 session_keywords 形参），让早期轮次的主题焦点在长对话中持续可见，
 不被上下文压缩摘要稀释。数据链路：关键词累积 → Redis SET（滑动 TTL，
 标记脏集合）→ 后台 daemon 线程定期整串 UPSERT 到 MySQL
@@ -32,12 +32,12 @@ session_keywords 形参），让早期轮次的主题焦点在长对话中持续
 - service/chat_service.py：ChatService.__init__ 持单例；handle/handle_stream
   每轮调 render_prefix 取注入文本；_save_information 每轮调
   extract_and_accumulate（jieba 抽取）；
-- memory/context_memory.py：上下文 LLM 压缩成功后调 accumulate 累积摘要关键词；
+- app/domain/memory/context_app.domain.memory.py：上下文 LLM 压缩成功后调 accumulate 累积摘要关键词；
 - service/agent_service.py：SummaryAgent 汇总相关性通过后调 accumulate
   累积汇总关键词；
 - dao/soft_delete.py：软删会话时调 clear 联动清理；
 - control/app.py 的 lifespan 启动钩子：start_background_flusher 启守护线程；
-- memory/session_rollover.py：滚换时直接按 Redis key 复制 SET 到新会话。
+- app/domain/memory/session_rollover.py：滚换时直接按 Redis key 复制 SET 到新会话。
 """
 import logging
 import threading
@@ -126,7 +126,7 @@ class SessionKeywordService:
 
         被谁调用：service/chat_service.py 的 _save_information（经
         extract_and_accumulate，每轮 jieba 抽取后）；
-        memory/context_memory.py 的 _maybe_compress（LLM 压缩产出关键词）；
+        app/domain/memory/context_app.domain.memory.py 的 _maybe_compress（LLM 压缩产出关键词）；
         service/agent_service.py 汇总相关性通过后（SummaryAgent 关键词）。
         参数：user_id (int，JWT)、session_id (int，请求体)；
         keywords (List[str])——本批关键词（来源 jieba/LLM，元素自动 strip
@@ -210,7 +210,7 @@ class SessionKeywordService:
         """渲染【会话关键词】注入前缀（超字符上限截断）。
 
         被谁调用：service/chat_service.py 的 handle/handle_stream
-        （每轮构建 prompt 时，注入 multi_agent/ChatAgent 的 session_keywords）。
+        （每轮构建 prompt 时，注入 app/domain/agents/ChatAgent 的 session_keywords）。
         参数：user_id (int，JWT)、session_id (int，请求体)。
         返回：str——【会话关键词】开头的顿号拼接串；无关键词返回 ""；
         拼接长度超 settings.SESSION_KEYWORD_INJECT_CHARS（默认 200）时
@@ -255,7 +255,7 @@ class SessionKeywordService:
         """删除会话关键词：Redis SET + 进程内副本 + MySQL 软删，三处联动清理。
 
         被谁调用：dao/soft_delete.py 的软删会话流程（用户删除历史会话时）；
-        与 short_term.clear、context_memory.clear 在同一删除链路中。
+        与 short_term.clear、context_app.domain.memory.clear 在同一删除链路中。
         参数：user_id (int，JWT)、session_id (int，请求体)。返回：None。
         异常：Redis/DAO 各自 try，失败仅记 debug 日志，不向上抛错
         （MySQL 软删失败不阻断删会话主流程）。
@@ -424,7 +424,7 @@ def get_session_keyword_service() -> SessionKeywordService:
     """应用级单例工厂（双重检查锁，非每请求新建）。
 
     被谁调用：service/chat_service.py（ChatService.__init__）、
-    memory/context_memory.py（压缩侧写）、service/agent_service.py
+    app/domain/memory/context_app.domain.memory.py（压缩侧写）、service/agent_service.py
     （汇总关键词）、dao/soft_delete.py（删会话清理）、control/app.py
     lifespan（启动后台落库线程）。
     返回：SessionKeywordService——共享单例（内部惰性取全局 Redis 连接）。

@@ -27,10 +27,10 @@
 被谁使用：
 - control/file_control.py：上传 temp 文件时取单例并 ensure_session_dir 落盘；
 - service/file_service.py：process_temp_file 经 get_temp_store() 父子块入库；
-- multi_agent/retrieval.py：FileAgent 检索时 has_session/get_db 加载会话库；
-- tools/business/knowledge_business.py：session_file_search 工具 has_session 判定；
+- app/domain/agents/retrieval.py：FileAgent 检索时 has_session/get_db 加载会话库；
+- app/domain/tools/business/knowledge_business.py：session_file_search 工具 has_session 判定；
 - control/history_control.py：删除会话时 drop() 一并清理；
-- memory/session_rollover.py：长会话滚换时 relocate() 迁移临时库。
+- app/domain/memory/session_rollover.py：长会话滚换时 relocate() 迁移临时库。
 """
 import gc
 import logging
@@ -137,7 +137,7 @@ class TempKnowledgeStore:
               temp_u<uid>_s<sid>，embedding 函数取 embedding/text_embedding
               单例），登记进 _dbs 并记录 created/restored 日志。
         被谁调用：add_documents/add_parent_child_text（入库）、
-                  multi_agent/retrieval.py 与 knowledge_business（检索加载）、
+                  app/domain/agents/retrieval.py 与 knowledge_business（检索加载）、
                   relocate（创建新会话库）。
         参数：user_id/session_id——会话复合键。
         返回：Chroma——该会话专属的持久化向量库实例；去向：FileAgent 检索
@@ -240,8 +240,8 @@ class TempKnowledgeStore:
     def has_session(self, user_id: int, session_id: int) -> bool:
         """注册表已加载，或磁盘存在持久化向量库（进程重启后未访问过）即视为有会话。
 
-        被谁调用：multi_agent/retrieval.py 检索前判定、
-                  tools/business/knowledge_business.py 的 session_file_search。
+        被谁调用：app/domain/agents/retrieval.py 检索前判定、
+                  app/domain/tools/business/knowledge_business.py 的 session_file_search。
         参数：user_id/session_id——会话复合键。
         返回：bool——True 表示该会话存在临时库（内存已加载或磁盘 chroma
               目录存在），调用方才执行临时库检索；False 返回空召回。
@@ -308,7 +308,7 @@ class TempKnowledgeStore:
         - 旧库目录保留，随旧会话被用户删除时由 drop() 一并清理
           （与既有删除路径的容忍策略一致）。
 
-        被谁调用：memory/session_rollover.py 在长会话自动滚换时调用。
+        被谁调用：app/domain/memory/session_rollover.py 在长会话自动滚换时调用。
         参数：
         - user_id (int)：会话归属用户 ID（滚换前后不变）。
         - old_session_id (int)：触发滚换的旧会话 ID。
@@ -381,8 +381,8 @@ def get_temp_store() -> TempKnowledgeStore:
     功能：lru_cache 保证全进程一个临时库注册表实例；根目录固定为
           settings.UPLOAD_DIR/temp（uploads/temp）。
     被谁调用：control/file_control.py、control/history_control.py、
-              service/file_service.py、multi_agent/retrieval.py、
-              tools/business/knowledge_business.py、memory/session_rollover.py。
+              service/file_service.py、app/domain/agents/retrieval.py、
+              app/domain/tools/business/knowledge_business.py、app/domain/memory/session_rollover.py。
     返回：TempKnowledgeStore 唯一实例。
     """
     root = Path(settings.UPLOAD_DIR) / "temp"

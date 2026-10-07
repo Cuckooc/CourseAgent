@@ -79,19 +79,19 @@ async def lifespan(app: FastAPI):
         logger.warning("startup temp cleanup failed: %s", e)
     # 用户画像：启动后台落库守护（启动时先补扫进程停机期间已满 7 天的暂存）
     try:
-        from memory.profile_service import get_profile_service
+        from app.domain.memory.profile_service import get_profile_service
         get_profile_service().start_background_flusher()
     except Exception as e:
         logger.warning("startup profile flusher failed: %s", e)
     # 长期记忆落库守护：短期记忆静默临近过期时批量转存 MySQL 后删除缓存
     try:
-        from memory.long_term import get_long_term_flusher
+        from app.domain.memory.long_term import get_long_term_flusher
         get_long_term_flusher().start_background_flusher()
     except Exception as e:
         logger.warning("startup long-term flusher failed: %s", e)
     # 会话关键词落库守护：Redis 累积关键词定期 UPSERT 到 MySQL 持久化
     try:
-        from memory.session_keyword_service import get_session_keyword_service
+        from app.domain.memory.session_keyword_service import get_session_keyword_service
         get_session_keyword_service().start_background_flusher()
     except Exception as e:
         logger.warning("startup keyword flusher failed: %s", e)

@@ -10,12 +10,12 @@
     - ProfileDAO：画像查询 get() 与幂等写入 upsert()。
 
 被谁使用：
-    - memory/profile_service.py 的 ProfileService.__init__ 中实例化
+    - app/domain/memory/profile_service.py 的 ProfileService.__init__ 中实例化
       （self._dao = profile_dao or ProfileDAO()）：
       get() 由画像加载逻辑调用（profile_service 内基线读取），
       upsert() 由 Redis 画像 flush 落库逻辑调用。
 
-画像读取/暂存策略由 memory.profile_service 负责：
+画像读取/暂存策略由 app.domain.memory.profile_service 负责：
 - 日常变更先写 Redis（7 天无更新才 flush）；
 - 本 DAO 只负责 MySQL 的读取与 upsert。
 """
@@ -36,7 +36,7 @@ class ProfileDAO:
     承担画像的单行查询（SELECT）与按主键幂等写入
     （INSERT ... ON DUPLICATE KEY UPDATE）；软删除/恢复由
     dao/soft_delete.py 统一处理。
-    实例化位置：memory/profile_service.py 的 ProfileService.__init__
+    实例化位置：app/domain/memory/profile_service.py 的 ProfileService.__init__
     （self._dao）。无 __init__ 形参、不持有连接；会话在各方法内通过
     session_scope() 获取并自动提交/回滚。
     """
@@ -49,7 +49,7 @@ class ProfileDAO:
         core.sql_guard.safe_execute 执行（SELECT 同时受 SQL_MAX_ROWS 上限保护），
         杜绝 SQL 注入；软删除过滤保证已注销用户画像不被读出。
 
-        被谁调用：memory/profile_service.py 的画像加载逻辑
+        被谁调用：app/domain/memory/profile_service.py 的画像加载逻辑
         （文件.函数：profile_service.ProfileService 内 self._dao.get(...)）。
         参数：
             user_id: 用户 ID，来源登录态/画像服务缓存键。
@@ -100,7 +100,7 @@ class ProfileDAO:
         SQL 安全：SQL 经 text() 构造，user_id/profile_text/interests/topics
         全部使用命名绑定参数并经 core.sql_guard.safe_execute 执行，杜绝 SQL 注入。
 
-        被谁调用：memory/profile_service.py 的 Redis 画像 flush 落库逻辑
+        被谁调用：app/domain/memory/profile_service.py 的 Redis 画像 flush 落库逻辑
         （文件.函数：profile_service.ProfileService 内 self._dao.upsert(...)，
         7 天无更新或服务关停等场景触发）。
         参数：

@@ -3,7 +3,7 @@
 
 作用：
     知识库文档管理 DAO。注意它不直接操作 MySQL 业务表，而是管理两处存储：
-    1) Chroma 向量库（经 multi_agent.rag_agent.RAGAgent.build_shared_db() 取得
+    1) Chroma 向量库（经 service.vector_store.get_persistent_db() 取得应用级
        共享 collection）——文档以父子块向量 + metadata 形式存在；
     2) 上传文件目录（settings.UPLOAD_DIR）——文档物理文件。
 
@@ -34,7 +34,6 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from multi_agent.rag_agent import RAGAgent
 from service.vector_store import _flush_collection_index, get_persistent_db, persistent_lock
 
 logger = logging.getLogger(__name__)
@@ -124,7 +123,7 @@ class KnowledgeDAO:
                     保存为 self._upload_dir（Path 对象），所有物理文件操作
                     均限制在该目录内。
     关键属性去向：self._collection 为懒加载的共享 Chroma collection
-    （经 RAGAgent.build_shared_db() 获取，单例复用），供各方法做向量 get/delete。
+    （经 get_persistent_db() 获取，单例复用），供各方法做向量 get/delete。
     """
 
     def __init__(self, upload_dir):
@@ -134,11 +133,11 @@ class KnowledgeDAO:
     def _col(self):
         """懒加载并缓存共享 Chroma collection（首次调用时绑定，之后复用）。
 
-        返回：Chroma collection 实例，来源 RAGAgent.build_shared_db()._collection；
+        返回：Chroma collection 实例，来源 service.vector_store.get_persistent_db()._collection；
         被本类 _iter_metadatas/get_document_info/delete_document 使用。
         """
         if self._collection is None:
-            self._collection = RAGAgent.build_shared_db()._collection
+            self._collection = get_persistent_db()._collection
         return self._collection
 
     # 分批拉取向量库记录的页大小：避免大库一次性全量载入内存

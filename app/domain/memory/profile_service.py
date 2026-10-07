@@ -1,13 +1,13 @@
 """
-模块：memory.profile_service —— 用户画像服务（用户级长期记忆：习惯/兴趣/常问主题）。
+模块：app.domain.memory.profile_service —— 用户画像服务（用户级长期记忆：习惯/兴趣/常问主题）。
 
 作用：维护每用户的画像（profile_text/interests/topics 三字段），对话期间
 异步从对话中提取画像信号，读取时渲染为【用户画像】前缀注入 LLM prompt
-（经 service/chat_service → AgentService → multi_agent/ChatAgent 的
+（经 service/chat_service → AgentService → app/domain/agents/ChatAgent 的
 user_profile 形参）。数据链路：自动提取/手动编辑 → Redis pending 暂存
 （连续 N 天无更新）→ 惰性/后台 flush → dao/profile.ProfileDAO.upsert 落
 MySQL user_profile 表；读取 = MySQL 基线 + pending 覆盖。画像为 user 级
-存储，天然跨会话，会话滚换（memory/session_rollover）无需迁移画像。
+存储，天然跨会话，会话滚换（app/domain/memory/session_rollover）无需迁移画像。
 
 数据来源：
 1. 自动提取：每轮对话结束后异步从"用户问题 + 助手回答"中提取画像信号，
@@ -136,7 +136,7 @@ def render_profile_prefix(profile: Optional[Dict[str, Any]]) -> str:
     """生成注入模型输入的画像前缀；画像为空返回空串。
 
     被谁调用：service/chat_service.py 的 ChatService._get_profile_prefix
-    （每轮对话渲染后随 prompt 注入 multi_agent/ChatAgent 的 user_profile）。
+    （每轮对话渲染后随 prompt 注入 app/domain/agents/ChatAgent 的 user_profile）。
     参数：profile (dict|None)——get_profile 返回的画像 dict
     （来源：MySQL user_profile 基线 + Redis pending 覆盖）。
     返回：str——"【用户画像】\\n…"注入文本；三字段全空时返回 ""，

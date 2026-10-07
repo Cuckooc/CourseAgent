@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.verifier
+模块名：app.domain.agents.verifier
 
 作用：
     意图一致性验证器：在 AnalysisAgent 与 ChatAgent 的关键产出后，由编排

@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.rag_agent
+模块名：app.domain.agents.rag_agent
 
 作用：
     流水线阶段 3 的知识库检索 Agent（RAG 路线）。消费 AnalysisAgent
@@ -23,8 +23,9 @@
       RAGAgent(message_bus=..., db=shared_db, user_id=..., session_id=...)
       每请求实例化；_run_retrieval() 按 analysis_result["need_RAGAgent"]
       经非关键包装器调用 agents["rag"].handle；
-    - dao/knowledge.py：知识库管理/删除同样经 RAGAgent.build_shared_db()
-      取得同一 Chroma collection 单例，避免写竞争。
+    - app/infrastructure/persistence/repositories/knowledge.py：知识库管理/删除
+      经 service.vector_store.get_persistent_db() 取得同一 Chroma collection 单例，
+      避免写竞争。
 
 Agent 间数据流：
     - 输入（消费方）：bus.subscribe("RAGAgent")，生产者为
@@ -34,7 +35,7 @@ Agent 间数据流：
       消费者 SummaryAgent.handle。
 向量库来源：service/vector_store.get_persistent_db 持有的应用级共享
     Chroma（含进程写锁 persistent_lock）；会话临时库由
-    service/temp_knowledge_store 提供，检索细节见 multi_agent/retrieval.py。
+    service/temp_knowledge_store 提供，检索细节见 app/domain/agents/retrieval.py。
 """
 import os
 from functools import lru_cache
@@ -47,13 +48,13 @@ from app.infrastructure.embeddings.text_embedding import (
     json_to_documents,
 )
 from app.infrastructure.llm.gateway import build_chat_model
-from multi_agent.retrieval import retrieve_scoped
+from app.domain.agents.retrieval import retrieve_scoped
 from typing import Optional
 from langchain_chroma import Chroma
 import logging
 
 from core.config import settings
-from tools.protocol import ToolContext
+from app.domain.tools.protocol import ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ class RAGAgent:
         订阅 AnalysisAgent 发布的检索任务，在公共/私有持久向量库与当前
         会话临时库上执行 retrieve_scoped 混合检索，把命中片段回传给
         SummaryAgent；开关 settings.TOOL_SHADOW_MODE 打开时旁路运行
-        function calling 新工具链（tools.shadow）做新旧结果对比。
+        function calling 新工具链（app.domain.tools.shadow）做新旧结果对比。
     继承关系：无基类（不实现 BaseAgent 抽象接口 create_agent），
         编排入口为 handle()，由非关键 Agent 包装器调度并重试。
     实例化位置：service/agent_service.py 的 AgentService._create_agents()，
@@ -247,11 +248,11 @@ class RAGAgent:
         参数：
         - payload：上游 AnalysisAgent 的消息 dict（影子新链路的输入）；
         - legacy_result：本 Agent 旧链路刚产出的 result_msg（对比基准）。
-        返回：None。影子结果只用于观测对比（tools.shadow.run_shadow 内部
+        返回：None。影子结果只用于观测对比（app.domain.tools.shadow.run_shadow 内部
               记录/落库），任何异常都被吞掉记 debug 日志，绝不影响主链路。
         """
         try:
-            from tools.shadow import run_shadow
+            from app.domain.tools.shadow import run_shadow
 
             ctx = ToolContext(
                 user_id=self.user_id,

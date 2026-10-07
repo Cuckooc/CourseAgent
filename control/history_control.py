@@ -26,8 +26,8 @@ from app.auth.guards import get_current_user
 from app.auth.rate_limit import user_rate_limit
 from app.auth.delete_guard import PendingDeleteStore
 from core.responses import BizException
-from memory.context_memory import get_context_memory_service
-from memory.short_term import get_short_term_store
+from app.domain.memory.context_memory import get_context_memory_service
+from app.domain.memory.short_term import get_short_term_store
 
 # 本模块日志器：记录短期记忆读取、临时知识库清理等非阻断失败
 logger = logging.getLogger(__name__)

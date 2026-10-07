@@ -1,12 +1,12 @@
 """
-模块名：tools.protocol
+模块名：app.domain.tools.protocol
 
 作用：
     工具调用层（P1 function calling 改造）的协议定义模块，只声明数据结构与契约，
     不含任何注册、分发与业务逻辑。全模块围绕三层边界组织：
 - 决策层（RAGAgent / FileAgent）：只产出 tool_calls，不接触业务实现；
 - 对接层（registry / dispatcher）：注册、鉴权、参数钳制、并发执行；
-- 业务层（tools/business/*）：纯函数 (args, ctx) -> ToolResult，承载真实业务。
+- 业务层（app/domain/tools/business/*）：纯函数 (args, ctx) -> ToolResult，承载真实业务。
 
 安全原则：user_id / session_id / role 只允许来自服务端注入的 ToolContext，
 LLM 在工具参数中传入这些字段一律忽略（dispatcher 负责剔除并告警）。
@@ -23,13 +23,13 @@ LLM 在工具参数中传入这些字段一律忽略（dispatcher 负责剔除�
       风险级别常量、默认允许角色与业务函数类型别名。
 
 被谁使用：
-    - tools/registry.py：导入 ToolContext/ToolSpec 构建注册表与 StructuredTool；
-    - tools/dispatcher.py：导入 ToolContext/ToolResult/ToolSpec 做鉴权、校验与执行；
-    - tools/business/knowledge_business.py：用上述模型声明并注册
+    - app/domain/tools/registry.py：导入 ToolContext/ToolSpec 构建注册表与 StructuredTool；
+    - app/domain/tools/dispatcher.py：导入 ToolContext/ToolResult/ToolSpec 做鉴权、校验与执行；
+    - app/domain/tools/business/knowledge_business.py：用上述模型声明并注册
       knowledge_search / session_file_search 两个工具；
-    - multi_agent/rag_agent.py、multi_agent/file_agent.py：
-      仅在影子模式分支构造 ToolContext 传给 tools.shadow.run_shadow；
-    - tests/tools/test_tool_layer_p1.py：协议边界与工具层单测。
+    - app/domain/agents/rag_agent.py、app/domain/agents/file_agent.py：
+      仅在影子模式分支构造 ToolContext 传给 app.domain.tools.shadow.run_shadow；
+    - tests/app/domain/tools/test_tool_layer_p1.py：协议边界与工具层单测。
 """
 from __future__ import annotations
 
@@ -53,12 +53,12 @@ class ToolContext:
     不可被业务代码或 LLM 参数篡改。
 
     实例化位置：
-        - multi_agent/rag_agent.py 的 RAGAgent._run_shadow()；
-        - multi_agent/file_agent.py 的 FileAgent._run_shadow()；
+        - app/domain/agents/rag_agent.py 的 RAGAgent._run_shadow()；
+        - app/domain/agents/file_agent.py 的 FileAgent._run_shadow()；
           均以 Agent 自身的 user_id/session_id（来源 service/agent_service.py
           按登录态与会话注入）、role="user"、bus.task_id 构造；
-        - tools/registry.py 的 tools_for() 接收本次请求的 ctx 并闭包注入；
-        - tests/tools/test_tool_layer_p1.py 的单测直接构造。
+        - app/domain/tools/registry.py 的 tools_for() 接收本次请求的 ctx 并闭包注入；
+        - tests/app/domain/tools/test_tool_layer_p1.py 的单测直接构造。
     关键属性去向：user_id/session_id 传入 retrieve_scoped 做数据域过滤
     （公共库 + 本人私有库 / 当前会话临时库）；role 供 dispatcher 角色鉴权；
     task_id 仅用于日志与 call_id 拼接，便于链路追踪。
@@ -132,7 +132,7 @@ class SearchArgsBase(BaseModel):
 class KnowledgeSearchArgs(SearchArgsBase):
     """knowledge_search 工具入参（公共 + 本人私有持久知识库）。
 
-    被 tools/business/knowledge_business.py 的 knowledge_search_fn 使用，
+    被 app/domain/tools/business/knowledge_business.py 的 knowledge_search_fn 使用，
     随 ToolSpec 注册到 owner_agent="RAGAgent"；字段语义同 SearchArgsBase。
     """
 
@@ -140,7 +140,7 @@ class KnowledgeSearchArgs(SearchArgsBase):
 class SessionFileSearchArgs(SearchArgsBase):
     """session_file_search 工具入参（当前会话临时知识库）。
 
-    被 tools/business/knowledge_business.py 的 session_file_search_fn 使用，
+    被 app/domain/tools/business/knowledge_business.py 的 session_file_search_fn 使用，
     随 ToolSpec 注册到 owner_agent="FileAgent"；字段语义同 SearchArgsBase。
     """
 
@@ -154,7 +154,7 @@ class ToolResult:
 
     data 结构由各工具自行约定（检索类为 [{"content","metadata"}, ...]，
     与 MessageBus 中 SummaryAgent 现有消费契约保持一致）。
-    结果去向：dispatcher 汇总后交给调用方——影子模式下由 tools/shadow.py
+    结果去向：dispatcher 汇总后交给调用方——影子模式下由 app/domain/tools/shadow.py
     做新旧链路指纹对比；未来主链路接入后回灌 LLM 或直接组装答案，
     经 SSE 推送前端；失败/降级信息同时进入日志与 chain_log 链路记录。
     """
@@ -185,8 +185,8 @@ class ToolResult:
         """构造检索类工具的空结果（成功空集 / 降级空集）。
 
         被谁调用：
-        - tools/business/knowledge_business.py：query 为空或会话临时库不存在时；
-        - tools/dispatcher.py：工具未注册、跨域、越权、参数非法等各类拒绝/降级分支。
+        - app/domain/tools/business/knowledge_business.py：query 为空或会话临时库不存在时；
+        - app/domain/tools/dispatcher.py：工具未注册、跨域、越权、参数非法等各类拒绝/降级分支。
         参数：
             name：工具名；degraded：是否降级（降级时 success 取 False）；
             error：降级/失败原因；call_id：调用追踪 ID。
@@ -210,7 +210,7 @@ DEFAULT_ROLES: Tuple[str, ...] = ("user", "teacher", "admin")
 
 # 业务函数签名：(已校验的 args 模型, ctx) -> ToolResult
 # 全部实现类（业务函数）：
-#   tools/business/knowledge_business.py:
+#   app/domain/tools/business/knowledge_business.py:
 #     - knowledge_search_fn    （工具 knowledge_search，归属 RAGAgent）
 #     - session_file_search_fn （工具 session_file_search，归属 FileAgent）
 BusinessFn = Callable[[BaseModel, ToolContext], ToolResult]
@@ -225,7 +225,7 @@ class ToolSpec:
       StructuredTool，供 llm.bind_tools 向 LLM 暴露 function calling 接口；
     ②name/business_fn/risk/require_roles/timeout_seconds/degraded 供
       ToolDispatcher 查表鉴权、钳制参数、并发执行与失败降级。
-    全部实现类（当前注册的工具，均定义于 tools/business/knowledge_business.py）：
+    全部实现类（当前注册的工具，均定义于 app/domain/tools/business/knowledge_business.py）：
       - knowledge_search：RAGAgent 域持久知识库检索；
       - session_file_search：FileAgent 域当前会话临时库检索。
     实例化位置：仅业务模块导入时通过 register_tool(ToolSpec(...)) 创建，
@@ -254,7 +254,7 @@ class ToolSpec:
     def validate(self) -> None:
         """注册时强校验：禁止假工具（业务函数不可调用直接报错）。
 
-        被谁调用：tools/registry.py 的 register_tool() 在写入注册表前调用，
+        被谁调用：app/domain/tools/registry.py 的 register_tool() 在写入注册表前调用，
         失败会抛 ValueError 并中止注册（导入期即暴露配置错误）。
         异常：business_fn 不可调用或 risk 不在三个合法级别常量中时抛 ValueError。
         """

@@ -20,13 +20,13 @@
     - _INJECTION_GUARD：防提示词注入的统一安全规则片段，拼接到多个模板尾部。
 
 被谁使用（Grep 类名确认）：
-    - multi_agent/chat_agent.py: ChatLLM().generate() 作为主回答模板；
-    - multi_agent/vague_agent.py: PredictLLM；analysis_agent.py: AnalysisLLM；
+    - app/domain/agents/chat_agent.py: ChatLLM().generate() 作为主回答模板；
+    - app/domain/agents/vague_agent.py: PredictLLM；analysis_agent.py: AnalysisLLM；
       summary_agent.py: InformationLLM（含 .llm 链）；
     - util/context.py: ContextKey（上下文改写）；util/title.py: TitleLLM（Title 子类）；
     - tests/phase/test_all_changes.py: 校验 Predict/Analysis/Chat/Rag/File 模板关键约束。
     说明：RagLLM/FileLLM 当前线上主链路未直接引用（RAG/文件 Agent 在
-    multi_agent/rag_agent.py、file_agent.py 内自管提示词），仅测试覆盖；
+    app/domain/agents/rag_agent.py、file_agent.py 内自管提示词），仅测试覆盖；
     OptimizeLLM 暂无调用方，为预留的问题优化模板。
 """
 from app.infrastructure.llm.llm import LLM
@@ -41,7 +41,7 @@ class RagLLM(LLM):
     """内置基础知识库问答提示词类（仅依据 RAG 知识库作答）。
 
     实例化位置：tests/phase/test_all_changes.py 做模板约束校验；当前线上
-    RAG 主链路（multi_agent/rag_agent.py）使用 Agent 内部提示词，本类为
+    RAG 主链路（app/domain/agents/rag_agent.py）使用 Agent 内部提示词，本类为
     基础知识库问答的标准模板定义（保留备用）。构造参数无，父类 __init__
     完成模型配置与 LLMGateway 构建。
     """
@@ -69,7 +69,7 @@ class FileLLM(LLM):
     """会话临时文件知识库检索提示词类（仅依据用户上传文件的向量库作答）。
 
     实例化位置：tests/phase/test_all_changes.py 做模板约束校验；线上文件
-    问答主链路在 multi_agent/file_agent.py 内自管提示词，本类为标准模板
+    问答主链路在 app/domain/agents/file_agent.py 内自管提示词，本类为标准模板
     定义（保留备用）。构造参数无，父类完成 LLMGateway 构建。
     """
     def __init__(self):
@@ -94,7 +94,7 @@ class FileLLM(LLM):
 class ChatLLM(LLM):
     """课程咨询主回答提示词类（线上对话主链路的系统提示词）。
 
-    实例化位置：multi_agent/chat_agent.py:55（ChatLLM().generate() 包成
+    实例化位置：app/domain/agents/chat_agent.py:55（ChatLLM().generate() 包成
     ChatPromptTemplate 组装主回答链）；tests/phase/test_all_changes.py
     校验模板安全约束。构造参数无，temperature 取 config setting 的
     llm.TEMPERATURE（env: Temperature，默认 0.9）。
@@ -105,12 +105,12 @@ class ChatLLM(LLM):
     def generate(self):
         """返回课程咨询主回答提示词模板。
 
-        被谁调用：multi_agent/chat_agent.py 的回答链构建；
+        被谁调用：app/domain/agents/chat_agent.py 的回答链构建；
         参数：无（运行期由模板变量注入）；
         模板占位符：{current_date} 当前日期（时间推算基准）、{user_profile}
         用户画像、{session_keywords} 会话关键词、{rag_context} RAG 检索上下文、
         {history} 对话历史、{input} 用户问题，来源分别为系统日期、memory 画像、
-        dao/session_keyword、multi_agent/retrieval、会话消息表与前端请求；
+        dao/session_keyword、app/domain/agents/retrieval、会话消息表与前端请求；
         返回：str 模板，渲染后交 self.llm 流式生成回答 → SSE 推送前端。
         """
         return """
@@ -173,7 +173,7 @@ class OptimizeLLM(LLM):
 class InformationLLM(LLM):
     """RAG 结果汇总提示词类（合并多条检索结果并提取关键词，强制 JSON 输出）。
 
-    实例化位置：multi_agent/summary_agent.py:78、80（InformationLLM().generate()
+    实例化位置：app/domain/agents/summary_agent.py:78、80（InformationLLM().generate()
     与 InformationLLM().llm 组装汇总链）；构造时向父类传 json_mode=True，
     底层网关请求带 response_format=json_object，保证输出可被 json.loads 解析。
     """
@@ -183,7 +183,7 @@ class InformationLLM(LLM):
     def generate(self):
         """返回信息汇总提示词模板（占位符 {rag_results}=多条 RAG 检索结果）。
 
-        被谁调用：multi_agent/summary_agent.py 的汇总链；
+        被谁调用：app/domain/agents/summary_agent.py 的汇总链；
         返回：str 模板，约定输出严格 JSON：{"summary": str, "keywords": [str...]}
         （summary 100-300 字、关键词 3-5 个），去向 summary_agent 解析后
         写入会话关键词/摘要等下游环节。
@@ -217,7 +217,7 @@ RAG检索结果列表：{rag_results}
 class PredictLLM(LLM):
     """模糊意图判断提示词类（判定用户问题是否模糊到需要澄清）。
 
-    实例化位置：multi_agent/vague_agent.py:54（PredictLLM().generate() 作为
+    实例化位置：app/domain/agents/vague_agent.py:54（PredictLLM().generate() 作为
     意图二分类提示词）；tests/phase/test_all_changes.py 校验输出约束。
     是否携带早期对话摘要受 config setting 的 agent.INTENT_WITH_HISTORY
     （env: intent_with_history，默认 true）控制。
@@ -228,11 +228,11 @@ class PredictLLM(LLM):
     def generate(self):
         """返回模糊意图判断提示词模板。
 
-        被谁调用：multi_agent/vague_agent.py；
+        被谁调用：app/domain/agents/vague_agent.py；
         模板占位符：{history_summary} 早期对话摘要（用于消解「那这个呢」类
         指代，可为空）、{input} 用户当前问题；
         返回：str 模板，模型仅输出「模糊意图」或「明确意图」，去向状态机
-        multi_agent/state_machine.py 决定是否先走澄清分支。
+        app/domain/agents/state_machine.py 决定是否先走澄清分支。
         """
         return """
 你是「智能课程咨询服务」平台的意图判断助手，任务是判断用户问题是否模糊需要澄清。
@@ -261,7 +261,7 @@ class PredictLLM(LLM):
 class AnalysisLLM(LLM):
     """工具分发（路由）判断提示词类：按语义决定是否调用 RAG Agent / File Agent。
 
-    实例化位置：multi_agent/analysis_agent.py:47（AnalysisLLM().generate()
+    实例化位置：app/domain/agents/analysis_agent.py:47（AnalysisLLM().generate()
     赋给 self.prompt 组装路由链）；tests/phase/test_all_changes.py 校验输出约束。
     """
     def __init__(self):
@@ -270,7 +270,7 @@ class AnalysisLLM(LLM):
     def generate(self):
         """返回工具分发判断提示词模板。
 
-        被谁调用：multi_agent/analysis_agent.py；
+        被谁调用：app/domain/agents/analysis_agent.py；
         模板占位符：{history_summary} 早期对话摘要（消解省略/指代）、
         {input} 用户问题；
         返回：str 模板，模型仅输出 JSON

@@ -39,11 +39,11 @@ from app.infrastructure.embeddings.embedding_model import get_embedding
 from config.setting import LLMConfig, agent
 from core.config import settings
 from core.usage import reset_current_user_id, set_current_user_id
-from memory.context_memory import get_context_memory_service
-from memory.profile_service import get_profile_service, render_profile_prefix
-from memory.session_keyword_service import get_session_keyword_service
-from memory.session_rollover import maybe_rollover
-from memory.short_term import get_short_term_store
+from app.domain.memory.context_memory import get_context_memory_service
+from app.domain.memory.profile_service import get_profile_service, render_profile_prefix
+from app.domain.memory.session_keyword_service import get_session_keyword_service
+from app.domain.memory.session_rollover import maybe_rollover
+from app.domain.memory.short_term import get_short_term_store
 from app.infrastructure.llm.gateway import LLMUnavailableError
 from core.degradation_alert import alert_degradation
 from core.content_filter import filter_text
@@ -129,7 +129,7 @@ class ChatService:
         """
         上下文记忆：构建【早期对话摘要 + 最近 N 轮原文】注入文本。
 
-        功能：委托 memory/context_memory.build_context 组装多轮上下文；
+        功能：委托 app/domain/memory/context_app.domain.memory.build_context 组装多轮上下文；
         - 短期记忆（Redis）未命中时自动回源 MySQL 并回填；
         - 超过 3/5 轮或上下文窗口达上限时压缩更早信息，已压缩轮次走缓存水位，
           网络中断恢复后不重复调用 LLM。
@@ -138,14 +138,14 @@ class ChatService:
         - user_id (int)：JWT 注入的用户 ID。
         - session_id (int)：当前会话 ID（per-user 序列）。
         返回：str——注入文本（数据来源：Redis 短期记忆，未命中回源 MySQL
-              历史表，摘要由 memory/context_memory 调 LLM 压缩）；空入参或
+              历史表，摘要由 app/domain/memory/context_memory 调 LLM 压缩）；空入参或
               异常时返回空串（降级为无历史，不阻断主链路）。去向：作为
               history 传给 AgentService，并用于提取早期摘要供意图判定。
         """
         if not user_id or not session_id:
             return ""
         try:
-            return self.context_memory.build_context(user_id, session_id)
+            return self.context_app.domain.memory.build_context(user_id, session_id)
         except Exception as e:
             logger.error("Error building context memory: %s", e)
             return ""
@@ -157,7 +157,7 @@ class ChatService:
 
         被谁调用：_get_intent_summary()。
         参数：context_text (str)——_get_recent_history 返回的注入文本
-              （数据来源：memory/context_memory）。
+              （数据来源：app/domain/memory/context_memory）。
         返回：str——摘要段正文（截止到【最近N轮对话】标记之前）；无摘要
               标记时返回空串。去向：作为 history_summary 传给 AgentService
               的 VagueAgent/AnalysisAgent。
@@ -190,7 +190,7 @@ class ChatService:
         功能：读取用户画像并渲染为注入前缀，供 ChatAgent 个性化回答。
         被谁调用：_handle_impl() / _handle_stream_impl()。
         参数：user_id (int)——JWT 注入的用户 ID。
-        返回：str——画像前缀文本；数据来源：memory/profile_service
+        返回：str——画像前缀文本；数据来源：app/domain/memory/profile_service
               （Redis 暂存 + MySQL 长期画像）；user_id 为空或异常时返回空串，
               画像加载失败不阻断对话。
         """
@@ -501,7 +501,7 @@ class ChatService:
         """
         记忆写入：长期记忆由短期记忆转变而来——对话期间只写 Redis 短期记忆
         （不写 MySQL，减少数据库请求）；后台落库任务在会话静默临近过期时
-        把短期记忆批量转存 MySQL 后删除缓存（memory/long_term.py）。
+        把短期记忆批量转存 MySQL 后删除缓存（app/domain/memory/long_term.py）。
         - 短期记忆：本轮对话 + 会话标题写入 Redis 并滑动续期；
         - 用户画像：异步从本轮对话提取/合并画像信号（内部节流，不阻塞响应）。
 
@@ -565,7 +565,7 @@ class ChatService:
         """本轮落库后判定是否达到滚换阈值并执行会话滚换。
 
         功能：轮数直接取短期记忆消息数（零 SQL；阈值 15 轮 < 短期记忆
-        20 轮截断上限，计数准确），委托 memory/session_rollover.maybe_rollover
+        20 轮截断上限，计数准确），委托 app/domain/memory/session_rollover.maybe_rollover
         决定并执行上下文整体迁移（含临时知识库复制）。
         被谁调用：_handle_impl() / _handle_stream_impl() 落库之后。
         参数：

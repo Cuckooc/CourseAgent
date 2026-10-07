@@ -24,8 +24,8 @@
 
 被测对象来源：
 - 路由：control/chat_control.py（/chat/send、/chat/stream、/chat/recover、/chat/feedback）；
-- 编排：service/agent_service.py 与 multi_agent/ 全链路（chat_agent/rag_agent 等）、
-  memory/（短期/上下文记忆）、model_llm/gateway.py（真实 DashScope）；
+- 编排：service/agent_service.py 与 app/domain/agents/ 全链路（chat_agent/rag_agent 等）、
+  app/domain/memory/（短期/上下文记忆）、model_llm/gateway.py（真实 DashScope）；
 - 落库：dao/chain_log.py、dao/history.py、dao/feedback.py；
 - 校验方式：HTTP 断言 + 通过 db/session.py 的 engine 直查真实表（无 mock）。
 

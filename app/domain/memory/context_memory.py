@@ -1,5 +1,5 @@
 """
-模块：memory.context_memory —— 上下文记忆（会话级压缩摘要，Redis 缓存）。
+模块：app.domain.memory.context_memory —— 上下文记忆（会话级压缩摘要，Redis 缓存）。
 
 作用：在短期记忆（Redis 原文）与长期记忆（MySQL session_information）之上，
 为每轮对话构建注入 LLM 的上下文文本——【早期对话摘要】+【最近 N 轮原文】；
@@ -7,7 +7,7 @@
 保证压缩幂等。数据链路：短期记忆（Redis，滑动 TTL）→ 未命中回源 MySQL 长期
 记忆（dao/session.SessionDAO.get_session_detail）并 warm_up 回填短期记忆 →
 压缩产出的摘要留在本模块 Redis hash，关键词侧写 session_keyword_service。
-注意：本模块不参与文档 RAG 检索（multi_agent/retrieval.py 的 RAG 读 Chroma
+注意：本模块不参与文档 RAG 检索（app/domain/agents/retrieval.py 的 RAG 读 Chroma
 文档向量库），只负责对话历史的上下文注入。
 
 规则（产品约定）：
@@ -39,10 +39,10 @@
 
 被谁使用（全仓 import 位置）：
 - service/chat_service.py：ChatService.__init__ 持有单例；_get_recent_history
-  每轮调 build_context 取注入文本（再交 AgentService → multi_agent/ChatAgent）；
+  每轮调 build_context 取注入文本（再交 AgentService → app/domain/agents/ChatAgent）；
 - control/history_control.py：删除会话确认接口调 clear 联动清理摘要缓存；
-- memory/context_memory 内部压缩成功后回调
-  memory/session_keyword_service.accumulate 累积压缩关键词。
+- app/domain/memory/context_memory 内部压缩成功后回调
+  app/domain/memory/session_keyword_service.accumulate 累积压缩关键词。
 """
 import json
 import logging
@@ -53,7 +53,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from core.config import settings
 from app.infrastructure.redis.redis_client import get_redis
 from app.infrastructure.persistence.repositories.session import SessionDAO
-from memory.short_term import get_short_term_store
+from app.domain.memory.short_term import get_short_term_store
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ class ContextMemoryService:
       settings.CONTEXT_TTL_SECONDS（默认 7200 秒，随每次压缩滑动续期）；
     - Redis 不可用：降级为进程内 dict（_mem，按 expires_at 手工过期），
       仅保证单机开发语义，多副本部署必须配置 Redis；
-    - 消息原文不落本类：读短期记忆（memory.short_term），未命中回源 MySQL
+    - 消息原文不落本类：读短期记忆（app.domain.memory.short_term），未命中回源 MySQL
       session_information（长期记忆，经 SessionDAO）并回填短期记忆。
 
     实例化位置：生产路径仅由模块底部 get_context_memory_service() 无参构造
@@ -155,7 +155,7 @@ class ContextMemoryService:
 
         被谁调用：service/chat_service.py 的 ChatService._get_recent_history
         （handle/handle_stream 每轮对话开始时一次），返回文本作为 history 注入
-        AgentService → multi_agent/ChatAgent 的模型输入。
+        AgentService → app/domain/agents/ChatAgent 的模型输入。
         参数：
         - user_id (int)：JWT 注入的用户 ID；
         - session_id (int)：当前会话 ID（对话请求体，per-user 序列）。
@@ -368,7 +368,7 @@ class ContextMemoryService:
             try:
                 # 压缩抽取的关键词累积进会话关键词服务（Redis → 后台落 MySQL），
                 # 供后续轮次以【会话关键词】注入，防止摘要压缩丢失主题词
-                from memory.session_keyword_service import get_session_keyword_service
+                from app.domain.memory.session_keyword_service import get_session_keyword_service
                 get_session_keyword_service().accumulate(user_id, session_id, new_keywords)
             except Exception as e:
                 logger.debug("keyword accumulate from compression failed: %s", e)

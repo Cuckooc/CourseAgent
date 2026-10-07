@@ -12,7 +12,7 @@
     - SessionKeywordDAO：get() 读取、upsert() 幂等写入、delete() 软删除。
 
 被谁使用：
-    - memory/session_keyword_service.py 的 SessionKeywordService.__init__
+    - app/domain/memory/session_keyword_service.py 的 SessionKeywordService.__init__
       实例化（self._dao = dao or SessionKeywordDAO()）：get() 用于关键词缓存
       未命中时回库，upsert() 用于关键词积累后落库，delete() 用于会话删除/
       关键词清空场景（clear() 内调用）。
@@ -33,7 +33,7 @@ class SessionKeywordDAO:
 
     承担单行关键词的查（get）、幂等写（upsert）、软删（delete）；
     不做物理删除与跨会话查询。
-    实例化位置：memory/session_keyword_service.py 的
+    实例化位置：app/domain/memory/session_keyword_service.py 的
     SessionKeywordService.__init__（self._dao）。无 __init__ 形参、
     不持有连接；会话在各方法内通过 session_scope() 获取并自动提交/回滚。
     """
@@ -43,7 +43,7 @@ class SessionKeywordDAO:
 
         SQL 安全：user_id/session_id 以绑定参数 :uid/:sid 传入；
         is_deleted = 0 排除已删行；LIMIT 1；经 safe_execute 执行。
-        被谁调用：memory/session_keyword_service.py 的 SessionKeywordService
+        被谁调用：app/domain/memory/session_keyword_service.py 的 SessionKeywordService
         缓存未命中回库逻辑（文件.函数：
         session_keyword_service.SessionKeywordService 内 self._dao.get(...)）。
         参数：
@@ -80,7 +80,7 @@ class SessionKeywordDAO:
         SQL 安全：uid/sid/kw 全部命名绑定参数，经 safe_execute 执行，杜绝注入。
         现状语义：ON DUPLICATE 子句不重置 is_deleted，已软删行即使冲突更新也
         仍保持 is_deleted=1（不会因重新落库而“复活”）。
-        被谁调用：memory/session_keyword_service.py 的关键词落库逻辑
+        被谁调用：app/domain/memory/session_keyword_service.py 的关键词落库逻辑
         （文件.函数：session_keyword_service.SessionKeywordService 内
         self._dao.upsert(...)，关键词积累节流后触发）。
         参数：
@@ -113,7 +113,7 @@ class SessionKeywordDAO:
         功能：按双键把关键词行标记删除（本语句未追加 is_deleted=0 条件，
         重复删除为幂等无副作用更新）；之后 get() 因 is_deleted=0 过滤读不到。
         SQL 安全：uid/sid 命名绑定参数，经 safe_execute 执行。
-        被谁调用：memory/session_keyword_service.py 的 SessionKeywordService.clear()
+        被谁调用：app/domain/memory/session_keyword_service.py 的 SessionKeywordService.clear()
         （文件.函数：session_keyword_service.SessionKeywordService.clear），
         而 clear() 在会话被软删除时由 dao/soft_delete.py 联动调用。
         参数：

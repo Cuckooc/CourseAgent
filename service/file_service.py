@@ -527,7 +527,7 @@ class FileService:
               "persisted": False, "parent_chunks", "child_chunks"}；
               失败 {"success": False, "error"}。去向：file_control 汇总为
               上传结果返回前端/写异步任务进度；向量去向：会话临时向量库，
-              供 multi_agent/retrieval.py 与 FileAgent 当轮检索使用。
+              供 app/domain/agents/retrieval.py 与 FileAgent 当轮检索使用。
         异常：全部异常捕获后转为 success=False 结果，不向调用方抛出。
         """
         file_path = path or self.path

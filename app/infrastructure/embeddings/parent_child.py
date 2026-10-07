@@ -30,7 +30,7 @@
 下游存储与检索去向：
     父子 Document 经 service/vector_store.py 写入 Chroma（metadata 携带
     doc_level/parent_id/file_id/scope/version/is_latest）；检索时
-    multi_agent/retrieval.py 先用子块粗检，再按 parent_id 取回父块参与精排与 LLM。
+    app/domain/agents/retrieval.py 先用子块粗检，再按 parent_id 取回父块参与精排与 LLM。
     向量必须与库内同为 text-embedding-v2（1536 维），维度约束见 embedding_model 模块说明。
 """
 from __future__ import annotations
@@ -262,7 +262,7 @@ def build_parent_child_documents(
         parents:  [(parent_id, Document)]  —— doc_level=parent，检索命中子块后按 parent_id 取回
         children: [(child_id, parent_id, Document)] —— doc_level=child，参与向量粗检
     返回去向：由 service/vector_store.py 分别向量化（父向量=子向量均值归一化）
-        后写入持久化 Chroma（chromadb_data）或会话内存库，供 multi_agent/retrieval.py 检索。
+        后写入持久化 Chroma（chromadb_data）或会话内存库，供 app/domain/agents/retrieval.py 检索。
     """
     fid = file_id or make_file_id(source)
     parents: List[Tuple[str, Document]] = []

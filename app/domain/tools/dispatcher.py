@@ -1,10 +1,10 @@
 """
-模块名：tools.dispatcher
+模块名：app.domain.tools.dispatcher
 
 作用：
     ToolDispatcher——工具对接层（决策层与业务层之间的唯一通道）。
     LLM function calling 决策出的 tool_name/params 经状态机
-    （multi_agent/state_machine.py）→ Agent 执行侧组装成
+    （app/domain/agents/state_machine.py）→ Agent 执行侧组装成
     [{"name", "args"}, ...] 后传入本模块；分发结果（ToolResult 列表）
     回灌给 LLM 或直接组装答案，最终经 SSE 推送前端。
 
@@ -27,9 +27,9 @@
     - _FORBIDDEN_IDENTITY_FIELDS：LLM 参数中禁止出现的身份字段名单。
 
 被谁使用：
-    - tools/registry.py 的 tools_for() 闭包：StructuredTool 被直接 invoke 时；
-    - tools/shadow.py 的 run_shadow()：影子链路真实执行新工具链；
-    - tests/tools/test_tool_layer_p1.py：鉴权/钳制/去重/降级/超时单测。
+    - app/domain/tools/registry.py 的 tools_for() 闭包：StructuredTool 被直接 invoke 时；
+    - app/domain/tools/shadow.py 的 run_shadow()：影子链路真实执行新工具链；
+    - tests/app/domain/tools/test_tool_layer_p1.py：鉴权/钳制/去重/降级/超时单测。
 """
 from __future__ import annotations
 
@@ -42,12 +42,12 @@ from typing import Any, Dict, List, Optional
 from pydantic import ValidationError
 
 from core.config import settings
-from tools.protocol import (
+from app.domain.tools.protocol import (
     ToolContext,
     ToolResult,
     ToolSpec,
 )
-from tools.registry import get_spec
+from app.domain.tools.registry import get_spec
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +63,8 @@ class ToolDispatcher:
     逐项超时 → 按风险级别降级"流水线，业务函数之间相互隔离，
     任一调用失败不影响其他调用。
     实例化位置：不直接 new，统一经 get_tool_dispatcher() 获取进程级单例；
-    调用方为 tools/registry.py 的 StructuredTool 闭包、tools/shadow.py
-    与 tests/tools/test_tool_layer_p1.py。无 __init__ 形参、无实例属性。
+    调用方为 app/domain/tools/registry.py 的 StructuredTool 闭包、app/domain/tools/shadow.py
+    与 tests/app/domain/tools/test_tool_layer_p1.py。无 __init__ 形参、无实例属性。
     """
 
     def execute(
@@ -76,9 +76,9 @@ class ToolDispatcher:
         """执行一批工具调用，返回与有效调用一一对应的 ToolResult 列表。
 
         被谁调用：
-        - tools/registry.py 的 tools_for() 闭包（StructuredTool.invoke 直调）；
-        - tools/shadow.py 的 run_shadow()（影子链路，owner_agent 必传）；
-        - 测试 tests/tools/test_tool_layer_p1.py。
+        - app/domain/tools/registry.py 的 tools_for() 闭包（StructuredTool.invoke 直调）；
+        - app/domain/tools/shadow.py 的 run_shadow()（影子链路，owner_agent 必传）；
+        - 测试 tests/app/domain/tools/test_tool_layer_p1.py。
         参数：
             calls：调用批，元素形如 {"name": 工具名, "args": 参数字典}；
                    name/args 来源 LLM function calling 的 tool_calls
@@ -248,8 +248,8 @@ _dispatcher: Optional[ToolDispatcher] = None
 def get_tool_dispatcher() -> ToolDispatcher:
     """获取 ToolDispatcher 进程级单例（惰性创建）。
 
-    被谁调用：tools/registry.py 的工具执行闭包、tools/shadow.py 的 run_shadow()，
-    以及 tests/tools/test_tool_layer_p1.py。
+    被谁调用：app/domain/tools/registry.py 的工具执行闭包、app/domain/tools/shadow.py 的 run_shadow()，
+    以及 tests/app/domain/tools/test_tool_layer_p1.py。
     返回：全局唯一的 ToolDispatcher 实例。
     """
     global _dispatcher

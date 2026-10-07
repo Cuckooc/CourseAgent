@@ -22,8 +22,8 @@
     - control/history_control.py 各历史会话端点（列表/详情/新建/改名/删除/撤销）；
     - control/login_control.py 登录成功后拼装会话列表；
     - control/file_control.py 上传临时文档前校验会话归属；
-    - memory/context_memory.py（ContextMemory 持有 _session_dao 读详情）、
-      memory/session_rollover.py（会话翻转时 create_session）。
+    - app/domain/memory/context_app.domain.memory.py（ContextMemory 持有 _session_dao 读详情）、
+      app/domain/memory/session_rollover.py（会话翻转时 create_session）。
 """
 import logging
 import random
@@ -75,8 +75,8 @@ class SessionDAO(BaseInformation):
     改（update_session_title）、软删除（delete_session 转发 dao.soft_delete）。
     实例化位置：service/chat_service.py 的 ChatService.__init__、
     control/history_control.py 各端点函数、control/login_control.py、
-    control/file_control.py、memory/context_memory.py 的 ContextMemory.__init__、
-    memory/session_rollover.py。__init__ 无形参，仅调用父类 ABC 构造；
+    control/file_control.py、app/domain/memory/context_app.domain.memory.py 的 ContextMemory.__init__、
+    app/domain/memory/session_rollover.py。__init__ 无形参，仅调用父类 ABC 构造；
     不持有数据库连接，会话在各方法内通过 session_scope() 获取。
     """
 
@@ -90,7 +90,7 @@ class SessionDAO(BaseInformation):
         SQL 安全：user_id/session_id/role/content 均为命名绑定参数，经
         core.sql_guard.safe_execute 执行，杜绝 SQL 注入。
         现状：当前主链路对话期间只写 Redis 短期记忆，由
-        memory/long_term.py 批量落库（dao/information.py），本方法为早期
+        app/domain/memory/long_term.py 批量落库（dao/information.py），本方法为早期
         单条写入接口，代码库中暂无生产调用，保留兼容。
         参数：
             data: {"user_id": 用户 ID, "session_id": 会话 ID,
@@ -252,8 +252,8 @@ class SessionDAO(BaseInformation):
         被谁调用：
         - control/history_control.py 的会话详情端点
           （文件.函数：history_control 详情处理函数）；
-        - memory/context_memory.py 的 ContextMemory 读取历史消息重建上下文
-          （文件.函数：context_memory.ContextMemory 内 self._session_dao.get_session_detail(...)）。
+        - app/domain/memory/context_app.domain.memory.py 的 ContextMemory 读取历史消息重建上下文
+          （文件.函数：context_app.domain.memory.ContextMemory 内 self._session_dao.get_session_detail(...)）。
         参数：
             user_id: 登录态用户 ID（不得取自请求体）。
             session_id: 目标会话 ID，来源前端请求（须先经归属校验）。
@@ -345,7 +345,7 @@ class SessionDAO(BaseInformation):
         - service/chat_service.py 的聊天入口（文件.函数：
           chat_service.ChatService 流式/非流式入口，首条消息时建会话）；
         - control/history_control.py 的新建会话端点；
-        - memory/session_rollover.py 会话数量翻转时建新会话。
+        - app/domain/memory/session_rollover.py 会话数量翻转时建新会话。
         参数：
             user_id: 登录态用户 ID。
             title: 初始标题，缺省“新会话”；翻转场景由调用方传入派生标题。

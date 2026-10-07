@@ -18,7 +18,7 @@
       model_llm/llm.py（llm：MODEL/API_KEY/BASE_URL）；
     - embedding/embedding_model.py（LLMConfig.API_KEY / MAX_RETRIES /
       BACKOFF_BASE_SECONDS）；
-    - multi_agent/base_agent.py、chat_agent.py、summary_agent.py
+    - app/domain/agents/base_agent.py、chat_agent.py、summary_agent.py
       （llm.MODEL/API_KEY/BASE_URL/TEMPERATURE，agent.VERBOSE/MAX_ITERATIONS）；
     - service/chat_service.py（LLMConfig.SIMILARITY_THRESHOLD、
       agent.INTENT_WITH_HISTORY）。
@@ -60,7 +60,7 @@ class LLMConfig:
  # 读取方：model_llm/llm.py、gateway.build_chat_model、multi_agent 各 Agent
  BASE_URL:Final[Optional[str]] = os.getenv("base_url")
  # 采样温度，环境变量 Temperature（注意大写 T），默认 0.9（偏高、回答更发散）；
- # 读取方：multi_agent/base_agent.py、chat_agent.py、summary_agent.py
+ # 读取方：app/domain/agents/base_agent.py、chat_agent.py、summary_agent.py
  TEMPERATURE:Final[Optional[float]] = float(os.getenv("Temperature","0.9"))
  # 上下文相关性余弦相似度阈值，环境变量 similarity_threshold，默认 0.8：
  # service/chat_service.py 仅当 query 与上下文相似度 ≥ 该值才拼接 RAG 上下文
@@ -96,10 +96,10 @@ class AgentConfig:
  与 service/chat_service.py。
  """
  # ReAct Agent 单轮最大工具迭代次数，环境变量 MAX_ITERATIONS，默认 10
- # （防止工具调用死循环）；读取方：multi_agent/base_agent.py、chat_agent.py、summary_agent.py
+ # （防止工具调用死循环）；读取方：app/domain/agents/base_agent.py、chat_agent.py、summary_agent.py
  MAX_ITERATIONS:int = int(os.getenv("MAX_ITERATIONS","10"))
  # Agent 详细日志开关，环境变量 VERBOSE（"true"/"false" 字符串），默认 True；
- # 读取方：multi_agent/base_agent.py 等赋给 agent_verbose 控制过程日志
+ # 读取方：app/domain/agents/base_agent.py 等赋给 agent_verbose 控制过程日志
  VERBOSE:bool = os.getenv("VERBOSE","True").lower() == "true"
  # 意图判定（Vague/Analysis）是否携带早期对话摘要：多轮承接式提问（"那这个呢"）
  # 依赖摘要消解指代；关闭后意图模型只看当前轮原文。

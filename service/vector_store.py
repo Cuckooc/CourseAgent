@@ -27,10 +27,10 @@
 - service/review_service.py：审核通过后入库与 flush；
 - service/temp_knowledge_store.py：临时库复用 add_parent_child 写入逻辑；
 - dao/knowledge.py：删除文档向量块时取共享库与写锁；
-- multi_agent/rag_agent.py：RAG 检索共享持久库；
+- app/domain/agents/rag_agent.py：RAG 检索共享持久库；
 - core/purge_scheduler.py：旧版本清理；control/app.py 与
   control/file_control.py：服务关闭/批次结束时 flush 索引；
-- tools/business/knowledge_business.py：知识库检索工具。
+- app/domain/tools/business/knowledge_business.py：知识库检索工具。
 """
 from __future__ import annotations
 
@@ -146,8 +146,8 @@ def get_persistent_db() -> Chroma:
     """应用级共享持久化向量库（RAGAgent/知识库管理/上传写入共用同一实例）。
 
     被谁调用：service/file_service.py、service/review_service.py、
-              dao/knowledge.py、multi_agent/rag_agent.py、
-              core/purge_scheduler.py、tools/business/knowledge_business.py
+              dao/knowledge.py、app/domain/agents/rag_agent.py、
+              core/purge_scheduler.py、app/domain/tools/business/knowledge_business.py
               及 scripts/ 维护脚本。
     返回：Chroma——_store.db() 懒加载出的 chromadb_data 持久库实例。
     """

@@ -1,5 +1,5 @@
 """
-模块名：multi_agent.chat_agent
+模块名：app.domain.agents.chat_agent
 
 作用：
     流水线阶段 5 的最终回答 Agent。订阅 MessageBus 中上游各 Agent 的产物
@@ -52,9 +52,9 @@ class ChatAgent:
     关键 self 属性含义与去向：
         - self.bus：订阅 receiver="ChatAgent" 邮箱获取上游产物；
         - self.query/self.history：用户问题与多轮历史（来源 ChatService
-          上下文改写与 memory/context_memory），进入 prompt 的 input/history；
+          上下文改写与 app/domain/memory/context_memory），进入 prompt 的 input/history；
         - self.session_keywords/self.user_profile：会话关键词与用户画像
-          注入前缀（来源 memory/session_keyword_service、profile_service），
+          注入前缀（来源 app/domain/memory/session_keyword_service、profile_service），
           作为独立 prompt 字段，避免污染上游意图判断与检索 embedding；
         - self.llm：经 model_llm.gateway 构建的聊天模型（含主备网关）。
     """
@@ -75,10 +75,10 @@ class ChatAgent:
         - query：改写后的用户最终查询（来源：ChatService 上下文改写），
           进入 prompt 的 input；为 None 时回退用总线消息携带的 query；
         - history：早期摘要 + 最近 N 轮对话原文（来源：
-          memory/context_memory，经 ChatService 透传）；
+          app/domain/memory/context_memory，经 ChatService 透传）；
         - session_keywords：会话累积关键词注入前缀（来源：
-          memory/session_keyword_service）；
-        - user_profile：用户画像注入前缀（来源：memory/profile_service）。
+          app/domain/memory/session_keyword_service）；
+        - user_profile：用户画像注入前缀（来源：app/domain/memory/profile_service）。
         """
         self.bus=message_bus
         # 用户原始问题 + 对话历史：修复旧实现 prompt 的 input 仅含上游 Agent

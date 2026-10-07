@@ -24,9 +24,9 @@
 
 被哪些模块依赖（Grep get_redis / from core.redis_client）：
     core.locks、app.auth.rate_limit（限流）、app.auth.account_guard、app.auth.delete_guard、
-    core.undo_store、app.auth.verification、core.usage、memory.context_memory、
-    memory.profile_service、memory.session_keyword_service、memory.session_rollover、
-    memory.short_term、service.file_service、service.admin_user_service；
+    core.undo_store、app.auth.verification、core.usage、app.domain.memory.context_memory、
+    app.domain.memory.profile_service、app.domain.memory.session_keyword_service、app.domain.memory.session_rollover、
+    app.domain.memory.short_term、service.file_service、service.admin_user_service；
     tests 下多个测试模块也直接导入。
 """
 import logging
@@ -50,7 +50,7 @@ def get_redis() -> Optional[object]:
     功能：首次调用时按 settings.REDIS_URL 探测一次连接并缓存结果，
     之后所有调用直接返回缓存（惰性单例 + 双重检查锁）。
     被谁调用：core.locks、app.auth.rate_limit、app.auth.account_guard、app.auth.delete_guard、
-        core.undo_store、app.auth.verification、core.usage 及 memory/service 下
+        core.undo_store、app.auth.verification、core.usage 及 app/domain/memory/service 下
         多个需要共享存储的模块（完整清单见模块 docstring）。
     返回：Optional[object]；连通时返回 redis.Redis 实例（decode_responses=True），
         未配置 redis_url 或 ping 失败时返回 None，调用方据此降级为进程内存实现。

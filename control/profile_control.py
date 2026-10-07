@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from app.auth.guards import get_current_user
 from app.auth.rate_limit import user_rate_limit
-from memory.profile_service import get_profile_service
+from app.domain.memory.profile_service import get_profile_service
 
 # 用户画像路由：prefix=/profile，由 control/app.py 的 app.include_router(profile_router) 注册。
 # 路由级依赖 user_rate_limit(60, 60)：按登录用户限流 60 次/分钟。

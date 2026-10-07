@@ -1,11 +1,11 @@
 """
-模块：memory.short_term —— 短期记忆（会话级，Redis）。
+模块：app.domain.memory.short_term —— 短期记忆（会话级，Redis）。
 
 数据流总览：消息从对话接口进入（control/chat_control.py →
 service/chat_service.py 的 handle/handle_stream，session_id 由 chat_control
 从 JWT(user_id) 与请求体(session_id) 传入）→ 每轮问答经 append_round 只写
-Redis（本模块）→ TTL 到期/条数兜底时由后台任务（memory/long_term.py）批量
-写 MySQL（session_information）后删除本 key → 读取侧（memory/context_memory
+Redis（本模块）→ TTL 到期/条数兜底时由后台任务（app/domain/memory/long_term.py）批量
+写 MySQL（session_information）后删除本 key → 读取侧（app/domain/memory/context_memory
 构建注入 LLM 的上下文、control/history_control 会话详情）优先读 Redis，
 未命中回源 MySQL 长期记忆并 warm_up 回填。
 
@@ -15,7 +15,7 @@ Redis（本模块）→ TTL 到期/条数兜底时由后台任务（memory/long_
   被 Redis 自动过期清理；用户在原会话继续对话会重新计时（每次写入 EXPIRE 续期）；
 - 上下文记忆优先读短期记忆（Redis 微秒级），未命中再回源 MySQL 长期记忆并回填；
 - 长期记忆由短期记忆转变而来：对话期间只写 Redis 不写 MySQL，后台落库任务
-  （memory/long_term.py）在会话静默临近过期时批量写入 MySQL 后删除本 key，
+  （app/domain/memory/long_term.py）在会话静默临近过期时批量写入 MySQL 后删除本 key，
   减少数据库请求。
 
 存储：
@@ -34,9 +34,9 @@ Redis（本模块）→ TTL 到期/条数兜底时由后台任务（memory/long_
 被谁使用（全仓 import 位置）：
 - service/chat_service.py：ChatService.__init__ 持有单例；_save_information
   调 append_round 写每轮对话，_maybe_rollover/recover 调 load 读消息；
-- memory/long_term.py：LongTermFlusher 调 scan_sessions/ttl_seconds/
+- app/domain/memory/long_term.py：LongTermFlusher 调 scan_sessions/ttl_seconds/
   pending_count/pending_messages/get_title/mark_flushed/drop 完成批量落库；
-- memory/context_memory.py：_load_messages 调 load 读短期、warm_up 回填；
+- app/domain/memory/context_app.domain.memory.py：_load_messages 调 load 读短期、warm_up 回填；
 - control/history_control.py：/history/detail 拼 pending_messages，
   /history/delete/confirm 调 clear 联动清理。
 """
@@ -69,7 +69,7 @@ def _meta_key(user_id: int, session_id: int) -> str:
 class ShortTermStore:
     """
     会话短期记忆存储（应用级单例，经 get_short_term_store 获取，非每请求新建；
-    service/chat_service.py、memory/long_term.py、memory/context_memory.py、
+    service/chat_service.py、app/domain/memory/long_term.py、app/domain/memory/context_app.domain.memory.py、
     control/history_control.py 共用同一实例）。
 
     职责：对话期间承接每轮消息的 Redis 读写与滑动 TTL，维护 total/flushed
@@ -204,7 +204,7 @@ class ShortTermStore:
         """
         读取短期记忆消息（时间升序）。
 
-        被谁调用：memory/context_memory.py 的 _load_messages（构建注入 LLM 的
+        被谁调用：app/domain/memory/context_app.domain.memory.py 的 _load_messages（构建注入 LLM 的
         上下文）；service/chat_service.py 的 _maybe_rollover（取消息数算轮数）
         与 recover（网络中断恢复查看本轮已生成内容）。
         参数：user_id (int，JWT)、session_id (int，请求体)。
@@ -232,7 +232,7 @@ class ShortTermStore:
         """
         缓存未命中回源 MySQL 后回填短期记忆（回填视为一次活跃访问，给予完整 TTL）。
 
-        被谁调用：memory/context_memory.py 的 _load_messages 在 Redis 未命中、
+        被谁调用：app/domain/memory/context_app.domain.memory.py 的 _load_messages 在 Redis 未命中、
         经 SessionDAO 从 MySQL 读完历史后调用，避免下一轮再次回源。
         参数：user_id/session_id 同上；messages (List[Dict])——时间升序的历史消息，
         来源 MySQL session_information，仅截取最近 max_messages 条回填。
@@ -279,7 +279,7 @@ class ShortTermStore:
         """
         返回 key 剩余存活秒数，供后台落库判定“临期”。
 
-        被谁调用：memory/long_term.py 的 LongTermFlusher.flush_due（每周期扫描时）。
+        被谁调用：app/domain/memory/long_term.py 的 LongTermFlusher.flush_due（每周期扫描时）。
         参数：user_id/session_id 同上。
         返回：int——Redis 语义：-2 key 不存在，-1 存在但无 TTL，非负数为剩余秒数；
         进程内降级模式返回按 expires_at 估算的非负剩余秒或 -2；异常时返回 -2。
@@ -301,7 +301,7 @@ class ShortTermStore:
         """
         待落库消息条数：meta.total - meta.flushed。
 
-        被谁调用：memory/long_term.py 的 flush_one（落库前判断是否有活）
+        被谁调用：app/domain/memory/long_term.py 的 flush_one（落库前判断是否有活）
         与 flush_due（条数兜底判定）。
         参数：user_id/session_id 同上。返回：int——非负待落库条数；meta 不存在
         或 Redis 异常时返回 0（按“无待落库”处理，避免误触发落库）。
@@ -326,7 +326,7 @@ class ShortTermStore:
         """
         读取 meta 中暂存的会话标题（落库时随消息一并 upsert 到 history_information）。
 
-        被谁调用：memory/long_term.py 的 flush_one。
+        被谁调用：app/domain/memory/long_term.py 的 flush_one。
         参数：user_id/session_id 同上。返回：str——无标题或异常时返回空串。
         """
         client = self.client
@@ -344,7 +344,7 @@ class ShortTermStore:
         """
         读取未落库的消息（时间升序）：取 list 尾部 pending 条。
 
-        被谁调用：memory/long_term.py 的 flush_one（批量写 MySQL 的消息来源）；
+        被谁调用：app/domain/memory/long_term.py 的 flush_one（批量写 MySQL 的消息来源）；
         control/history_control.py 的 /history/detail（拼接到 MySQL 已落库部分
         之后，返回完整会话记录给前端）。
         参数：user_id/session_id 同上。返回：List[Dict[str,str]]——时间升序消息；
@@ -373,7 +373,7 @@ class ShortTermStore:
         """
         落库成功后推进水位：flushed = total（保留 key，会话可能仍在活跃）。
 
-        被谁调用：memory/long_term.py 的 flush_one 在“条数兜底落库”
+        被谁调用：app/domain/memory/long_term.py 的 flush_one 在“条数兜底落库”
         （drop_after=False）成功后调用；此后 pending_count 归零，直到有新对话追加。
         参数：user_id/session_id 同上。返回：None。异常仅记 error 日志。
         """
@@ -396,7 +396,7 @@ class ShortTermStore:
         临期落库成功后删除短期记忆（长期记忆已接管；语义为短期→长期的正常转变，
         区别于用户删会话的 clear，但实现复用 clear 删 list+meta）。
 
-        被谁调用：memory/long_term.py 的 flush_one 在“临期落库”
+        被谁调用：app/domain/memory/long_term.py 的 flush_one 在“临期落库”
         （drop_after=True）成功后，以及无待落库消息的临期清理分支。
         参数：user_id/session_id 同上。返回：None。
         """
@@ -408,7 +408,7 @@ class ShortTermStore:
         Redis：SCAN mem:short:*（游标分批 count=200，排除 :meta/:guard 后缀）；
         降级内存：遍历 _mem。
 
-        被谁调用：memory/long_term.py 的 LongTermFlusher.flush_due
+        被谁调用：app/domain/memory/long_term.py 的 LongTermFlusher.flush_due
         （扫描周期 settings.SHORT_TERM_FLUSH_INTERVAL_SECONDS，默认 60 秒）。
         参数：无。返回：List[Tuple[int,int]]——(user_id, session_id) 列表；
         扫描异常时返回已收集部分（可能为空），不向调用方抛错。
@@ -502,7 +502,7 @@ def get_short_term_store() -> ShortTermStore:
     """应用级单例工厂（双重检查锁，非每请求新建）。
 
     被谁调用：service/chat_service.py（ChatService.__init__）、
-    memory/long_term.py（store 属性惰性取）、memory/context_memory.py
+    app/domain/memory/long_term.py（store 属性惰性取）、app/domain/memory/context_app.domain.memory.py
     （_load_messages 读写/回填）、control/history_control.py（详情拼接/删除清理）。
     返回：ShortTermStore——共享单例（内部惰性取全局 Redis 连接）。
     """

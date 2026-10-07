@@ -13,7 +13,7 @@
     # 主力账号 e2e_tester_2026/Test1234! 须预先存在；自建临时账号
     # e2e_eval_b_<TS>、e2e_eval_adm_<TS>；总耗时约 10 分钟（含对话限流窗口等待）
 依赖说明：requests 直发 HTTP（不经 conftest）+ SQLAlchemy 直连库 +
-直接 import multi_agent / tools.function_tools 做进程内状态机与工具评测。
+直接 import multi_agent / app.domain.tools.function_tools 做进程内状态机与工具评测。
 
 类别            本系统落点
 C1  结果层      真实 LLM 问答任务完成率 / SSE+JSON 字段完整 / 切题（pass@1、格式校验通过率）
@@ -372,7 +372,7 @@ check("C2.2 status 帧 stage 非空且为字符串",
       bool(stages) and all(isinstance(s, str) and s for s in stages), str(stages))
 
 # 2.3 进程内状态机：死循环/重试边界
-from multi_agent.state_machine import PipelineStateMachine, MAX_RETRIES
+from app.domain.agents.state_machine import PipelineStateMachine, MAX_RETRIES
 
 sm = PipelineStateMachine("q", uid_a, 1)
 # 指纹按 3 种 agent 循环：任意长度 5 的滑动窗口内都有 3 种指纹（>=3 不触发
@@ -404,7 +404,7 @@ check("C2.3 回滚达上限后 can_rollback=False", can is True and sm2.can_roll
 
 # ================================================================ C3 工具调用层
 section("C3 工具调用层：工具选择准确率 / 参数准确率 / 错误码不崩 / 越权拦截")
-from tools.function_tools import vague, course, summary, execute_tool
+from app.domain.tools.function_tools import vague, course, summary, execute_tool
 
 # 金标：course 工具（判定是否走 RAG）；前 5 组为正常/语序/拼音错别字/噪声口语正例，
 # 后 3 组为闲聊负例（电影/去哪玩/笑话），元组第二项为期望的走 RAG 布尔
