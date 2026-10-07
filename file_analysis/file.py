@@ -40,6 +40,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(current_dir)) 
 from PyPDF2 import PdfReader
 from embedding.text_embedding import get_embedding
+from core.config import settings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 import os
@@ -212,7 +213,7 @@ def to_documents(chunks: list[str], source: str, scope: str = "private", user_id
             meta["session_id"] = session_id
         docs.append(Document(page_content=content, metadata=meta))
     return docs
-def build_chromadb(docs:list[Document],embedding_model,persist_path:str="../chromadb_data/")->Chroma:
+def build_chromadb(docs:list[Document],embedding_model,persist_path:str=None)->Chroma:
     """把 Document 列表分批写入持久化 Chroma 向量库。
 
     流水线位置：解析-切分-封装之后的向量入库终点；写入后文本即可被
@@ -229,11 +230,14 @@ def build_chromadb(docs:list[Document],embedding_model,persist_path:str="../chro
     - docs (list[Document])：to_documents 产出的文档列表；
     - embedding_model：embedding 模型对象（get_embedding() 产出），
       Chroma 用它在写入时把 page_content 向量化；
-    - persist_path (str)：向量库持久化目录，默认 ../chromadb_data/。
+    - persist_path (str)：向量库持久化目录；None 时取 settings.CHROMA_DIR
+      （默认 storage/chromadb，可用环境变量 chroma_dir 覆盖）。
 
     返回：
     - Chroma：已写入文档的 Chroma 实例（可直接用于检索）。
     """
+    if persist_path is None:
+        persist_path = str(settings.CHROMA_DIR)
     logger.info('build_chromadb start')
     db=Chroma(
         embedding_function=embedding_model,
@@ -290,7 +294,7 @@ if __name__ == "__main__":
     splitted_docs = split_str(text)
     embeddings = get_embedding()
     docs = to_documents(splitted_docs, pdf_path)
-    db = build_chromadb(docs, embeddings, persist_path="../chromadb_data/")
+    db = build_chromadb(docs, embeddings)
     test_retrieval(db, "基于改进 Census 变换与梯度融合的立体匹配算法，在 Middlebury 数据集上的平均非遮挡区域误匹配率和全部区域误匹配率分别是多少")
 
     

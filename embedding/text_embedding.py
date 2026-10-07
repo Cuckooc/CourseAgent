@@ -5,7 +5,7 @@
     内置 JSON 问答知识库的离线入库与向量检索工具集。处理流水线为：
     加载 JSON → 转换为 LangChain Document → 递归字符分块 → 调用 DashScope
     text-embedding-v2 向量化 → 构建/加载本地持久化 Chroma 库（默认
-    ../chromadb_data/），并提供按可见范围（public/private）与 L2 距离阈值
+    storage/chromadb，可由环境变量 chroma_dir 覆盖），并提供按可见范围（public/private）与 L2 距离阈值
     过滤的检索函数。
 
 主要成员：
@@ -44,6 +44,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_community.embeddings import DashScopeEmbeddings
+
+from core.config import settings
 
 # 模块导入时配置根日志：INFO 级别 + 标准时间格式，StreamHandler 强制输出到终端（不依赖外部 logging 配置）
 logging.basicConfig(
@@ -131,7 +133,7 @@ def get_embedding():
         dashscope_api_key=dashscope.api_key,
     )
     return embedding_model
-def build_chromadb(docs:list[Document],embedding_model,persist_path:str="../chromadb_data/")->Chroma:
+def build_chromadb(docs:list[Document],embedding_model,persist_path:str=None)->Chroma:
     """加载已有持久化 Chroma 库；不存在时用 docs 分批构建并持久化。
 
     功能：persist_path 已存在且非空 → 直接打开（不重复入库），返回库内条数；
@@ -139,11 +141,14 @@ def build_chromadb(docs:list[Document],embedding_model,persist_path:str="../chro
     被谁调用：本模块 __main__；multi_agent/rag_agent.py（公共库）、file_agent.py。
     参数：docs —— 分块后的 Document（仅首次建库使用）；
           embedding_model —— get_embedding() 返回的嵌入客户端；
-          persist_path —— Chroma 持久化目录，默认 ../chromadb_data/。
+          persist_path —— Chroma 持久化目录；None 时取 settings.CHROMA_DIR
+          （默认 storage/chromadb，可用环境变量 chroma_dir 覆盖）。
     返回：langchain Chroma 实例，去向各 Agent 的 similarity_search_with_score 检索。
     异常：embedding API 超时/限流由 DashScope SDK 内部处理；批量写入中途失败时
     已成功的批次已落盘，重跑本函数会因目录非空走「直接打开」分支（不会自动补写）。
     """
+    if persist_path is None:
+        persist_path = str(settings.CHROMA_DIR)
     logger.info('build_chromadb start')
     if os.path.exists(persist_path) and len(os.listdir(persist_path)) > 0:
         logger.info('chromadb_data exists')
@@ -268,8 +273,8 @@ if __name__ == "__main__":
     # 5. 加载带缓存的Embedding模型
     embeddings = get_embedding()
     
-    # 6. 构建Chroma向量库（对应你项目的chromadb_data文件夹）
-    db = build_chromadb(splitted_docs, embeddings, persist_path="../chromadb_data/")
+    # 6. 构建Chroma向量库（持久化目录取 settings.CHROMA_DIR，默认 storage/chromadb）
+    db = build_chromadb(splitted_docs, embeddings)
     
     # 7. 测试检索（可自定义问题）
     test_retrieval(db, "高一学生语文跟不上怎么办？")

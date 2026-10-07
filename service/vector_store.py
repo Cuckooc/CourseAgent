@@ -38,7 +38,6 @@ import logging
 import math
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 from langchain_chroma import Chroma
@@ -49,14 +48,14 @@ from embedding.parent_child import (
     split_parent_child,
 )
 from embedding.text_embedding import get_embedding
+from core.config import settings
 
 # 模块级日志器：向量写入/替换/flush 落盘与异常告警日志走该 logger
 logger = logging.getLogger(__name__)
 
-# 模块级常量：项目根目录（service/ 的上一级），用于定位持久化目录
-_BASE_DIR = Path(__file__).resolve().parent.parent
-# 模块级常量：持久化 Chroma 落盘根目录 <项目根>/chromadb_data
-_PERSIST_PATH = str(_BASE_DIR / "chromadb_data")
+# 持久化 Chroma 落盘目录：统一取配置 settings.CHROMA_DIR（默认 storage/chromadb，
+# 可用环境变量 chroma_dir 覆盖），取代历史上硬编码的 <项目根>/chromadb_data。
+_PERSIST_PATH = str(settings.CHROMA_DIR)
 
 # 单次发给 embedding API 的子块上限（DashScope text-embedding-v2 批量约束，保守值）
 _EMBED_BATCH = 25

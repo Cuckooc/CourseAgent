@@ -60,8 +60,8 @@ logger = logging.getLogger(__name__)
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 默认演示 PDF：本地文件问答的演示语料（data/samples/1.pdf，数据/源码分离）
 _DEFAULT_PDF_PATH = os.path.join(_BASE_DIR, "data", "samples", "1.pdf")
-# 演示 PDF 向量库的 Chroma 持久化目录
-_DEFAULT_PERSIST_PATH = os.path.join(_BASE_DIR, "chromadb_data")
+# 演示 PDF 向量库的 Chroma 持久化目录（统一配置，默认 storage/chromadb）
+_DEFAULT_PERSIST_PATH = str(settings.CHROMA_DIR)
 
 
 class FileAgent:

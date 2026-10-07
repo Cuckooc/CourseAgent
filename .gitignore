@@ -39,9 +39,8 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 
-# 运行时数据
-chromadb_data/
-uploads/
+# 运行时数据（数据/源码分离：上传文件与 Chroma 持久化统一 storage 根）
+storage/
 *.log
 
 # IDE / OS

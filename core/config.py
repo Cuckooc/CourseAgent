@@ -293,14 +293,37 @@ class Settings:
         """把逗号分隔的 CORS_ORIGINS 拆成去空白后的来源列表；被 control/app.py 的 CORSMiddleware 读取。"""
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
-    # upload_dir：上传文件根目录名（相对 BASE_DIR 或绝对路径），默认 "uploads"，与源码目录隔离。
-    # 被 file_control / file_service / knowledge_service / tools 等经 UPLOAD_DIR property 读取。
-    UPLOAD_DIR_NAME: Final[str] = os.getenv("upload_dir", "uploads")
+    # storage_dir：运行时有状态数据根目录（相对 BASE_DIR 或绝对路径），默认 "storage"。
+    # 上传文件与 Chroma 持久化统一收敛到此根下，与源码目录物理隔离（数据/源码分离）；
+    # 可用环境变量 storage_dir 覆盖，绝对路径时直接使用。
+    STORAGE_DIR_NAME: Final[str] = os.getenv("storage_dir", "storage")
+
+    @property
+    def STORAGE_DIR(self) -> Path:
+        """运行时数据根目录绝对路径；STORAGE_DIR_NAME 为绝对路径时直接使用，否则拼到 BASE_DIR 下。"""
+        p = Path(self.STORAGE_DIR_NAME)
+        return p if p.is_absolute() else BASE_DIR / p
+
+    # upload_dir：上传文件根目录（相对 BASE_DIR 或绝对路径），默认 storage/uploads。
+    # 显式配置环境变量 upload_dir 时仍尊重旧值（向后兼容）。
+    # 被 file_control / file_service / knowledge_service / temp_knowledge_store 等经 UPLOAD_DIR 读取。
+    UPLOAD_DIR_NAME: Final[str] = os.getenv("upload_dir", "storage/uploads")
 
     @property
     def UPLOAD_DIR(self) -> Path:
         """上传目录的绝对路径：UPLOAD_DIR_NAME 为绝对路径时直接使用，否则拼到 BASE_DIR 下。"""
         p = Path(self.UPLOAD_DIR_NAME)
+        return p if p.is_absolute() else BASE_DIR / p
+
+    # chroma_dir：Chroma 持久化目录（相对 BASE_DIR 或绝对路径），默认 storage/chromadb。
+    # 公共知识库向量库（service/vector_store）与文件演示库（multi_agent/file_agent）共用此定位；
+    # 取代历史上散落在各模块的 ../chromadb_data/ 相对路径（CWD 依赖）。
+    CHROMA_DIR_NAME: Final[str] = os.getenv("chroma_dir", "storage/chromadb")
+
+    @property
+    def CHROMA_DIR(self) -> Path:
+        """Chroma 持久化目录绝对路径；CHROMA_DIR_NAME 为绝对路径时直接使用，否则拼到 BASE_DIR 下。"""
+        p = Path(self.CHROMA_DIR_NAME)
         return p if p.is_absolute() else BASE_DIR / p
 
     # frontend_dist：前端生产构建产物目录（相对 BASE_DIR 或绝对路径），默认 web/frontend/dist。
