@@ -25,10 +25,10 @@
 模块常量：UPLOAD_URL（POST /file/path 全地址）、KNOWLEDGE_LIST_URL（列表相对路径）。
 
 被测对象来源：
-- 路由：control/file_control.py（POST /file/path，扩展名白名单 + _validate_magic
-  magic bytes 校验 + uuid 重命名落盘）、control/knowledge_control.py（/knowledge/list、
+- 路由：app/api/v1/files.py（POST /file/path，扩展名白名单 + _validate_magic
+  magic bytes 校验 + uuid 重命名落盘）、app/api/v1/knowledge.py（/knowledge/list、
   删除走 /knowledge/delete/* 本文件未用）；
-- 业务：service/file_service.py（解析/脱敏/embedding）、service/vector_store.py
+- 业务：app/application/files/file_service.py（解析/脱敏/embedding）、app/infrastructure/vector_store/persistent.py
   与 embedding/（DashScope embedding + Chroma 持久化）；
 - 鉴权：core/deps.py（无效 token → 401）。
 

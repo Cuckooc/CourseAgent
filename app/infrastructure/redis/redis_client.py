@@ -26,7 +26,7 @@
     core.locks、app.auth.rate_limit（限流）、app.auth.account_guard、app.auth.delete_guard、
     core.undo_store、app.auth.verification、core.usage、app.domain.memory.context_memory、
     app.domain.memory.profile_service、app.domain.memory.session_keyword_service、app.domain.memory.session_rollover、
-    app.domain.memory.short_term、service.file_service、service.admin_user_service；
+    app.domain.memory.short_term、app.application.files.file_service、app.application.admin.admin_user_service；
     tests 下多个测试模块也直接导入。
 """
 import logging

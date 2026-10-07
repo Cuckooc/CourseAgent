@@ -18,7 +18,7 @@
 被谁使用（Grep UndoStore）：
     - dao/soft_delete.py：soft_delete_session、soft_delete_user 成功后
       调用 UndoStore.save 暂存被删对象定位信息；
-    - control/history_control.py：撤销恢复端点调用 UndoStore.consume
+    - app/api/v1/history.py：撤销恢复端点调用 UndoStore.consume
       取出最近一次删除记录后执行恢复。
     peek() 当前全仓无调用方（预留给“查询是否可撤销”类场景）。
 """
@@ -89,7 +89,7 @@ class UndoStore:
         """取出并删除撤销记录（一次性消费）。
 
         功能：读取用户最近一条撤销记录并立即删除，保证恢复机会只能使用一次。
-        被谁调用：control/history_control.py 的撤销恢复端点，
+        被谁调用：app/api/v1/history.py 的撤销恢复端点，
             取到记录后执行反软删（is_deleted 置回 0）。
         参数：
             user_id: 当前登录用户 id（来自 get_current_user 鉴权结果）。

@@ -16,9 +16,9 @@ POST /file/path；无 asyncio。
   （唯一约束/去重检查在并发下不产生重复行）。
 
 被测对象来源：
-- 路由：control/file_control.py（POST /file/path）、
-  control/knowledge_control.py（/knowledge/list、/knowledge/delete/preview|confirm）；
-- 业务：service/file_service.py 去重判定（相似度阈值）与上传限流
+- 路由：app/api/v1/files.py（POST /file/path）、
+  app/api/v1/knowledge.py（/knowledge/list、/knowledge/delete/preview|confirm）；
+- 业务：app/application/files/file_service.py 去重判定（相似度阈值）与上传限流
   （core/deps.py，5 次/分钟/user）。
 
 运行方式：

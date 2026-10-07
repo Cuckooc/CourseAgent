@@ -1,5 +1,5 @@
 """
-模块名：service.preference_service
+模块名：app.application.files.preference_service
 作用：用户偏好提取服务。临时知识库文件上传后，从脱敏文本中用 LLM 异步
       提取用户偏好、习惯等关键信息（学习/工作领域、兴趣话题、表达习惯、
       关注方向），结果存入进程内 per-user_id 内存缓存，供后续对话个性化使用。
@@ -14,7 +14,7 @@
   线程池与提取提示词常量。
 
 被谁使用：
-- control/file_control.py：_process_saved_file 中 temp 文件处理成功后
+- app/api/v1/files.py：_process_saved_file 中 temp 文件处理成功后
   调 extract_preferences(masked_text, user_id)（fire-and-forget）。
 - get_preferences 当前仓库内无业务调用点，作为个性化能力的读取入口预留。
 """
@@ -58,7 +58,7 @@ def extract_preferences(text: str, user_id: int) -> None:
     功能：空文本直接忽略；否则把任务提交到 _pool 线程池后台执行，
           调用方（上传链路）立即返回，不感知提取成败。文本截断前 8000
           字以控制单次 LLM token 消耗。
-    被谁调用：control/file_control.py 的 _process_saved_file（temp 文件
+    被谁调用：app/api/v1/files.py 的 _process_saved_file（temp 文件
               上传成功且文本已脱敏后，fire-and-forget）。
     参数：
     - text (str)：脱敏后的文件提取文本（来源：file_control 中 mask_text

@@ -1,5 +1,5 @@
 """
-模块名：service.knowledge_service
+模块名：app.application.knowledge.knowledge_service
 作用：知识库管理服务（应用级单例），是知识库列表/详情/删除接口与
       dao/knowledge.py 的 KnowledgeDAO 之间的薄业务层。协调向量库记录
       （chromadb_data 中的父子块）与上传物理文件（UPLOAD_DIR）的生命周期，
@@ -13,7 +13,7 @@
 - get_knowledge_service()：lru_cache 单例工厂。
 
 被谁使用：
-- control/knowledge_control.py：以 get_knowledge_service() 单例方式调用，
+- app/api/v1/knowledge.py：以 get_knowledge_service() 单例方式调用，
   分别服务知识库列表、文档详情/下载、文档删除三个接口；user_id 来自
   JWT，is_admin 由 control 层按角色判定，结果返回知识库管理前端。
 """
@@ -37,7 +37,7 @@ class KnowledgeService:
 
     实例化位置：不在 control 层直接 new；唯一创建处为本模块末尾的
             get_knowledge_service()（@lru_cache 应用级单例），由
-            control/knowledge_control.py 的三个接口调用。
+            app/api/v1/knowledge.py 的三个接口调用。
 
     关键 self 属性：
     - dao：dao/knowledge.py 的 KnowledgeDAO 实例，构造参数为
@@ -55,7 +55,7 @@ class KnowledgeService:
 
         功能：委托 DAO 按 scope/user_id 过滤文档（普通用户仅见公共库 +
               自有私有库，管理员可见范围由 DAO 按 is_admin 放宽）。
-        被谁调用：control/knowledge_control.py 的知识库列表接口。
+        被谁调用：app/api/v1/knowledge.py 的知识库列表接口。
         参数：
         - user_id (int|None)：当前用户 ID，来源：JWT current_user。
         - is_admin (bool)：是否管理员视角，来源：control 层按角色判定。
@@ -68,7 +68,7 @@ class KnowledgeService:
         """查询单个文档详情（含下载/预览前的权限校验）。
 
         功能：委托 DAO 按存储定位文档并校验当前用户是否有权访问。
-        被谁调用：control/knowledge_control.py 的文档详情接口。
+        被谁调用：app/api/v1/knowledge.py 的文档详情接口。
         参数：
         - filename (str)：存储文件名，来源：请求体 req.stored_name。
         - user_id (int|None)：JWT 注入的当前用户 ID。
@@ -83,7 +83,7 @@ class KnowledgeService:
 
         功能：委托 DAO 删除该文件的全部父子向量块并删除 UPLOAD_DIR 下
               物理文件（DAO 内部先做归属/权限校验），删除成功后写审计日志。
-        被谁调用：control/knowledge_control.py 的文档删除接口。
+        被谁调用：app/api/v1/knowledge.py 的文档删除接口。
         参数：
         - filename (str)：存储文件名，来源：请求体 req.stored_name。
         - user_id (int|None)：JWT 注入的当前用户 ID。
@@ -108,7 +108,7 @@ class KnowledgeService:
 def get_knowledge_service() -> KnowledgeService:
     """KnowledgeService 应用级单例工厂。
 
-    被谁调用：control/knowledge_control.py 的列表/详情/删除接口。
+    被谁调用：app/api/v1/knowledge.py 的列表/详情/删除接口。
     返回：KnowledgeService 唯一实例（内部 KnowledgeDAO 随之只构建一次）。
     """
     return KnowledgeService()

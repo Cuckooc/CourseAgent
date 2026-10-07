@@ -27,8 +27,8 @@
     - app/domain/tools/dispatcher.py 的 ToolDispatcher._run_one() 经 ToolSpec.business_fn
       回调这两个函数（上游入口为 StructuredTool 直调或 app/domain/tools/shadow.py）；
     - tests/app/domain/tools/test_tool_layer_p1.py 直接构造参数模型与 ToolContext 调用；
-    - 数据源依赖：service/vector_store.get_persistent_db（持久 Chroma 库）、
-      service/temp_knowledge_store.get_temp_store（会话临时库注册表）、
+    - 数据源依赖：app/infrastructure/vector_store/persistent.get_persistent_db（持久 Chroma 库）、
+      app/infrastructure/vector_store/temp_store.get_temp_store（会话临时库注册表）、
       app/domain/agents/retrieval.retrieve_scoped（检索算法）。
 """
 from __future__ import annotations
@@ -38,8 +38,8 @@ import logging
 from langchain_core.documents import Document
 
 from app.domain.agents.retrieval import retrieve_scoped
-from service.temp_knowledge_store import get_temp_store
-from service.vector_store import get_persistent_db
+from app.infrastructure.vector_store.temp_store import get_temp_store
+from app.infrastructure.vector_store.persistent import get_persistent_db
 from app.domain.tools.protocol import (
     KnowledgeSearchArgs,
     SessionFileSearchArgs,
@@ -93,7 +93,7 @@ def knowledge_search_fn(
               200 字、top_k 钳制 [1,10]）。
     参数：args 为校验后的入参模型（query 来源 LLM 决策的检索词，top_k 召回条数）；
           ctx 为服务端注入上下文（user_id 是 scope 过滤的唯一身份来源）。
-    数据源：service/vector_store.get_persistent_db() 返回的持久 Chroma 库；
+    数据源：app/infrastructure/vector_store/persistent.get_persistent_db() 返回的持久 Chroma 库；
             检索算法 app/domain/agents/retrieval.retrieve_scoped。
     返回：ToolResult，data 为 [{"content", "metadata"}, ...]（content 优先取
           metadata.output），去向为回灌 Agent 拼入 LLM prompt / SSE 答案，
@@ -139,7 +139,7 @@ def session_file_search_fn(
               （{"query": str, "top_k": int=3}，同样经 dispatcher 钳制）。
     参数：args.query 来源 LLM 决策的检索词；ctx.user_id/ctx.session_id 为
           服务端注入的临时库定位键（LLM 参数中伪造一律无效）。
-    数据源：service/temp_knowledge_store.get_temp_store() 的会话临时库注册表
+    数据源：app/infrastructure/vector_store/temp_store.get_temp_store() 的会话临时库注册表
             （has_session 判断物理库是否存在、retrieve_scoped 内部 get_db 加载），
             检索算法仍为 app/domain/agents/retrieval.retrieve_scoped。
     返回：ToolResult，data 为 [{"content", "metadata"}, ...]（正文取

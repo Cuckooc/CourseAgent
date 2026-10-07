@@ -27,7 +27,7 @@
 （upsert history_information，不覆盖用户自定义标题）。
 
 读取侧配套：会话详情 = MySQL 已落库部分 + 短期记忆未落库部分拼接
-（见 control/history_control.py）；上下文记忆短期未命中时回源 MySQL 并
+（见 app/api/v1/history.py）；上下文记忆短期未命中时回源 MySQL 并
 warm_up 回填，落库删除 key 后该回源路径自然接管。
 
 主要成员：

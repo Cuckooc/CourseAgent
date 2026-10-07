@@ -1,8 +1,8 @@
 """
 模块：app.domain.memory.short_term —— 短期记忆（会话级，Redis）。
 
-数据流总览：消息从对话接口进入（control/chat_control.py →
-service/chat_service.py 的 handle/handle_stream，session_id 由 chat_control
+数据流总览：消息从对话接口进入（app/api/v1/chat.py →
+app/application/chat/chat_service.py 的 handle/handle_stream，session_id 由 chat_control
 从 JWT(user_id) 与请求体(session_id) 传入）→ 每轮问答经 append_round 只写
 Redis（本模块）→ TTL 到期/条数兜底时由后台任务（app/domain/memory/long_term.py）批量
 写 MySQL（session_information）后删除本 key → 读取侧（app/domain/memory/context_memory
@@ -32,12 +32,12 @@ Redis（本模块）→ TTL 到期/条数兜底时由后台任务（app/domain/m
 - reset_short_term_store_for_test()：测试辅助，重置单例。
 
 被谁使用（全仓 import 位置）：
-- service/chat_service.py：ChatService.__init__ 持有单例；_save_information
+- app/application/chat/chat_service.py：ChatService.__init__ 持有单例；_save_information
   调 append_round 写每轮对话，_maybe_rollover/recover 调 load 读消息；
 - app/domain/memory/long_term.py：LongTermFlusher 调 scan_sessions/ttl_seconds/
   pending_count/pending_messages/get_title/mark_flushed/drop 完成批量落库；
-- app/domain/memory/context_app.domain.memory.py：_load_messages 调 load 读短期、warm_up 回填；
-- control/history_control.py：/history/detail 拼 pending_messages，
+- app/domain/memory/context_memory.py：_load_messages 调 load 读短期、warm_up 回填；
+- app/api/v1/history.py：/history/detail 拼 pending_messages，
   /history/delete/confirm 调 clear 联动清理。
 """
 import json
@@ -69,8 +69,8 @@ def _meta_key(user_id: int, session_id: int) -> str:
 class ShortTermStore:
     """
     会话短期记忆存储（应用级单例，经 get_short_term_store 获取，非每请求新建；
-    service/chat_service.py、app/domain/memory/long_term.py、app/domain/memory/context_app.domain.memory.py、
-    control/history_control.py 共用同一实例）。
+    app/application/chat/chat_service.py、app/domain/memory/long_term.py、app/domain/memory/context_memory.py、
+    app/api/v1/history.py 共用同一实例）。
 
     职责：对话期间承接每轮消息的 Redis 读写与滑动 TTL，维护 total/flushed
     落库水位供后台批量落库，并在 Redis 不可用时降级为进程内 TTL dict。
@@ -114,7 +114,7 @@ class ShortTermStore:
         """
         追加一轮对话（user + assistant 两条 JSON 消息），滑动续期并累计待落库计数。
 
-        被谁调用：service/chat_service.py 的 ChatService._save_information
+        被谁调用：app/application/chat/chat_service.py 的 ChatService._save_information
         （handle/handle_stream 拿到完整 LLM 回答后，每轮恰好一次）。
         参数：
         - user_id (int)：JWT 注入的用户 ID；session_id (int)：当前会话 ID（请求体）；
@@ -180,7 +180,7 @@ class ShortTermStore:
         """
         删除会话的短期记忆（list + meta）及进程内降级副本。
 
-        被谁调用：control/history_control.py 的 /history/delete/confirm
+        被谁调用：app/api/v1/history.py 的 /history/delete/confirm
         （用户删除历史会话联动清理）；本类 drop() 落库后正常转变也复用本方法。
         参数：user_id (int，JWT)、session_id (int，请求体)。返回：None。
         异常：Redis 删除失败仅记 debug 日志，仍尽力清理进程内副本，不向上抛错。
@@ -204,8 +204,8 @@ class ShortTermStore:
         """
         读取短期记忆消息（时间升序）。
 
-        被谁调用：app/domain/memory/context_app.domain.memory.py 的 _load_messages（构建注入 LLM 的
-        上下文）；service/chat_service.py 的 _maybe_rollover（取消息数算轮数）
+        被谁调用：app/domain/memory/context_memory.py 的 _load_messages（构建注入 LLM 的
+        上下文）；app/application/chat/chat_service.py 的 _maybe_rollover（取消息数算轮数）
         与 recover（网络中断恢复查看本轮已生成内容）。
         参数：user_id (int，JWT)、session_id (int，请求体)。
         返回：Optional[List[Dict[str,str]]]——元素为 {"role","content"} 的消息列表；
@@ -232,7 +232,7 @@ class ShortTermStore:
         """
         缓存未命中回源 MySQL 后回填短期记忆（回填视为一次活跃访问，给予完整 TTL）。
 
-        被谁调用：app/domain/memory/context_app.domain.memory.py 的 _load_messages 在 Redis 未命中、
+        被谁调用：app/domain/memory/context_memory.py 的 _load_messages 在 Redis 未命中、
         经 SessionDAO 从 MySQL 读完历史后调用，避免下一轮再次回源。
         参数：user_id/session_id 同上；messages (List[Dict])——时间升序的历史消息，
         来源 MySQL session_information，仅截取最近 max_messages 条回填。
@@ -345,7 +345,7 @@ class ShortTermStore:
         读取未落库的消息（时间升序）：取 list 尾部 pending 条。
 
         被谁调用：app/domain/memory/long_term.py 的 flush_one（批量写 MySQL 的消息来源）；
-        control/history_control.py 的 /history/detail（拼接到 MySQL 已落库部分
+        app/api/v1/history.py 的 /history/detail（拼接到 MySQL 已落库部分
         之后，返回完整会话记录给前端）。
         参数：user_id/session_id 同上。返回：List[Dict[str,str]]——时间升序消息；
         无待落库或异常时返回 []。pending 超过现存条数（理论仅截断兜底失效时
@@ -501,9 +501,9 @@ _store_lock = threading.Lock()
 def get_short_term_store() -> ShortTermStore:
     """应用级单例工厂（双重检查锁，非每请求新建）。
 
-    被谁调用：service/chat_service.py（ChatService.__init__）、
-    app/domain/memory/long_term.py（store 属性惰性取）、app/domain/memory/context_app.domain.memory.py
-    （_load_messages 读写/回填）、control/history_control.py（详情拼接/删除清理）。
+    被谁调用：app/application/chat/chat_service.py（ChatService.__init__）、
+    app/domain/memory/long_term.py（store 属性惰性取）、app/domain/memory/context_memory.py
+    （_load_messages 读写/回填）、app/api/v1/history.py（详情拼接/删除清理）。
     返回：ShortTermStore——共享单例（内部惰性取全局 Redis 连接）。
     """
     global _store

@@ -15,7 +15,7 @@ v3 改造：
   need_FileAgent/has_uploaded_files 决策字段并向总线发布检索任务。
 
 被谁使用（Grep 模块名结果）：
-- service/agent_service.py：AgentService._create_agents() 中
+- app/application/chat/agent_service.py：AgentService._create_agents() 中
   AnalysisAgent(bus=..., user_id=..., session_id=..., history_summary=...)
   每请求实例化；run_agent()/run_agent_stream() 阶段 2 经
   _run_critical_agent(..., "analysis", agents["analysis"].create_agent, query)
@@ -51,7 +51,7 @@ class AnalysisAgent(BaseAgent):
     继承关系：实现 BaseAgent 抽象接口 create_agent（基类另一子类为
         VagueAgent，见 app/domain/agents/base_agent.py）；LLM/总线等公共能力
         由 BaseAgent.__init__ 构建。
-    实例化位置：service/agent_service.py 的 AgentService._create_agents()，
+    实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()，
         AnalysisAgent(bus=..., user_id=..., session_id=...,
         history_summary=...) 每请求实例化；run_agent/run_agent_stream
         阶段 2 经 _run_critical_agent(..., "analysis",
@@ -70,7 +70,7 @@ class AnalysisAgent(BaseAgent):
                  history_summary: str = None):
         """初始化分析 Agent。
 
-        被谁调用：AgentService._create_agents()（service/agent_service.py，
+        被谁调用：AgentService._create_agents()（app/application/chat/agent_service.py，
                   每请求一次），随后经 super().__init__ 完成基类公共组件构建。
         参数：
         - bus：本次请求专属 MessageBus（编排层注入），用于发布检索任务；
@@ -135,7 +135,7 @@ class AnalysisAgent(BaseAgent):
         迭代上限（Agent stopped due to iteration limit），每条消息白耗约 7s
         且常伴随 Invalid Format 解析错误重试；工具分发判定本身无需多轮工具调用。）
 
-        被谁调用：service/agent_service.py 的 _run_critical_agent()
+        被谁调用：app/application/chat/agent_service.py 的 _run_critical_agent()
                   （run_agent/run_agent_stream 阶段 2，以 func(query) 包装调用；
                   _retry_chat_for_rollback 回滚重跑时也会再次调用）。
         参数：

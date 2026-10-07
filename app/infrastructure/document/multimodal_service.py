@@ -27,7 +27,7 @@ API Key 来源：
     env/qianwen_config.env 注入该变量（本地密钥文件，禁止入库）。
 
 被谁使用：
-    - service/file_service.py 的 _extract_text()：doc_type 为
+    - app/application/files/file_service.py 的 _extract_text()：doc_type 为
       "image_rich" 时延迟导入并调用 extract_with_multimodal
       （文件.函数：file_service._extract_text）；产出文本随后进入
       切分 → embedding → 向量库主链路。
@@ -200,7 +200,7 @@ def _detect_page_content_type(image_path: str) -> str:
 def extract_with_multimodal(file_path: str, pages: Optional[List[int]] = None) -> str:
     """image_rich PDF → 逐页多模态提取 → 拼接结构化全文（模块对外主入口）。
 
-    被谁调用：service/file_service.py 的 _extract_text()，
+    被谁调用：app/application/files/file_service.py 的 _extract_text()，
     doc_type 判定为 "image_rich" 时延迟导入并调用
     （文件.函数：file_service._extract_text）；返回文本随后进入
     切分 → embedding → 向量库主链路。

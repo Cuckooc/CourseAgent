@@ -7,7 +7,7 @@
     四个边界只通过本模块接口交互；实现由 infrastructure 各适配器提供：
     - LlmGateway     ← app/infrastructure/llm/（原 model_llm/）
     - Embedder       ← app/infrastructure/embeddings/（原 embedding/）
-    - VectorStore    ← app/infrastructure/vector_store/（原 service/vector_store.py，阶段5 下沉）
+    - VectorStore    ← app/infrastructure/vector_store/（原 app/infrastructure/vector_store/persistent.py，阶段5 下沉）
     - DocumentParser ← app/infrastructure/document/（原 file_analysis/）
     - FileStorage    ← storage/uploads 物理文件适配器（阶段5 建立）
     - MemoryStore    ← app/infrastructure/redis/ 或进程内存实现

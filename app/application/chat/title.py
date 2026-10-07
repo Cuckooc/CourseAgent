@@ -11,7 +11,7 @@
     - Title：TitleLLM 的唯一子类，title() 为唯一业务方法。
 
 被谁使用：
-    - service/chat_service.py：ChatService.__init__ 中实例化为
+    - app/application/chat/chat_service.py：ChatService.__init__ 中实例化为
       self.title_service（约 L93），由标题预取线程执行体
       _handle_title() 调用 self.title_service.title(context,
       user_input)（文件.类.方法：chat_service.ChatService._handle_title）；
@@ -28,7 +28,7 @@ class Title(TitleLLM):
     类作用：复用父类 TitleLLM 的 generate() 模板与 __init__ 中构建的
     self.llm 聊天模型，仅新增 title() 方法完成链式调用与截断兜底，
     自身不引入新属性。
-    实例化位置：service/chat_service.py 的 ChatService.__init__
+    实例化位置：app/application/chat/chat_service.py 的 ChatService.__init__
     （self.title_service = Title()，约 L93）。
     """
 
@@ -39,7 +39,7 @@ class Title(TitleLLM):
     def title(self, context_text:Dict[str,Any], query: str)-> str:
         """调用 LLM 依据上下文与用户问题生成会话标题。
 
-        被谁调用：service/chat_service.py 的 ChatService._handle_title()
+        被谁调用：app/application/chat/chat_service.py 的 ChatService._handle_title()
         （标题预取线程池 worker，文件.类.方法：
         chat_service.ChatService._handle_title）。
         参数：

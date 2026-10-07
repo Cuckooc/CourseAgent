@@ -187,7 +187,7 @@ def _purge_expired_old_versions() -> int:
     import time
     from pathlib import Path
 
-    from service.vector_store import (
+    from app.infrastructure.vector_store.persistent import (
         _flush_collection_index,
         get_persistent_db,
         persistent_lock,

@@ -270,9 +270,9 @@ def vector_chunks_like(prefix):
     """直连 Chroma，返回 original_name 以 prefix 开头的全部向量块 metadata 列表。
 
     用于 C8 隔离性：断言失败/越权场景下无残留向量块。
-    被访问外部依赖：service.vector_store.get_persistent_db 的持久化 collection。
+    被访问外部依赖：app.infrastructure.vector_store.persistent.get_persistent_db 的持久化 collection。
     """
-    from service.vector_store import get_persistent_db
+    from app.infrastructure.vector_store.persistent import get_persistent_db
     db = get_persistent_db()
     data = db._collection.get(include=["metadatas"])
     return [m for m in data["metadatas"]
@@ -596,7 +596,7 @@ def _resolve_stored(original):
         return sn
     try:
         import os as _os
-        from service.vector_store import get_persistent_db
+        from app.infrastructure.vector_store.persistent import get_persistent_db
         _col = get_persistent_db()._collection
         _d = _col.get(include=["metadatas"])
         for m in _d["metadatas"]:
@@ -955,7 +955,7 @@ for nm in (FEYNMAN_DOC, SPACED_DOC, PRIVATE_DOC):
         pass
 # 向量块兜底（含可能的 is_latest=False 旧版本）
 try:
-    from service.vector_store import get_persistent_db, persistent_lock
+    from app.infrastructure.vector_store.persistent import get_persistent_db, persistent_lock
     _db = get_persistent_db()
     _col = _db._collection
     _data = _col.get(include=["metadatas"])

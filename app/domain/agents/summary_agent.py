@@ -14,7 +14,7 @@
     - SummaryAgent：独立实现（不继承 BaseAgent），入口方法 handle()。
 
 被谁使用（Grep 模块名结果）：
-    - service/agent_service.py：AgentService._create_agents() 中
+    - app/application/chat/agent_service.py：AgentService._create_agents() 中
       SummaryAgent(message_bus=message_bus) 每请求实例化；
       _run_summary_with_relevance() 经非关键包装器
       _run_non_critical_agent(sm, "summary", agents["summary"].handle, ...)
@@ -80,7 +80,7 @@ class SummaryAgent:
         保证最终回答链路不被阻断。
     继承关系：无基类（不实现 BaseAgent 抽象接口 create_agent），
         编排入口为 handle()，由非关键 Agent 包装器调度并重试。
-    实例化位置：service/agent_service.py 的 AgentService._create_agents()，
+    实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()，
         SummaryAgent(message_bus=message_bus) 每请求实例化。
     关键 self 属性含义与去向：
         - self.bus：订阅 receiver="SummaryAgent" 邮箱取检索结果，
@@ -94,7 +94,7 @@ class SummaryAgent:
                  message_bus: MessageBus):
         """初始化汇总 Agent。
 
-        被谁调用：AgentService._create_agents()（service/agent_service.py，
+        被谁调用：AgentService._create_agents()（app/application/chat/agent_service.py，
                   每请求一次）。
         参数：
         - message_bus：本次请求专属 MessageBus（来源：编排层新建并注入），
@@ -113,7 +113,7 @@ class SummaryAgent:
     def handle(self):
         """汇总检索结果并向 ChatAgent 发布素材（流水线阶段 4 入口）。
 
-        被谁调用：service/agent_service.py 的 _run_summary_with_relevance()
+        被谁调用：app/application/chat/agent_service.py 的 _run_summary_with_relevance()
                   经非关键包装器 _run_non_critical_agent(sm, "summary",
                   agents["summary"].handle, ...) 调用；失败按非关键 Agent
                   重试上限重试，耗尽后由编排层用降级值收场。

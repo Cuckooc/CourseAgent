@@ -45,9 +45,9 @@
 辅助函数：_b64url_decode/_b64url_encode/_tamper_token（JWT 篡改）。本文件夹具 _reset_rate_limit。
 
 被测对象来源：
-- 路由/守卫：control/admin_control.py（/admin/* + require_admin）、
-  control/review_control.py（_can_moderate 所有者/审核员判定、/review/all 审核员门槛、approve/reject 状态机）、
-  control/chat_control.py（/chat/send）、control/file_control.py（/file/path magic 校验）；
+- 路由/守卫：app/api/v1/admin.py（/admin/* + require_admin）、
+  app/api/v1/review.py（_can_moderate 所有者/审核员判定、/review/all 审核员门槛、approve/reject 状态机）、
+  app/api/v1/chat.py（/chat/send）、app/api/v1/files.py（/file/path magic 校验）；
 - JWT：core/security.py + core/deps.py 的签名/ver/exp 校验；
 - 审核记录构造：dao/document_review.py 的 DocumentReviewDAO（直接造 pending 数据）；
 - 请求体约束：control 层 Pydantic 模型 max_length。

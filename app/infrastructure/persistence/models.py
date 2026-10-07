@@ -61,7 +61,7 @@ class HistoryInformation(Base):
 
     由 Base.metadata 建表，被 alembic baseline 迁移与 dao/history.py、
     dao/session.py、dao/read.py、dao/soft_delete.py 使用；每个用户的每个
-    会话一行，侧栏会话列表与标题来自本表，util/title.py 生成的标题写回 title。
+    会话一行，侧栏会话列表与标题来自本表，app/application/chat/title.py 生成的标题写回 title。
     索引/约束：user_id 普通索引；(user_id, session_id) 唯一键 uk_user_session。
     关系去向：user_id 逻辑引用 user_information.id；session_id 与
     session_information.session_id 一对多（本表单条会话头、消息表多条消息），
@@ -75,7 +75,7 @@ class HistoryInformation(Base):
     user_id = Column(Integer, nullable=False, index=True, comment="用户ID")
     # 业务会话 ID（与 session_information.session_id 对应）
     session_id = Column(Integer, nullable=False, comment="会话ID")
-    # 会话标题：首轮后由 util/title.py 的 LLM 生成并写回
+    # 会话标题：首轮后由 app/application/chat/title.py 的 LLM 生成并写回
     title = Column(String(100), nullable=False, comment="会话标题")
     # 创建时间：插入时取 MySQL 当前时间
     create_time = Column(DateTime, server_default=func.now())
@@ -283,8 +283,8 @@ class FileMeta(Base):
     MySQL 表名：file_meta。
 
     由 Base.metadata 建表（对应 db/migrations/007_token_version.sql 等
-    增量脚本的版本演进而定），被 dao/knowledge.py 与 service/file_service.py、
-    service/vector_store.py 的入库/去重/版本管理链路使用：content_hash
+    增量脚本的版本演进而定），被 dao/knowledge.py 与 app/application/files/file_service.py、
+    app/infrastructure/vector_store/persistent.py 的入库/去重/版本管理链路使用：content_hash
     判重、status 驱动向量化流程、vector_count 记录入库向量数。
     索引：idx_fm_user(user_id)、idx_fm_status(status)、
     idx_fm_content_hash(content_hash)。

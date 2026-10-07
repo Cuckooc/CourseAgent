@@ -17,7 +17,7 @@
     - model_llm/llm_business.py 的全部提示词类（RagLLM/FileLLM/ChatLLM/
       OptimizeLLM/InformationLLM/PredictLLM/AnalysisLLM/ContextKey/TitleLLM）
       均继承本类，并在 multi_agent 各 Agent（chat_agent、vague_agent、
-      analysis_agent、summary_agent）、util/title.py、util/context.py 中被实例化。
+      analysis_agent、summary_agent）、app/application/chat/title.py、app/application/chat/context.py 中被实例化。
 """
 from abc import ABC, abstractmethod
 from typing import Any, Dict
@@ -32,7 +32,7 @@ class LLM(ABC):
 
     实例化位置：本类不直接实例化；由 model_llm/llm_business.py 各提示词子类经
     super().__init__() 间接构造（如 InformationLLM 传 json_mode=True），子类实例
-    随后在 multi_agent 各 Agent 与 util/title.py、util/context.py 中创建。
+    随后在 multi_agent 各 Agent 与 app/application/chat/title.py、app/application/chat/context.py 中创建。
     """
 
     def __init__(self, json_mode=False, **extra_kwargs):

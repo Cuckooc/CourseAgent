@@ -9,7 +9,7 @@
 - list_users：全部用户基础信息列表；
 - update_user_role：管理员调整用户角色（user ⇄ teacher）；
 - deactivate_user_preview / deactivate_user_confirm：注销用户的预览令牌签发与确认执行。
-被谁使用：由 control/app.py 通过 `from control.admin_control import admin_router` 导入并
+被谁使用：由 control/app.py 通过 `from app.api.v1.admin import admin_router` 导入并
           app.include_router 注册；所有端点再经 require_admin 依赖做 JWT 鉴权 + admin 角色校验；
           路由由 HTTP 客户端（web/frontend 管理后台）调用，非内部调用。
 """
@@ -26,7 +26,7 @@ from app.auth.delete_guard import PendingDeleteStore
 from core.responses import BizException, success
 from core.usage import usage_snapshot, user_usage_snapshot
 from app.infrastructure.persistence.repositories.read import Information_Read
-from service import admin_user_service
+from app.application.admin import admin_user_service
 
 # 管理路由：prefix=/admin；由 control/app.py 的 app.include_router(admin_router) 注册。
 # 路由级依赖 user_rate_limit(30, 60)：按登录用户限流 30 次/60 秒；

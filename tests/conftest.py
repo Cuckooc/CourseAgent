@@ -21,7 +21,7 @@
 6. pytest_configure 注册 marker：backend / slow / db。
 
 被测对象来源：
-- HTTP 层：control/app.py 注册的全部路由（control/login_control.py、chat_control.py、
+- HTTP 层：control/app.py 注册的全部路由（app/api/v1/auth.py、chat_control.py、
   history_control.py、file_control.py、review_control.py、knowledge_control.py、
   admin_control.py、profile_control.py），默认监听 http://localhost:8000；
 - 账号链路：dao/user.py 的 Information（save_information/update_role/increment_token_version）、

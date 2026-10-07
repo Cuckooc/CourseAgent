@@ -1,7 +1,7 @@
 """
-模块名：service.agent_service
+模块名：app.application.chat.agent_service
 作用：Agent 自动化流程服务（状态机编排版），是对话主链路的核心编排层。
-      对上向 service/chat_service.py 暴露非流式 run_agent() 与流式
+      对上向 app/application/chat/chat_service.py 暴露非流式 run_agent() 与流式
       run_agent_stream() 两个入口；对下协调 app/domain/agents/ 下各 Agent、
       PipelineStateMachine 状态机、失败诊断/意图校验/兜底处理器，
       并把全链路日志异步落 MySQL（dao/chain_log.py）。
@@ -26,9 +26,9 @@
   相关性回退、检索编排、Chat 回滚重跑、兜底结果包装等。
 
 被谁使用：
-- service/chat_service.py：ChatService.__init__ 中 get_agent_service() 持有单例，
+- app/application/chat/chat_service.py：ChatService.__init__ 中 get_agent_service() 持有单例，
   ChatService._handle_impl 调 run_agent()，_handle_stream_impl 调
-  run_agent_stream()；结果经 control/chat_control.py 的 /chat/send 接口返回
+  run_agent_stream()；结果经 app/api/v1/chat.py 的 /chat/send 接口返回
   前端，或经 /chat/stream 的 SSE 流式返回前端。
 """
 import logging
@@ -76,7 +76,7 @@ class AgentService:
 
     实例化位置：不在 control 层直接 new；唯一创建处为本模块末尾的
             get_agent_service()（@lru_cache 应用级单例），由
-            service/chat_service.py 的 ChatService.__init__ 调用并长期持有。
+            app/application/chat/chat_service.py 的 ChatService.__init__ 调用并长期持有。
             tests/phase/test_all_changes.py 中另有测试目的的导入与反射检查。
 
     关键 self 属性：
@@ -127,7 +127,7 @@ class AgentService:
               用户 ID；模型网关据此统计 per-user 月度用量（core/usage.py）。
         被谁调用：_create_agents()，在全部 Agent 创建后统一绑定。
         参数：
-        - user_id：当前对话用户 ID，来源：control/chat_control.py 从 JWT
+        - user_id：当前对话用户 ID，来源：app/api/v1/chat.py 从 JWT
           解析后经 ChatService.handle 透传。
         - *agents：本次请求新建的 Agent 实例（vague/analysis/summary/chat）。
         返回：无。绑定失败静默忽略（计量为辅助能力，不得阻断编排）。
@@ -144,7 +144,7 @@ class AgentService:
         """懒加载并返回 RAGAgent 共享的持久化向量库（单例缓存于 self._rag_db）。
 
         功能：首次调用时通过 RAGAgent.build_shared_db() 构建/加载应用级共享
-              Chroma 持久库（底层即 service/vector_store.py 的持久库实例），
+              Chroma 持久库（底层即 app/infrastructure/vector_store/persistent.py 的持久库实例），
               后续请求直接复用。
         被谁调用：_create_agents() 创建 RAGAgent 时传入 db 参数。
         参数：无。
@@ -164,7 +164,7 @@ class AgentService:
               analysis/rag/file/summary/chat 六个 Agent；RAG 复用单例共享库，
               File 不注入共享库（仅检索会话临时库）；最后绑定 user_id。
         被谁调用：run_agent() 与 run_agent_stream() 入口处各调用一次。
-        参数（均由 ChatService 从 control/chat_control.py 的请求上下文透传）：
+        参数（均由 ChatService 从 app/api/v1/chat.py 的请求上下文透传）：
         - query：改写后的最终查询文本（含上下文拼接，来源：用户输入 +
           ChatService 上下文改写）。
         - user_id：JWT 注入的当前用户 ID（LLM 用量计量/画像/检索隔离用）。
@@ -507,9 +507,9 @@ class AgentService:
               （非关键，失败传空）；④SummaryAgent 汇总（带相关性回退）；
               ⑤ChatAgent 生成最终回答，校验失败时回滚重跑整条上游链。
               无论成功失败，finally 均异步提交 chain_log 落库。
-        被谁调用：service/chat_service.py 的 ChatService._handle_impl。
+        被谁调用：app/application/chat/chat_service.py 的 ChatService._handle_impl。
         参数：
-        - query (str)：改写后的最终查询，来源：control/chat_control.py /chat/send
+        - query (str)：改写后的最终查询，来源：app/api/v1/chat.py /chat/send
           的用户输入经 ChatService 上下文改写。
         - user_id (int|None)：JWT 注入的用户 ID。
         - session_id (int|None)：当前会话 ID（per-user 序列）。
@@ -521,7 +521,7 @@ class AgentService:
               analysis_result/rag_result/chat_result；兜底时含 fallback 字段
               （clarify/error）；异常时 {"success": False, "error": ...}。
               去向：经 util/result_handle.handle_result 归一化后由
-              control/chat_control.py 的 /chat/send 接口返回前端。
+              app/api/v1/chat.py 的 /chat/send 接口返回前端。
         异常：LLMUnavailableError 直接上抛交 ChatService 统一友好降级；
               其余异常捕获后返回 success=False 结果（不向 control 抛错）。
         """
@@ -825,8 +825,8 @@ class AgentService:
               ChatAgent.handle_stream 的文本增量包装为 delta 帧逐块 yield；
               兜底时经 _stream_fallback 输出澄清 delta 或错误帧。
               finally 同样异步提交 chain_log 落库。
-        被谁调用：service/chat_service.py 的 ChatService._handle_stream_impl，
-                  事件帧向上经 control/chat_control.py 的 /chat/stream 接口
+        被谁调用：app/application/chat/chat_service.py 的 ChatService._handle_stream_impl，
+                  事件帧向上经 app/api/v1/chat.py 的 /chat/stream 接口
                   序列化为 SSE（data: {...}\\n\\n）流式返回前端。
         参数：同 run_agent（query/user_id/session_id/history/
               session_keywords/user_profile/history_summary，来源一致）。
@@ -934,7 +934,7 @@ class AgentService:
         参数：chat_agent——本次请求的 ChatAgent 实例（其 handle_stream
               数据来源：model_llm 网关的流式 LLM 返回）。
         返回：generator——delta 事件帧；去向：ChatService →
-              control/chat_control.py 的 SSE 流式返回前端逐字渲染。
+              app/api/v1/chat.py 的 SSE 流式返回前端逐字渲染。
         """
         for delta in chat_agent.handle_stream():
             if delta:
@@ -965,7 +965,7 @@ def get_agent_service():
 
     功能：以 lru_cache 保证全进程仅构建一个 AgentService（共享 RAG 向量库
           句柄与 chain_log 线程池）。
-    被谁调用：service/chat_service.py 的 ChatService.__init__（每个
+    被谁调用：app/application/chat/chat_service.py 的 ChatService.__init__（每个
               ChatService 单例初始化时调用一次，实际命中同一缓存实例）。
     返回：AgentService 唯一实例。
     """

@@ -1,5 +1,5 @@
 """
-模块名：service.review_service
+模块名：app.application.review.review_service
 作用：文档审核服务。对 OCR/多模态提取结果提供人工审核工作流：创建 pending
       审核记录、分页查询（本人/审核员视图）、审核通过（可附带人工修正文本，
       重新脱敏后父子块入库并 flush 索引）或驳回。协调审核表 DAO、脱敏服务
@@ -24,7 +24,7 @@
 - reject()：驳回审核。
 
 被谁使用：
-- control/review_control.py：_get_service() 中每次请求 `ReviewService()`
+- app/api/v1/review.py：_get_service() 中每次请求 `ReviewService()`
   新建轻量实例，/review 列表、/review/all、/review/{id} 详情、
   /review/{id}/approve、/review/{id}/reject 五个端点分别调用上述方法。
 - submit_for_review 当前在仓库内无控制层调用点（为 OCR/多模态提取后
@@ -34,8 +34,8 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO
-from service.mask_service import mask_text
-from service.vector_store import add_parent_child, flush_persistent_index, get_persistent_db, persistent_lock
+from app.application.files.mask_service import mask_text
+from app.infrastructure.vector_store.persistent import add_parent_child, flush_persistent_index, get_persistent_db, persistent_lock
 
 # 模块级日志器：审核提交/通过/驳回与入库失败日志走该 logger
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class ReviewService:
             取记录 owner 而非审核操作者），并立即 flush HNSW 索引保证可检索。
             状态约束：仅 pending 记录可审核，防重复提交。
 
-    实例化位置：control/review_control.py 的 _get_service() 中每个请求
+    实例化位置：app/api/v1/review.py 的 _get_service() 中每个请求
             `ReviewService()` 新建（类本身无跨请求可变状态，DAO 无状态）。
 
     关键 self 属性：
@@ -110,7 +110,7 @@ class ReviewService:
         """分页查询当前用户自己的审核记录。
 
         功能：按状态可选过滤，分页返回该用户提交的审核记录与总条数。
-        被谁调用：control/review_control.py 的 /review 列表端点（list_reviews）。
+        被谁调用：app/api/v1/review.py 的 /review 列表端点（list_reviews）。
         参数：
         - user_id (int)：JWT 注入的当前用户 ID，仅查本人记录。
         - status (str|None)：pending/approved/rejected 过滤（control 层校验合法性）。
@@ -130,7 +130,7 @@ class ReviewService:
         """审核员视图：分页查询所有用户的审核记录（/review/all 端点）。
 
         功能：跨用户分页查询审核记录，可按 status / user_id 过滤。
-        被谁调用：control/review_control.py 的 /review/all 端点
+        被谁调用：app/api/v1/review.py 的 /review/all 端点
                   （list_all_reviews，端点侧已限 teacher/admin 角色）。
         参数：
         - status (str|None)：pending/approved/rejected 过滤，来源：查询参数。
@@ -147,7 +147,7 @@ class ReviewService:
         功能：按主键取审核记录全文（含 raw_text/cleaned_text，供审核页
               对照与编辑）；若记录归属的上传者账号已注销（软删），视为不可
               操作的孤儿记录，统一返回 None（详情端点转 404）。
-        被谁调用：control/review_control.py 的 /review/{review_id} 详情端点；
+        被谁调用：app/api/v1/review.py 的 /review/{review_id} 详情端点；
                   本类 approve / reject 内部也改走本方法，保证三条链路孤儿
                   拦截口径一致。
         参数：review_id (int)——审核记录 ID，来源：路径参数。
@@ -180,7 +180,7 @@ class ReviewService:
         teacher/admin 代审）；⑤以审核文件为 source、scope=private 调
         add_parent_child 写入文档上传者的持久化向量库（而非审核者库），并
         flush_persistent_index 立即落盘 HNSW 索引。
-        被谁调用：control/review_control.py 的 /review/{review_id}/approve 端点
+        被谁调用：app/api/v1/review.py 的 /review/{review_id}/approve 端点
                   （所有者本人或 teacher/admin 审核员）。
         参数：
         - review_id (int)：审核记录 ID，来源：路径参数。
@@ -191,7 +191,7 @@ class ReviewService:
         返回：Dict——成功 {"success": True, "review_id", "parent_chunks",
               "child_chunks"}；各类失败 {"success": False, "error": 原因}。
               去向：approve 端点 JSON 返回前端；向量数据去向：
-              service/vector_store 的 chromadb_data 持久库。
+              app/infrastructure/vector_store/persistent 的 chromadb_data 持久库。
         异常：向量入库抛错时状态已更新为 approved，方法捕获后返回
               success=False 并记录异常日志（不向 control 层抛出）。
         """
@@ -256,7 +256,7 @@ class ReviewService:
         功能：校验记录存在且处于 pending 后，把状态更新为 rejected
               （WHERE 双键传记录归属者 review["user_id"]，支持 teacher/admin 代审；
               驳回不触发向量入库）。
-        被谁调用：control/review_control.py 的 /review/{review_id}/reject 端点
+        被谁调用：app/api/v1/review.py 的 /review/{review_id}/reject 端点
                   （所有者本人或 teacher/admin 审核员）。
         参数：
         - review_id (int)：审核记录 ID，来源：路径参数。

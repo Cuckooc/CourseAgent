@@ -15,9 +15,9 @@
     dao/soft_delete.py，本模块通过函数内延迟导入调用以避免循环依赖。
 
 被谁使用：
-    - util/user.py 的 UserInformation.__init__ 实例化
+    - app/application/auth/user.py 的 UserInformation.__init__ 实例化
       （self.information = Information()）：注册、登录后 token_version 自增；
-    - service/admin_user_service.py 管理端角色调整与注销（Information() 临时实例化）；
+    - app/application/admin/admin_user_service.py 管理端角色调整与注销（Information() 临时实例化）；
     - tests/ 夹具与安全/并发/RBAC 测试直接实例化。
 
 注意：写入前密码必须已由 service 层完成 bcrypt 哈希，DAO 不接触明文密码逻辑。
@@ -37,8 +37,8 @@ class Information(BaseInformation):
 
     承担账号行的新增（save_information）、角色修改（update_role）、
     token 版本自增（increment_token_version）、注销编排（deactivate_user）。
-    实例化位置：util/user.py 的 UserInformation.__init__（self.information）、
-    service/admin_user_service.py 的 update_role/deactivate_user、
+    实例化位置：app/application/auth/user.py 的 UserInformation.__init__（self.information）、
+    app/application/admin/admin_user_service.py 的 update_role/deactivate_user、
     tests 测试夹具与安全用例。__init__ 无形参，仅调用父类 ABC 构造；
     不持有数据库连接，会话在各方法内通过 session_scope() 获取。
     """
@@ -55,7 +55,7 @@ class Information(BaseInformation):
         （用户名/邮箱重复）会抛异常被本方法捕获并返回 "false"。
         安全约定：data["user_pwd"] 必须已是 service 层 bcrypt 哈希结果，
         DAO 不接触明文密码。
-        被谁调用：util/user.py 的 UserInformation.register_user()
+        被谁调用：app/application/auth/user.py 的 UserInformation.register_user()
         （文件.函数：user.UserInformation.register_user）；
         tests 夹具创建账号时亦调用。
         参数：
@@ -94,9 +94,9 @@ class Information(BaseInformation):
         该用户未过期 token 的下一个请求即按新角色鉴权。
         SQL 安全：role 与 uid 均为命名绑定参数（role 取值合法性由
         control/service 层白名单约束），经 safe_execute 执行。
-        被谁调用：service/admin_user_service.py 的 update_role()
+        被谁调用：app/application/admin/admin_user_service.py 的 update_role()
         （文件.函数：admin_user_service.update_role），上层为
-        control/admin_control.py 的角色调整端点。
+        app/api/v1/admin.py 的角色调整端点。
         参数：
             user_id: 目标用户 ID，来源管理端请求（经管理员权限与二次确认校验）。
             role: 新角色，当前业务取值 user/teacher（admin 角色由其他途径授予）。
@@ -126,7 +126,7 @@ class Information(BaseInformation):
         必须在密码/验证码校验通过后调用，避免攻击者借失败登录使受害者 token 失效。
         SQL 安全：uid 命名绑定参数；自增在数据库侧 token_version = token_version + 1
         完成（非读改写，避免并发丢更新），经 safe_execute 执行。
-        被谁调用：util/user.py 的 UserInformation.login_by_username() 与
+        被谁调用：app/application/auth/user.py 的 UserInformation.login_by_username() 与
         login_by_email_code()（文件.函数：user.UserInformation.login_by_username、
         login_by_email_code，校验通过、签发 JWT 前调用）；tests 安全/并发用例。
         参数：
@@ -165,9 +165,9 @@ class Information(BaseInformation):
         core/purge_scheduler.py 兜底扫描）。
         依赖 get_current_user 的实时回库 is_deleted 校验，注销后该用户未过期的
         token 立即失效（下一个请求即 401）。
-        被谁调用：service/admin_user_service.py 的 deactivate_user()
+        被谁调用：app/application/admin/admin_user_service.py 的 deactivate_user()
         （文件.函数：admin_user_service.deactivate_user），上层为
-        control/admin_control.py 的注销确认端点（二次确认令牌校验后）。
+        app/api/v1/admin.py 的注销确认端点（二次确认令牌校验后）。
         参数：
             user_id: 待注销用户 ID，来源管理端请求（非当前登录用户自删）。
         返回：bool。True 软删除成功（注销计划已尽力登记）；软删失败返回 False。

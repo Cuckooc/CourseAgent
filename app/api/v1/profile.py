@@ -6,7 +6,7 @@
 - ProfileUpdateRequest：画像修改请求体模型；
 - get_profile：获取当前用户画像（GET /profile 与 /profile/ 双装饰器）；
 - update_profile：手动修改画像（PUT /profile 与 /profile/ 双装饰器）。
-被谁使用：由 control/app.py 通过 `from control.profile_control import profile_router`
+被谁使用：由 control/app.py 通过 `from app.api.v1.profile import profile_router`
           导入并 app.include_router 注册；JWT 鉴权，user_id 取自登录态；
           路由由 HTTP 客户端（web/frontend 个人信息页）调用，非内部调用。
 

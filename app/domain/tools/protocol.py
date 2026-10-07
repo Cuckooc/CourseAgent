@@ -55,7 +55,7 @@ class ToolContext:
     实例化位置：
         - app/domain/agents/rag_agent.py 的 RAGAgent._run_shadow()；
         - app/domain/agents/file_agent.py 的 FileAgent._run_shadow()；
-          均以 Agent 自身的 user_id/session_id（来源 service/agent_service.py
+          均以 Agent 自身的 user_id/session_id（来源 app/application/chat/agent_service.py
           按登录态与会话注入）、role="user"、bus.task_id 构造；
         - app/domain/tools/registry.py 的 tools_for() 接收本次请求的 ctx 并闭包注入；
         - tests/app/domain/tools/test_tool_layer_p1.py 的单测直接构造。

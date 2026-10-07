@@ -31,8 +31,8 @@
 - model_llm/llm.py 的 LLM 基类（llm_business 全部提示词类经此间接持有网关）；
 - multi_agent：base_agent.py（各 ReAct Agent 基类）、chat_agent.py、
   rag_agent.py、file_agent.py、summary_agent.py、verifier.py、failure_diagnoser.py；
-- service/preference_service.py、app/domain/memory/profile_service.py、app/domain/memory/context_app.domain.memory.py、
-  util/context.py。
+- app/application/files/preference_service.py、app/domain/memory/profile_service.py、app/domain/memory/context_app.domain.memory.py、
+  app/application/chat/context.py。
 
 与 embedding 侧的关键差异：chat 允许跨模型降级（不同 chat 模型输出同为文本，
 可互换）；embedding 侧只重试、禁止换模型——换 embedding 模型会改变向量维度，
@@ -362,8 +362,8 @@ def build_chat_model(**overrides: Any) -> LLMGateway:
     被谁调用：model_llm/llm.py 的 LLM 基类（llm_business 全部提示词类）；
     app/domain/agents/base_agent.py、chat_agent.py、rag_agent.py、file_agent.py、
     summary_agent.py、verifier.py、failure_diagnoser.py；
-    service/preference_service.py、app/domain/memory/profile_service.py、
-    app/domain/memory/context_app.domain.memory.py、util/context.py。
+    app/application/files/preference_service.py、app/domain/memory/profile_service.py、
+    app/domain/memory/context_app.domain.memory.py、app/application/chat/context.py。
     参数：**overrides —— 调用点覆盖项（如 temperature=self.temperature、
           failure_diagnoser 的更短 timeout），优先级高于配置默认值。
     返回：LLMGateway 实例（ChatOpenAI  drop-in 替代），去向各 Agent/chain

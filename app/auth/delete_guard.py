@@ -13,9 +13,9 @@
     - _memory_store：模块级全局单例，Redis 不可用时的进程内令牌字典（不跨副本/重启）。
 
 被谁使用：
-    - control/knowledge_control.py：文档删除 preview/confirm（action=delete_document）；
-    - control/history_control.py：会话删除 preview/confirm（action=delete_session）；
-    - control/admin_control.py：管理员停用用户 preview/confirm（action=deactivate_user）。
+    - app/api/v1/knowledge.py：文档删除 preview/confirm（action=delete_document）；
+    - app/api/v1/history.py：会话删除 preview/confirm（action=delete_session）；
+    - app/api/v1/admin.py：管理员停用用户 preview/confirm（action=deactivate_user）。
 """
 import logging
 import secrets
@@ -55,7 +55,7 @@ class PendingDeleteStore:
         功能：生成 24 字节 URL 安全随机令牌，把 {user_id, action, target_info} 载荷
         优先写入 Redis（SETEX，键 del_confirm:<token>，TTL 5 分钟）；
         Redis 不可用/写入异常时加锁写入进程内 _memory_store 兜底。
-        被谁调用：control/knowledge_control.py、history_control.py、admin_control.py
+        被谁调用：app/api/v1/knowledge.py、history_control.py、admin_control.py
                   的删除 preview 端点（先于真正删除）。
         参数：
             user_id: 发起删除的用户 id，来源为 app.auth.guards.get_current_user 解析结果；
@@ -99,7 +99,7 @@ class PendingDeleteStore:
 
         功能：先查 Redis（命中即删除，保证令牌一次性），未命中再在内存字典 pop；
         随后核对载荷中的 user_id 与 action 是否与本次请求一致（防越权/防动作串用）。
-        被谁调用：control/knowledge_control.py、history_control.py、admin_control.py
+        被谁调用：app/api/v1/knowledge.py、history_control.py、admin_control.py
                   的删除 confirm 端点（真正执行删除前）。
         参数：
             token: 前端回传的 confirm_token，来源为 HTTP confirm 请求体；

@@ -13,13 +13,13 @@
       handle_stream（流式生成）。
 
 被谁使用（Grep 模块名结果）：
-    - service/agent_service.py：AgentService._create_agents() 中
+    - app/application/chat/agent_service.py：AgentService._create_agents() 中
       ChatAgent(message_bus=..., query=..., history=...,
       session_keywords=..., user_profile=...) 每请求实例化；
       run_agent() 阶段 1（意图模糊直接澄清）与阶段 5 调
       agents["chat"].handle()；run_agent_stream() 经 _stream_chat()
       消费 handle_stream() 的文本增量，包装为 {"type":"delta"} 帧，
-      经 ChatService → control/chat_control.py 的 SSE 流返回前端逐字渲染。
+      经 ChatService → app/api/v1/chat.py 的 SSE 流返回前端逐字渲染。
 
 Agent 间数据流：
     - 输入（消费方）：MessageBus 中 receiver="ChatAgent" 的消息，生产者为
@@ -47,7 +47,7 @@ class ChatAgent:
         填入 ChatLLM 模板，调用 LLM 产出面向用户的最终回答（同步或流式）。
     继承关系：无基类（与 RAGAgent/FileAgent/SummaryAgent 一样为独立类，
         不实现 BaseAgent 抽象接口 create_agent，调度入口为 handle/handle_stream）。
-    实例化位置：service/agent_service.py 的 AgentService._create_agents()，
+    实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()，
         每对话请求创建一个，注入本次请求专属 MessageBus。
     关键 self 属性含义与去向：
         - self.bus：订阅 receiver="ChatAgent" 邮箱获取上游产物；
@@ -67,7 +67,7 @@ class ChatAgent:
                  user_profile: str = None):
         """初始化最终回答 Agent。
 
-        被谁调用：AgentService._create_agents()（service/agent_service.py，
+        被谁调用：AgentService._create_agents()（app/application/chat/agent_service.py，
                   每请求一次）。
         参数：
         - message_bus：本次请求专属 MessageBus（来源：编排层新建并注入），
@@ -151,7 +151,7 @@ class ChatAgent:
     def handle(self):
         """同步生成最终回答（流水线阶段 5 的主入口）。
 
-        被谁调用：service/agent_service.py 的 run_agent()——阶段 1 意图
+        被谁调用：app/application/chat/agent_service.py 的 run_agent()——阶段 1 意图
                   模糊时直接调用产出澄清回答；阶段 5 正常流程调用产出最终
                   回答；_retry_chat_for_rollback() 回滚重跑时也调用本方法。
         参数：无（上游素材在 _build_chain 内部经总线订阅获得）。
@@ -186,10 +186,10 @@ class ChatAgent:
     def handle_stream(self):
         """流式生成回答：逐段 yield LLM 文本增量。
 
-        被谁调用：service/agent_service.py 的 AgentService._stream_chat()，
+        被谁调用：app/application/chat/agent_service.py 的 AgentService._stream_chat()，
                   后者在 run_agent_stream() 阶段 1（模糊澄清）与阶段 5
                   消费本生成器，把非空增量包装为 {"type":"delta","content":...}
-                  帧，经 ChatService → control/chat_control.py 的 SSE 流
+                  帧，经 ChatService → app/api/v1/chat.py 的 SSE 流
                   推送前端逐字渲染。
         参数：无（上游素材在 _build_chain 内部经总线订阅获得）。
         返回：生成器——每次 yield 一个文本片段（str）；最终去向：SSE 流。

@@ -13,7 +13,7 @@
     - _words_cache：模块级全局单例，加载后的词表缓存（None=尚未加载，[]=词库为空或加载失败）。
 
 被谁使用：
-    - service/chat_service.py：非流式结果（ai_output 返回前）与流式分片写出前两处调用。
+    - app/application/chat/chat_service.py：非流式结果（ai_output 返回前）与流式分片写出前两处调用。
 """
 import logging
 from pathlib import Path
@@ -63,7 +63,7 @@ def filter_text(text):
     """替换敏感词为 ***，过滤异常时原样返回。
 
     功能：逐个检查词表中的敏感词，命中即在文本中替换为 "***"（子串匹配，非词边界）。
-    被谁调用：service/chat_service.py —— 非流式最终输出 ai_output 落库/返回前，
+    被谁调用：app/application/chat/chat_service.py —— 非流式最终输出 ai_output 落库/返回前，
               以及流式响应每个分片发送前。
     参数：
         text: 待过滤文本，来源为上游 service（LLM 生成内容，可能为空）。

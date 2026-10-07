@@ -1,5 +1,5 @@
 """
-模块名：user.py（用户身份与认证业务编排，service 层门面）
+模块名：user.py（用户身份与认证业务编排，application 层门面）
 
 作用：
     UserInformation 是登录/注册能力对 control 层暴露的门面
@@ -21,7 +21,7 @@
     - UserInformation：唯一业务类，方法见类 docstring。
 
 被谁使用：
-    - control/login_control.py：注册 /login/register、账号登录
+    - app/api/v1/auth.py：注册 /login/register、账号登录
       /login/account、发码 /login/email/code、邮箱登录 /login/email
       四个接口内实例化并调用（文件.函数：
       login_control.register / login_by_account / send_email_code /
@@ -45,7 +45,7 @@ class UserInformation:
     Information）与 core（security / verification / mailer）完成认证
     流程；类内无跨请求可变状态，每个登录/注册请求现用现实例化。
 
-    实例化位置：control/login_control.py 的 register()（约 L123）、
+    实例化位置：app/api/v1/auth.py 的 register()（约 L123）、
     login_by_account()（约 L158）、send_email_code()（约 L187，
     一次性内联实例）、login_by_email()（约 L227）。
 
@@ -101,7 +101,7 @@ class UserInformation:
     def check_user(self, data: Dict[str, Any]) -> bool:
         """注册前查重：用户名或邮箱是否已被注册。
 
-        被谁调用：control/login_control.py 的 register()
+        被谁调用：app/api/v1/auth.py 的 register()
         （文件.函数：login_control.register），查重命中时直接返回
         “用户名或邮箱已被注册”，不再进入 register_user。
         参数：
@@ -117,7 +117,7 @@ class UserInformation:
     def register_user(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """注册：密码 bcrypt 哈希后组装 payload 写入用户表。
 
-        被谁调用：control/login_control.py 的 register()，前置已通过
+        被谁调用：app/api/v1/auth.py 的 register()，前置已通过
         check_user 查重（文件.函数：login_control.register）；成功后
         由 control 层写 user_registered 审计日志。
         参数：
@@ -148,7 +148,7 @@ class UserInformation:
     def login_by_username(self, username: str, password: str) -> Dict[str, Any]:
         """账号密码登录：校验通过后自增 token 版本并签发 JWT。
 
-        被谁调用：control/login_control.py 的 login_by_account()
+        被谁调用：app/api/v1/auth.py 的 login_by_account()
         POST /login/account（文件.函数：login_control.login_by_account）；
         成功结果回到 control 后追加 sessions 会话列表，失败由
         control 做失败计数/锁定与 login_failed 审计。
@@ -211,7 +211,7 @@ class UserInformation:
         （带 60 秒发送冷却）；core.mailer 已配置 SMTP 时真实发信，
         未配置时降级把验证码打到服务日志（仅开发环境）。SMTP 发送
         失败会立即作废刚生成的码，避免用户在冷却期内无法重发。
-        被谁调用：control/login_control.py 的 send_email_code()
+        被谁调用：app/api/v1/auth.py 的 send_email_code()
         POST /login/email/code（文件.函数：
         login_control.send_email_code），接口另有 rate_limit(5, 60)
         全局限流防轰炸。
@@ -245,7 +245,7 @@ class UserInformation:
     def login_by_email_code(self, email: str, code: str) -> Dict[str, Any]:
         """邮箱 + 一次性验证码登录：校验通过后自增 token 版本并签发 JWT。
 
-        被谁调用：control/login_control.py 的 login_by_email()
+        被谁调用：app/api/v1/auth.py 的 login_by_email()
         POST /login/email（文件.函数：login_control.login_by_email）；
         成功结果回到 control 后追加 sessions 会话列表。
         参数：

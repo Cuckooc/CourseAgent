@@ -17,7 +17,7 @@
     - _SINK_ID：模块级全局单例，已注册 sink 的 id（None=未注册/注册失败）。
 
 被谁使用：
-    - app/domain/agents/summary_agent.py、service/agent_service.py、service/chat_service.py
+    - app/domain/agents/summary_agent.py、app/application/chat/agent_service.py、app/application/chat/chat_service.py
       调用 alert_degradation 记录各 agent 环节降级；
     - app/domain/agents/fallback.py 在全链路兜底失败时调用 alert_chain_failure。
 """
@@ -113,8 +113,8 @@ def alert_degradation(
     severity=critical 且配置了 DEGRADE_WEBHOOK_URL 时额外异步推送 webhook。
     被谁调用：
         - app/domain/agents/summary_agent.py（summary 环节降级）；
-        - service/agent_service.py（各 agent 执行失败/重试耗尽）；
-        - service/chat_service.py（对话链路降级，如 retrieval 失败）。
+        - app/application/chat/agent_service.py（各 agent 执行失败/重试耗尽）；
+        - app/application/chat/chat_service.py（对话链路降级，如 retrieval 失败）。
 
     参数：
         stage: 降级环节，"vague_agent" | "analysis_agent" | "retrieval" | "summary" | "llm_unavailable"，

@@ -11,7 +11,7 @@
       提示词模板来自 model_llm.llm_business.PredictLLM。
 
 被谁使用（Grep 模块名结果）：
-    - service/agent_service.py：AgentService._create_agents() 中
+    - app/application/chat/agent_service.py：AgentService._create_agents() 中
       VagueAgent(bus=message_bus, history_summary=history_summary)
       每请求实例化；run_agent()/run_agent_stream() 阶段 1 经
       _run_critical_agent(..., "vague", agents["vague"].create_agent, query)
@@ -31,7 +31,7 @@ class VagueAgent(BaseAgent):
 
     类作用：调用 LLM 对用户 query 做二分类（模糊/明确），把判定结果
     构造成统一 output dict 并发布到总线，决定流水线走向闲聊还是分析。
-    实例化位置：service/agent_service.py 的 AgentService._create_agents()。
+    实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()。
     """
 
     def __init__(self, bus: MessageBus, memory: Any = None, tools: Any = None,
@@ -63,7 +63,7 @@ class VagueAgent(BaseAgent):
         （Agent stopped due to iteration limit），每条消息白耗 2-3 次 LLM 调用
         且常伴随 Invalid Format 解析错误重试；意图判定本身无需多轮工具调用。）
 
-        被谁调用：service/agent_service.py 的 _run_critical_agent()
+        被谁调用：app/application/chat/agent_service.py 的 _run_critical_agent()
                   （run_agent/run_agent_stream 阶段 1，以 func(query) 包装调用）。
         参数：
         - query：用户原始问题（来源：状态机调度链传入的 ChatService 改写查询）；

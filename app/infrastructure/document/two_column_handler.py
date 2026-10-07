@@ -22,7 +22,7 @@
     - extract_two_column：模块对外主入口，逐页检测并提取全书。
 
 被谁使用：
-    - service/file_service.py 的 _extract_text()：doc_type 为
+    - app/application/files/file_service.py 的 _extract_text()：doc_type 为
       "two_column" 时延迟导入并调用 extract_two_column
       （文件.函数：file_service._extract_text）；产出文本随后进入
       切分 → embedding → 向量库主链路。
@@ -177,7 +177,7 @@ def extract_two_column(file_path: str) -> str:
     功能：打开 PDF 后逐页检测栏布局——双栏页走 _extract_page_ordered
     （先左栏后右栏、栏内从上到下），单栏页走 _extract_page_normal
     （从上到下）；各非空页文本以 \\n\\n 拼接为全书文本。
-    被谁调用：service/file_service.py 的 _extract_text()，
+    被谁调用：app/application/files/file_service.py 的 _extract_text()，
     doc_type 判定为 "two_column" 时延迟导入并调用
     （文件.函数：file_service._extract_text）；返回文本随后进入
     切分 → embedding → 向量库主链路。

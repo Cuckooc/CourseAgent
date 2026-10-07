@@ -19,8 +19,8 @@
 被谁使用（Grep "embedding.text_embedding" 确认）：
     - app/domain/agents/rag_agent.py（JSON ETL 三步 + build_chromadb）、file_agent.py；
     - app/domain/agents/retrieval.py（get_embedding / build_scope_filter / MAX_L2_DISTANCE）；
-    - service/vector_store.py、file_service.py、temp_knowledge_store.py（get_embedding）；
-    - file_analysis/file.py、util/context.py 及 scripts/ 下调试/维护脚本。
+    - app/infrastructure/vector_store/persistent.py、file_service.py、temp_knowledge_store.py（get_embedding）；
+    - file_analysis/file.py、app/application/chat/context.py 及 scripts/ 下调试/维护脚本。
 
 向量维度一致性约束：
     text-embedding-v2 固定输出 1536 维向量。同一 Chroma collection 内的存量向量与
@@ -118,13 +118,13 @@ def get_embedding():
 
     功能：构造 langchain DashScopeEmbeddings；@lru_cache(maxsize=1) 保证全进程
     只实例化一次，重复调用返回同一对象。
-    被谁调用：app/domain/agents/retrieval.py、rag_agent.py、service/vector_store.py、
-    file_service.py、temp_knowledge_store.py、file_analysis/file.py、util/context.py
+    被谁调用：app/domain/agents/retrieval.py、rag_agent.py、app/infrastructure/vector_store/persistent.py、
+    file_service.py、temp_knowledge_store.py、file_analysis/file.py、app/application/chat/context.py
     及 scripts 维护脚本，作为 Chroma 的 embedding_function。
     返回：DashScopeEmbeddings 实例（1536 维），去向 Chroma 建库/查询向量化，
     最终向量写入本地 chromadb_data 持久化目录。
     异常：本函数不发起远程调用，无网络异常；实际向量化失败由调用方处理。
-    注意：service/chat_service.py 使用的是 embedding/embedding_model.py 的同名
+    注意：app/application/chat/chat_service.py 使用的是 embedding/embedding_model.py 的同名
     函数（带重试与查询缓存的包装版），两者模型一致、维度一致。
     """
     logger.info('get_embedding start')
@@ -243,7 +243,7 @@ def test_retrieval_temp(db: Chroma, query: str, top_k: int = 3)->list[Document]:
 
     被谁调用：预留的会话临时库检索入口（线上等价逻辑在 app/domain/agents/retrieval.py
     对 TempKnowledgeStore 内存库的检索分支）。
-    参数：db —— service/temp_knowledge_store.get_db 产出的会话级 Chroma；
+    参数：db —— app/infrastructure/vector_store/temp_store.get_db 产出的会话级 Chroma；
           query —— 用户问题；top_k —— 返回块数上限。
     返回：list[Document]，由 service 层与持久化库结果合并后进入 RAG prompt。
     """

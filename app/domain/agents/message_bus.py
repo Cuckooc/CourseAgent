@@ -21,7 +21,7 @@ Agent 消息总线。
   subscribe（读邮箱并清空）、broadcast（广播给全部已知邮箱）。
 
 被谁使用（Grep 模块名结果）：
-- service/agent_service.py：AgentService._create_agents() 中
+- app/application/chat/agent_service.py：AgentService._create_agents() 中
   MessageBus(task_id=...) 每请求创建一个实例，注入六个 Agent；
   编排层还直接 bus.publish("SummaryAgent", "ChatAgent", ...) 补发兜底消息；
 - multi_agent 内全部 Agent：base_agent / chat_agent / vague_agent /
@@ -114,7 +114,7 @@ class MessageBus:
 
     类作用：以"每接收方一个邮箱（list）"的方式解耦 Agent 间通信——
     发布方只写目标邮箱，订阅方读取自己的邮箱，读即清空。
-    实例化位置：service/agent_service.py 的 AgentService._create_agents()，
+    实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()，
     每次对话请求创建一个独立实例并注入全部 Agent（并发隔离）。
     """
 

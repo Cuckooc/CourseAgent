@@ -13,7 +13,7 @@
       token 有效期，默认 720 分钟。
 
 token 去向与校验链路：
-    登录成功（util/user.py 的 login_by_username / login_by_email_code）调用
+    登录成功（app/application/auth/user.py 的 login_by_username / login_by_email_code）调用
     create_access_token 签发 -> token 放入登录响应体 access_token 返回前端
     -> 前端存储后在后续请求的 Authorization: Bearer <token> 头携带
     -> core/deps.py 的 get_current_user 依赖取出 Bearer token 并调用
@@ -24,7 +24,7 @@ token 去向与校验链路：
     hash_password / verify_password / create_access_token / decode_token。
 
 被谁使用（Grep）：
-    - util/user.py：注册哈希、登录校验与自动升级哈希、两种登录方式签发 token；
+    - app/application/auth/user.py：注册哈希、登录校验与自动升级哈希、两种登录方式签发 token；
     - core/deps.py：get_current_user 调用 decode_token；
     - tests/conftest.py、test_api_rbac.py、test_concurrency.py 构造测试 token。
 """
@@ -51,7 +51,7 @@ def hash_password(plain_password: str) -> str:
 
     功能：对 UTF-8 编码后的明文口令截断至 bcrypt 上限 72 字节，
     随机加盐后返回可入库存储的哈希字符串。
-    被谁调用：util/user.py 的 register_user（注册入库）、
+    被谁调用：app/application/auth/user.py 的 register_user（注册入库）、
         login_by_username（历史明文密码登录成功后自动升级哈希）；
         tests/conftest.py、test_concurrency.py 构造测试用户。
     参数：
@@ -65,7 +65,7 @@ def hash_password(plain_password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """校验明文密码与 bcrypt 哈希是否匹配。
 
-    被谁调用：util/user.py 的 login_by_username（账号密码登录）。
+    被谁调用：app/application/auth/user.py 的 login_by_username（账号密码登录）。
     参数：
         plain_password: 登录请求中的明文口令（HTTP 请求体）；
         hashed_password: 库内 user_pwd（MySQL，$2 开头的 bcrypt 哈希）。
@@ -90,7 +90,7 @@ def create_access_token(user_id: int, user_name: str, role: str = "user", expire
     与库内 token_version 比对，不等则 token 立即失效。旧 token 无 ver
     字段时 deps 默认 0，与库内 DEFAULT 0 相等，平滑过渡不被一次性踢出。
 
-    被谁调用：util/user.py 的 login_by_username、login_by_email_code
+    被谁调用：app/application/auth/user.py 的 login_by_username、login_by_email_code
         （两种登录成功后签发）；tests 下构造认证请求。
     参数：
         user_id: 用户 id，来源为 user_information 主键；写入 sub 声明；

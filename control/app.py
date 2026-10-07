@@ -10,7 +10,7 @@
 - spa_index / spa_fallback / api_fallback_other_methods：前端构建产物存在时的 SPA 托管与兜底路由；
 - root：无前端产物时的纯 API 根路径探活响应。
 被谁使用：由 Dockerfile / docker-compose 以 `uvicorn control.app:app` 启动（docs 文档亦多处引用）；
-          本文件 import 并注册 chat/login/file/history/admin/knowledge/profile/review 八个子路由模块。
+          本文件 import 并注册 app/api/v1 下 auth/chat/files/history/admin/knowledge/profile/review 八个子路由模块。
 """
 import logging
 from contextlib import asynccontextmanager
@@ -22,14 +22,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from control.chat_control import chat_router
-from control.login_control import login_router
-from control.file_control import file_router
-from control.history_control import history_router
-from control.admin_control import admin_router
-from control.knowledge_control import knowledge_router
-from control.profile_control import profile_router
-from control.review_control import review_router
+from app.api.v1.chat import chat_router
+from app.api.v1.auth import login_router
+from app.api.v1.files import file_router
+from app.api.v1.history import history_router
+from app.api.v1.admin import admin_router
+from app.api.v1.knowledge import knowledge_router
+from app.api.v1.profile import profile_router
+from app.api.v1.review import review_router
 from core.config import settings
 from core.version import __version__
 from core.logging_config import setup_logging
@@ -103,9 +103,9 @@ async def lifespan(app: FastAPI):
         logger.warning("startup purge scheduler failed: %s", e)
     yield
     # 关闭：先把向量库 HNSW 不足 sync_threshold 的尾部索引强制落盘，
-    # 避免重启后最近上传的文件在近似检索中“消失”（详见 service.vector_store）
+    # 避免重启后最近上传的文件在近似检索中“消失”（详见 app.infrastructure.vector_store.persistent）
     try:
-        from service.vector_store import flush_persistent_index
+        from app.infrastructure.vector_store.persistent import flush_persistent_index
 
         flush_persistent_index()
     except Exception as e:

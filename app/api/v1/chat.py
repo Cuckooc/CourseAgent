@@ -7,7 +7,7 @@
 - _ensure_budget：LLM 预算熔断内部辅助函数（日/月 token 超限抛 429）；
 - send：普通对话（非流式）；stream：SSE 流式对话；
 - recover：网络中断后恢复上一轮生成结果；feedback：对 AI 回答点赞/点踩。
-被谁使用：由 control/app.py 通过 `from control.chat_control import chat_router` 导入并
+被谁使用：由 control/app.py 通过 `from app.api.v1.chat import chat_router` 导入并
           app.include_router 注册；路由由 HTTP 客户端（web/frontend）调用，非内部调用。
 设计说明：身份一律取自 JWT，请求体中的 user_id 不再受信任。路由使用同步 def：内部
           LLM/数据库调用均为阻塞型，FastAPI 会自动放到线程池执行，避免阻塞事件循环
@@ -21,7 +21,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from service.chat_service import get_chat_service
+from app.application.chat.chat_service import get_chat_service
 from app.infrastructure.persistence.repositories.feedback import FeedbackDAO
 from core.audit import audit
 from app.auth.guards import get_current_user, forbid_admin

@@ -25,11 +25,11 @@
 - get_temp_store()：lru_cache 应用级单例工厂（根目录 uploads/temp）。
 
 被谁使用：
-- control/file_control.py：上传 temp 文件时取单例并 ensure_session_dir 落盘；
-- service/file_service.py：process_temp_file 经 get_temp_store() 父子块入库；
+- app/api/v1/files.py：上传 temp 文件时取单例并 ensure_session_dir 落盘；
+- app/application/files/file_service.py：process_temp_file 经 get_temp_store() 父子块入库；
 - app/domain/agents/retrieval.py：FileAgent 检索时 has_session/get_db 加载会话库；
 - app/domain/tools/business/knowledge_business.py：session_file_search 工具 has_session 判定；
-- control/history_control.py：删除会话时 drop() 一并清理；
+- app/api/v1/history.py：删除会话时 drop() 一并清理；
 - app/domain/memory/session_rollover.py：长会话滚换时 relocate() 迁移临时库。
 """
 import gc
@@ -167,7 +167,7 @@ class TempKnowledgeStore:
     def ensure_session_dir(self, user_id: int, session_id: int) -> Path:
         """确保会话临时目录存在并返回其绝对路径。
 
-        被谁调用：control/file_control.py 上传 temp 文件前确定落盘目录。
+        被谁调用：app/api/v1/files.py 上传 temp 文件前确定落盘目录。
         参数：user_id/session_id——会话复合键（上传前已做会话归属校验）。
         返回：Path——会话临时目录绝对路径（uploads/temp/<uid>_<sid>）。
         """
@@ -210,10 +210,10 @@ class TempKnowledgeStore:
     ) -> Tuple[int, int]:
         """单个临时文件以父子结构入库（embedding 在锁外并行计算，写入持写锁串行）。
 
-        功能：获取会话库后委托 service/vector_store.add_parent_child 完成
+        功能：获取会话库后委托 app/infrastructure/vector_store/persistent.add_parent_child 完成
               切分、embedding（锁外远程调用）与父子块写入（持本 store 的
               _write_lock 串行），scope 固定为 "temp"。
-        被谁调用：service/file_service.py 的 FileService.process_temp_file。
+        被谁调用：app/application/files/file_service.py 的 FileService.process_temp_file。
         参数：
         - user_id/session_id：会话复合键（JWT 用户 + per-user 会话号）。
         - source (str)：文件物理路径，作为向量块 source 元数据。
@@ -223,7 +223,7 @@ class TempKnowledgeStore:
               上传结果。数据去向：会话 chroma 持久目录。
         """
         # 局部 import 规避 service 层之间的循环导入
-        from service.vector_store import add_parent_child
+        from app.infrastructure.vector_store.persistent import add_parent_child
 
         db = self.get_db(user_id, session_id)
         return add_parent_child(
@@ -272,7 +272,7 @@ class TempKnowledgeStore:
         功能：从注册表弹出并释放 Chroma 实例（del + gc.collect 释放
               Windows 下 sqlite 句柄），统计并递归删除整个会话目录；
               目录删除失败仅告警（容忍残留，不阻断删除会话主流程）。
-        被谁调用：control/history_control.py 删除会话接口。
+        被谁调用：app/api/v1/history.py 删除会话接口。
         参数：user_id/session_id——待销毁会话的复合键。
         返回：int——删除的物理文件数（统计口径为删前目录内普通文件）。
         """
@@ -380,8 +380,8 @@ def get_temp_store() -> TempKnowledgeStore:
 
     功能：lru_cache 保证全进程一个临时库注册表实例；根目录固定为
           settings.UPLOAD_DIR/temp（uploads/temp）。
-    被谁调用：control/file_control.py、control/history_control.py、
-              service/file_service.py、app/domain/agents/retrieval.py、
+    被谁调用：app/api/v1/files.py、app/api/v1/history.py、
+              app/application/files/file_service.py、app/domain/agents/retrieval.py、
               app/domain/tools/business/knowledge_business.py、app/domain/memory/session_rollover.py。
     返回：TempKnowledgeStore 唯一实例。
     """

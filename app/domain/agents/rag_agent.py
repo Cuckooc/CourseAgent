@@ -18,13 +18,13 @@
       与 Chroma 持久化目录的默认路径（模块级常量，基于项目根目录拼接）。
 
 被谁使用（Grep 模块名结果）：
-    - service/agent_service.py：AgentService._get_rag_db() 经
+    - app/application/chat/agent_service.py：AgentService._get_rag_db() 经
       RAGAgent.build_shared_db() 懒加载共享库；_create_agents() 中
       RAGAgent(message_bus=..., db=shared_db, user_id=..., session_id=...)
       每请求实例化；_run_retrieval() 按 analysis_result["need_RAGAgent"]
       经非关键包装器调用 agents["rag"].handle；
     - app/infrastructure/persistence/repositories/knowledge.py：知识库管理/删除
-      经 service.vector_store.get_persistent_db() 取得同一 Chroma collection 单例，
+      经 app.infrastructure.vector_store.persistent.get_persistent_db() 取得同一 Chroma collection 单例，
       避免写竞争。
 
 Agent 间数据流：
@@ -33,9 +33,9 @@ Agent 间数据流：
     - 输出（生产者）：bus.publish("RAGAgent", "SummaryAgent", result_msg)，
       payload 为 {"query", "top_k", "results":[{content, metadata}]}，
       消费者 SummaryAgent.handle。
-向量库来源：service/vector_store.get_persistent_db 持有的应用级共享
+向量库来源：app/infrastructure/vector_store/persistent.get_persistent_db 持有的应用级共享
     Chroma（含进程写锁 persistent_lock）；会话临时库由
-    service/temp_knowledge_store 提供，检索细节见 app/domain/agents/retrieval.py。
+    app/infrastructure/vector_store/temp_store 提供，检索细节见 app/domain/agents/retrieval.py。
 """
 import os
 from functools import lru_cache
@@ -64,7 +64,7 @@ _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DEFAULT_JSON_PATH = os.path.join(
     _BASE_DIR, "data", "LearnPlan_Dialogue_Collection", "LearnPlan_Dialogue_Collection.json"
 )
-# Chroma 持久化目录默认值（向量库落盘位置；主流程实际由 service.vector_store 统一管理）
+# Chroma 持久化目录默认值（向量库落盘位置；主流程实际由 app.infrastructure.vector_store.persistent 统一管理）
 _DEFAULT_PERSIST_PATH = os.path.join(_BASE_DIR, "chromadb_data")
 
 
@@ -99,11 +99,11 @@ class RAGAgent:
         function calling 新工具链（app.domain.tools.shadow）做新旧结果对比。
     继承关系：无基类（不实现 BaseAgent 抽象接口 create_agent），
         编排入口为 handle()，由非关键 Agent 包装器调度并重试。
-    实例化位置：service/agent_service.py 的 AgentService._create_agents()，
+    实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()，
         每请求实例化，db 形参由 _get_rag_db() 注入 build_shared_db()
         返回的应用级共享向量库单例。
     关键 self 属性含义与去向：
-        - self.db：持久 Chroma 实例（来源 service.vector_store 共享单例），
+        - self.db：持久 Chroma 实例（来源 app.infrastructure.vector_store.persistent 共享单例），
           作为 retrieve_scoped 的 db 形参（公共 + user_id 私有范围）；
         - self.user_id/self.session_id：来源编排层（JWT/会话上下文），
           决定检索 scope 过滤与是否合并会话临时库；
@@ -123,7 +123,7 @@ class RAGAgent:
     ):
         """初始化 RAG 检索 Agent。
 
-        被谁调用：AgentService._create_agents()（service/agent_service.py，
+        被谁调用：AgentService._create_agents()（app/application/chat/agent_service.py，
                   每请求一次）。
         参数：
         - message_bus：本次请求专属 MessageBus（编排层注入），用于订阅
@@ -133,7 +133,7 @@ class RAGAgent:
         - persist_path：Chroma 持久化目录（默认 _DEFAULT_PERSIST_PATH）；
         - top_k：默认检索返回条数（消息未带 top_k 时使用）；
         - db：应用级共享持久向量库（来源：RAGAgent.build_shared_db()，
-          经 service/agent_service.py 的 _get_rag_db() 注入）；None 时
+          经 app/application/chat/agent_service.py 的 _get_rag_db() 注入）；None 时
           回退 load_or_build_db 自建；
         - user_id：JWT 当前用户 ID（来源请求上下文），做私有库 scope 过滤；
         - session_id：会话号（来源请求上下文），非空时合并检索会话临时库。
@@ -175,10 +175,10 @@ class RAGAgent:
         """构建/加载应用级共享向量库（单例：AgentService / 知识库管理 / 上传写入共用同一实例，
         避免同 persist 目录的多个 Chroma 客户端产生写竞争）。
 
-        实例由 service.vector_store 统一持有（含进程写锁）；首次使用且库为空时，
+        实例由 app.infrastructure.vector_store.persistent 统一持有（含进程写锁）；首次使用且库为空时，
         在此播种内置 JSON 公共知识库（保持历史启动行为）。
         """
-        from service.vector_store import get_persistent_db, persistent_lock
+        from app.infrastructure.vector_store.persistent import get_persistent_db, persistent_lock
 
         db = get_persistent_db()
         if db._collection.count() == 0:
@@ -192,7 +192,7 @@ class RAGAgent:
     def handle(self):
         """执行 RAG 检索并把结果回传 SummaryAgent（流水线阶段 3 的 RAG 分支入口）。
 
-        被谁调用：service/agent_service.py 的 _run_retrieval()，经非关键
+        被谁调用：app/application/chat/agent_service.py 的 _run_retrieval()，经非关键
                   包装器 _run_non_critical_agent(sm, "retrieval_rag",
                   agents["rag"].handle, fallback_value=None) 调用；异常按
                   retrieval 重试上限重试，耗尽后编排层以空结果继续。

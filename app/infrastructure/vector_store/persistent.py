@@ -23,13 +23,13 @@
   批量并发 embedding 等工具函数。
 
 被谁使用：
-- service/file_service.py：上传持久库入库、去重扫描与替换策略；
-- service/review_service.py：审核通过后入库与 flush；
-- service/temp_knowledge_store.py：临时库复用 add_parent_child 写入逻辑；
+- app/application/files/file_service.py：上传持久库入库、去重扫描与替换策略；
+- app/application/review/review_service.py：审核通过后入库与 flush；
+- app/infrastructure/vector_store/temp_store.py：临时库复用 add_parent_child 写入逻辑；
 - dao/knowledge.py：删除文档向量块时取共享库与写锁；
 - app/domain/agents/rag_agent.py：RAG 检索共享持久库；
 - core/purge_scheduler.py：旧版本清理；control/app.py 与
-  control/file_control.py：服务关闭/批次结束时 flush 索引；
+  app/api/v1/files.py：服务关闭/批次结束时 flush 索引；
 - app/domain/tools/business/knowledge_business.py：知识库检索工具。
 """
 from __future__ import annotations
@@ -145,7 +145,7 @@ _store = PersistentVectorStore()
 def get_persistent_db() -> Chroma:
     """应用级共享持久化向量库（RAGAgent/知识库管理/上传写入共用同一实例）。
 
-    被谁调用：service/file_service.py、service/review_service.py、
+    被谁调用：app/application/files/file_service.py、app/application/review/review_service.py、
               dao/knowledge.py、app/domain/agents/rag_agent.py、
               core/purge_scheduler.py、app/domain/tools/business/knowledge_business.py
               及 scripts/ 维护脚本。
@@ -158,7 +158,7 @@ def persistent_lock() -> threading.RLock:
     """返回持久化向量库的进程级写锁。
 
     被谁调用：所有需要串行化 collection.add/delete/update 的写入路径
-              （file_service/review_service/dao.knowledge/purge_scheduler）。
+              （file_app/application/review/review_service/dao.knowledge/purge_scheduler）。
     返回：threading.RLock——与持久库绑定的全局写锁。
     """
     return _store.lock
@@ -170,8 +170,8 @@ def flush_persistent_index() -> None:
     功能：库尚未初始化则直接返回；否则持写锁以两轮等待方式调用
           _flush_collection_index，覆盖第一轮等待期间 chroma consumer
           又投递的在途记录。
-    被谁调用：control/app.py 应用关闭钩子、control/file_control.py
-              上传批次结束后、service/review_service.py 审核入库后。
+    被谁调用：control/app.py 应用关闭钩子、app/api/v1/files.py
+              上传批次结束后、app/application/review/review_service.py 审核入库后。
     参数：无。返回：无。数据去向：chromadb_data 的 HNSW 索引与 SQLite 落盘。
     """
     if _store._db is None:
@@ -267,7 +267,7 @@ def _l2_normalize(vec: List[float]) -> List[float]:
 
     功能：把向量缩放到单位长度，使父块均值向量与子块向量处于同一度量空间；
           零向量（模长为 0）原样拷贝返回，避免除零。
-    被谁调用：add_parent_child() 聚合父向量、service/file_service.py
+    被谁调用：add_parent_child() 聚合父向量、app/application/files/file_service.py
               预聚合父向量时。
     参数：vec (List[float])——待归一化的向量（如某父块全部子向量的均值）。
     返回：List[float]——归一化后的同维向量。
@@ -282,7 +282,7 @@ def _embed_in_batches(embedding_model, texts: List[str]) -> List[List[float]]:
     功能：单批直接同步调用 embed_documents；多批时提交到 _embed_executor
           线程池（4 并发，受 DashScope QPS 约束）并发请求，再按原始批次
           顺序组装，保证返回向量下标与 texts 一一对应。
-    被谁调用：add_parent_child()、service/file_service.py 去重前预计算。
+    被谁调用：add_parent_child()、app/application/files/file_service.py 去重前预计算。
     参数：
     - embedding_model：embedding 客户端（来源：embedding/text_embedding.get_embedding）。
     - texts (List[str])：待向量化文本（子块内容，来源：父子切分结果）。
@@ -334,9 +334,9 @@ def add_parent_child(
     最后在 lock 内分父、子两批 collection.add 写入。本函数不逐文件
     flush，落盘时机由批次结束/服务关闭的 flush_persistent_index 统一兜底。
 
-    被谁调用：service/file_service.py（全新文件入库）、
-              service/review_service.py（审核通过入库）、
-              service/temp_knowledge_store.py（会话临时库入库）。
+    被谁调用：app/application/files/file_service.py（全新文件入库）、
+              app/application/review/review_service.py（审核通过入库）、
+              app/infrastructure/vector_store/temp_store.py（会话临时库入库）。
     参数：
     - db (Chroma)：目标库（持久库 get_persistent_db 或会话临时库）。
     - lock (threading.RLock)：写锁（持久库传 persistent_lock()，临时库
@@ -447,7 +447,7 @@ def find_max_similarity(
     功能：批量对每个新子块向量在库内（带 where 过滤）取 top-1 近邻，把
           chroma 的 L2 距离经 _cosine_from_l2 换算为 cosine，取全局最大
           值及其命中块的 source 元数据；查询异常时告警并按无匹配返回。
-    被谁调用：service/file_service.py 的 FileService._check_duplicate
+    被谁调用：app/application/files/file_service.py 的 FileService._check_duplicate
               （full 与 filename 两种去重策略均用）。
     参数：
     - db (Chroma)：持久化向量库（来源：get_persistent_db）。
@@ -504,7 +504,7 @@ def replace_document(
           元数据）→ 删除旧块 → 写入新块；写入异常时用备份回滚并把异常
           上抛。成功后 flush 索引（带 added/deleted id 等待落盘），并在
           锁外删除旧物理文件（删除失败仅告警）。
-    被谁调用：service/file_service.py 的 process_file（UPDATE_STRATEGY
+    被谁调用：app/application/files/file_service.py 的 process_file（UPDATE_STRATEGY
               = replace 分支）。
     参数：
     - db (Chroma)/lock (RLock)：持久库与其写锁。
@@ -574,7 +574,7 @@ def add_new_version(
           当前最新版本全部块，用 col.update 批量置 is_latest=False 并写
           superseded_at，最后 flush 索引。旧版本向量保留可回溯，由
           core/purge_scheduler.py 按保留期清理。
-    被谁调用：service/file_service.py 的 process_file（UPDATE_STRATEGY
+    被谁调用：app/application/files/file_service.py 的 process_file（UPDATE_STRATEGY
               = version 分支，默认策略）。
     参数：
     - db (Chroma)/lock (RLock)：持久库与其写锁。

@@ -18,7 +18,7 @@
     - dao/session.py 的 SessionDAO.delete_session() 转发 soft_delete_session()；
     - dao/user.py 的 Information.deactivate_user() 调用 soft_delete_user()
       与 schedule_account_deletion()；
-    - control/history_control.py 的撤销端点调用 recover_last_deleted()；
+    - app/api/v1/history.py 的撤销端点调用 recover_last_deleted()；
     - tests/conftest.py 测试清库走 soft_delete_user()。
 
 软删除语义：
@@ -233,7 +233,7 @@ def recover_last_deleted(user_id: int) -> Optional[str]:
     SQL 安全：uid/sid 命名绑定参数；查询按 is_deleted=1 精确定位待恢复行，
     更新只作用于 is_deleted=1 的行，避免误复活从未删除的数据；
     ORDER BY deleted_at DESC LIMIT 1 保证“最近一条”且行数有界。
-    被谁调用：control/history_control.py 的撤销删除端点
+    被谁调用：app/api/v1/history.py 的撤销删除端点
     （文件.函数：history_control 撤销处理函数，recover_last_deleted(user_id)）。
     参数：
         user_id: 登录态用户 ID（只能恢复自己名下的删除记录）。

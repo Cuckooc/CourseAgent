@@ -24,7 +24,7 @@
 - IntentVerifier：验证器类，verify() 判一致性、score_relevance() 打相关性分。
 
 被谁使用（Grep 模块名结果）：
-- service/agent_service.py：run_agent()/run_agent_stream() 入口各
+- app/application/chat/agent_service.py：run_agent()/run_agent_stream() 入口各
   IntentVerifier() 实例化一次；阶段 2 调 verifier.verify(query,
   "analysis", analysis_result)，阶段 5 调 verifier.verify(query,
   "chat", chat_result)；_run_summary_with_relevance() 每轮调
@@ -63,7 +63,7 @@ class IntentVerifier:
         verify() 判分析/生成结果是否偏题（决定是否回退重跑），
         score_relevance() 给汇总文本打相关性分（决定是否重新检索）。
     继承关系：无基类（独立辅助类，不属于 Agent 流水线节点）。
-    实例化位置：service/agent_service.py 的 run_agent() 与
+    实例化位置：app/application/chat/agent_service.py 的 run_agent() 与
         run_agent_stream() 入口（每请求一个实例）。
     关键 self 属性：self.llm——温度 settings.AGENT_VERIFIER_TEMPERATURE
         （低温求判定稳定）、超时 settings.AGENT_VERIFIER_TIMEOUT 的
@@ -87,7 +87,7 @@ class IntentVerifier:
         # type: (str, str, Any) -> bool
         """验证 Agent 输出与用户原始意图是否一致。
 
-        被谁调用：service/agent_service.py 的 run_agent()/
+        被谁调用：app/application/chat/agent_service.py 的 run_agent()/
                   run_agent_stream()——阶段 2 以 stage="analysis" 校验
                   AnalysisAgent 决策；阶段 5 以 stage="chat" 校验
                   ChatAgent 最终回答（vague 阶段按修复约定不校验，避免
@@ -128,7 +128,7 @@ class IntentVerifier:
         # type: (str, str) -> float
         """评估汇总内容与用户问题的相关性，返回 0.0~1.0 的分数。
 
-        被谁调用：service/agent_service.py 的 _run_summary_with_relevance()
+        被谁调用：app/application/chat/agent_service.py 的 _run_summary_with_relevance()
                   每轮 SummaryAgent 执行成功且非空兜底文案后调用，分数
                   记入 chain_log 的 relevance_check 事件。
         参数：

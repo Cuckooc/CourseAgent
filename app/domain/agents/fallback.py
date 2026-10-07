@@ -21,7 +21,7 @@
   编排层调用入口，_notify_developer 为内部开发者告警方法。
 
 被谁使用（Grep 模块名结果）：
-- service/agent_service.py：run_agent()/run_agent_stream() 入口各
+- app/application/chat/agent_service.py：run_agent()/run_agent_stream() 入口各
   FallbackHandler(sm, query, user_id, session_id) 实例化一次；
   _run_critical_agent 调 handle_missing_info/handle_final_fallback；
   run_agent 包装兜底结果调 handle_fallback；_stream_fallback 调
@@ -46,7 +46,7 @@ class FallbackHandler:
         迁到 FALLBACK_CLARIFY/FALLBACK_ERROR，并在 Tier2 时把 chain_log
         推送开发者。
     继承关系：无基类（独立辅助类）。
-    实例化位置：service/agent_service.py 的 run_agent() 与
+    实例化位置：app/application/chat/agent_service.py 的 run_agent() 与
         run_agent_stream() 入口（每请求一个实例，与本次请求的 sm 绑定）。
     关键 self 属性含义与去向：
         - self.sm：本次请求 PipelineStateMachine（来源：编排层创建），
@@ -77,7 +77,7 @@ class FallbackHandler:
 
         触发条件：_run_critical_agent 中 FailureDiagnoser.diagnose 返回
                   type="MISSING_INFO"（用户问题信息不足，重试无意义）。
-        被谁调用：service/agent_service.py 的 _run_critical_agent()。
+        被谁调用：app/application/chat/agent_service.py 的 _run_critical_agent()。
         参数：clarification——诊断器生成的一句向用户澄清的提问
               （来源：diagnose 返回的 clarification 字段，缺省"请提供更多信息"）。
         返回：{"success": True, "fallback": "clarify",

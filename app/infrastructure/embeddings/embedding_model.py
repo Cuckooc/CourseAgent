@@ -13,9 +13,9 @@
     - _MAX_RETRIES / _BACKOFF_BASE / _FATAL_MARKERS / _QUERY_CACHE_SIZE：重试与缓存常量。
 
 被谁使用（Grep "embedding.embedding_model" 确认）：
-    - service/chat_service.py：get_embedding() 用于上下文相关性判定
+    - app/application/chat/chat_service.py：get_embedding() 用于上下文相关性判定
       （embed_query 计算 query 与上下文的余弦相似度）。
-    注意入库/检索主链路（service/vector_store.py、app/domain/agents/retrieval.py）使用
+    注意入库/检索主链路（app/infrastructure/vector_store/persistent.py、app/domain/agents/retrieval.py）使用
     embedding/text_embedding.py 的 get_embedding（裸客户端）；两者均锁定
     text-embedding-v2（1536 维），向量维度保持一致。
 
@@ -80,10 +80,10 @@ class RetryingDashScopeEmbeddings:
     以字符串特征排除 401/403 类致命错误）。
 
     实例化位置：仅由本模块 get_embedding() 工厂创建（lru_cache 保证进程级单例），
-    被 service/chat_service.py 经 get_embedding() 持有使用；业务代码不直接 new。
+    被 app/application/chat/chat_service.py 经 get_embedding() 持有使用；业务代码不直接 new。
     内嵌的 DashScopeEmbeddings 在 __init__ 中以 text-embedding-v2 + 全局
     dashscope.api_key 构造；关键产出（1536 维 float 向量）去向 chat_service 的
-    余弦相似度计算，入库侧向量则写入 service/vector_store.py 管理的 Chroma。
+    余弦相似度计算，入库侧向量则写入 app/infrastructure/vector_store/persistent.py 管理的 Chroma。
     """
 
     def __init__(self):
@@ -131,7 +131,7 @@ class RetryingDashScopeEmbeddings:
         """批量文本向量化（接口与 DashScopeEmbeddings 一致）。
 
         被谁调用：Chroma 建库/写入路径以 embedding_function 身份间接调用
-        （service/vector_store.py 的批量入库）。
+        （app/infrastructure/vector_store/persistent.py 的批量入库）。
         参数：texts —— str 列表（分块文本）。
         返回：List[List[float]]，每个 1536 维，顺序与 texts 对齐，去向 Chroma 写入。
         异常：见 _with_retry（致命错误即抛；其余重试耗尽后抛最后异常）。
@@ -143,7 +143,7 @@ class RetryingDashScopeEmbeddings:
 
         带 LRU 缓存：相同文本直接命中缓存，避免重复远程调用。
 
-        被谁调用：service/chat_service.py 上下文相关性判定（query 与候选上下文
+        被谁调用：app/application/chat/chat_service.py 上下文相关性判定（query 与候选上下文
         各向量化后算余弦相似度）；Chroma 检索时亦以 embedding_function 身份调用。
         参数：text —— 查询字符串（用户问题/上下文文本）。
         返回：List[float]，1536 维向量；命中 _query_cache 时直接返回缓存引用。
@@ -172,7 +172,7 @@ def get_embedding():
     """获取带重试的 DashScopeEmbeddings（调用方接口零改动）。
 
     功能：返回 RetryingDashScopeEmbeddings 进程级单例（lru_cache 保证唯一实例）。
-    被谁调用：service/chat_service.py（ChatService 初始化时持有，用于上下文相似度）。
+    被谁调用：app/application/chat/chat_service.py（ChatService 初始化时持有，用于上下文相似度）。
     返回：RetryingDashScopeEmbeddings 实例；其 embed_query/embed_documents 产出的
           1536 维向量须与 Chroma 存量向量（text-embedding-v2）维度一致。
     """

@@ -27,8 +27,8 @@ class BaseInformation(ABC):
 
     不对应具体 MySQL 表，仅约束子类统一实现 save_information()，
     使 service 层可以按同一接口形态调用不同表的写入逻辑。
-    子类实例化位置见各子类模块（service/chat_service.py、app/domain/memory/long_term.py、
-    util/user.py 等）；本类无 __init__ 形参，也不持有数据库连接，
+    子类实例化位置见各子类模块（app/application/chat/chat_service.py、app/domain/memory/long_term.py、
+    app/application/auth/user.py 等）；本类无 __init__ 形参，也不持有数据库连接，
     会话由子类在方法内部通过 session_scope() 按需获取并自动提交/回滚。
     """
 

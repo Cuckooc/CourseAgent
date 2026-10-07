@@ -17,11 +17,11 @@
       update_session_title / delete_session。
 
 被谁使用：
-    - service/chat_service.py 的 ChatService.__init__ 实例化
+    - app/application/chat/chat_service.py 的 ChatService.__init__ 实例化
       （self.session_dao = SessionDAO()），聊天收发时建会话/校验归属；
-    - control/history_control.py 各历史会话端点（列表/详情/新建/改名/删除/撤销）；
-    - control/login_control.py 登录成功后拼装会话列表；
-    - control/file_control.py 上传临时文档前校验会话归属；
+    - app/api/v1/history.py 各历史会话端点（列表/详情/新建/改名/删除/撤销）；
+    - app/api/v1/auth.py 登录成功后拼装会话列表；
+    - app/api/v1/files.py 上传临时文档前校验会话归属；
     - app/domain/memory/context_app.domain.memory.py（ContextMemory 持有 _session_dao 读详情）、
       app/domain/memory/session_rollover.py（会话翻转时 create_session）。
 """
@@ -73,9 +73,9 @@ class SessionDAO(BaseInformation):
     承担会话的增（create_session / save_information）、查（get_session_list /
     get_session_list_paged / get_session_detail / is_session_owner）、
     改（update_session_title）、软删除（delete_session 转发 dao.soft_delete）。
-    实例化位置：service/chat_service.py 的 ChatService.__init__、
-    control/history_control.py 各端点函数、control/login_control.py、
-    control/file_control.py、app/domain/memory/context_app.domain.memory.py 的 ContextMemory.__init__、
+    实例化位置：app/application/chat/chat_service.py 的 ChatService.__init__、
+    app/api/v1/history.py 各端点函数、app/api/v1/auth.py、
+    app/api/v1/files.py、app/domain/memory/context_app.domain.memory.py 的 ContextMemory.__init__、
     app/domain/memory/session_rollover.py。__init__ 无形参，仅调用父类 ABC 构造；
     不持有数据库连接，会话在各方法内通过 session_scope() 获取。
     """
@@ -130,7 +130,7 @@ class SessionDAO(BaseInformation):
 
         功能：get_session_list_paged(range_="all", limit=None) 的便捷封装，
         仅取 data 部分。
-        被谁调用：control/login_control.py 登录/注册成功后拼装返回会话列表
+        被谁调用：app/api/v1/auth.py 登录/注册成功后拼装返回会话列表
         （文件.函数：login_control 登录处理函数）。
         参数：
             user_id: 登录态用户 ID（登录成功后回拉该用户全部会话）。
@@ -154,7 +154,7 @@ class SessionDAO(BaseInformation):
 
         被谁调用：
         - 本类 get_session_list()（登录后全量列表）；
-        - control/history_control.py 的会话列表端点
+        - app/api/v1/history.py 的会话列表端点
           （文件.函数：history_control 列表处理函数，带 day/week/分页参数）。
         参数：
             user_id: 登录态用户 ID，WHERE 强制按用户隔离，只能列出自己的会话。
@@ -250,7 +250,7 @@ class SessionDAO(BaseInformation):
         is_deleted = 0 软删除过滤；经 safe_execute 执行，无显式 LIMIT 时
         SELECT 受 sql_guard 的 SQL_MAX_ROWS 钳制。
         被谁调用：
-        - control/history_control.py 的会话详情端点
+        - app/api/v1/history.py 的会话详情端点
           （文件.函数：history_control 详情处理函数）；
         - app/domain/memory/context_app.domain.memory.py 的 ContextMemory 读取历史消息重建上下文
           （文件.函数：context_app.domain.memory.ContextMemory 内 self._session_dao.get_session_detail(...)）。
@@ -294,11 +294,11 @@ class SessionDAO(BaseInformation):
         SQL 安全：user_id/session_id 双键命名绑定参数 + is_deleted = 0；
         LIMIT 1 找到即止；经 safe_execute 执行。
         被谁调用：
-        - service/chat_service.py 的聊天收发（文件.函数：
+        - app/application/chat/chat_service.py 的聊天收发（文件.函数：
           chat_service.ChatService 流式/非流式入口，传入已有 session_id 时校验）；
-        - control/file_control.py 上传会话临时文档前
+        - app/api/v1/files.py 上传会话临时文档前
           （SessionDAO().is_session_owner(...)）；
-        - control/history_control.py 删除/改名等端点。
+        - app/api/v1/history.py 删除/改名等端点。
         参数：
             user_id: 登录态用户 ID。
             session_id: 请求声称要操作的会话 ID。
@@ -342,9 +342,9 @@ class SessionDAO(BaseInformation):
         SQL 安全：user_id/session_id/title 均为命名绑定参数，经
         safe_execute 执行；FOR UPDATE 行锁与唯一键冲突均不改变参数化方式。
         被谁调用：
-        - service/chat_service.py 的聊天入口（文件.函数：
+        - app/application/chat/chat_service.py 的聊天入口（文件.函数：
           chat_service.ChatService 流式/非流式入口，首条消息时建会话）；
-        - control/history_control.py 的新建会话端点；
+        - app/api/v1/history.py 的新建会话端点；
         - app/domain/memory/session_rollover.py 会话数量翻转时建新会话。
         参数：
             user_id: 登录态用户 ID。
@@ -416,7 +416,7 @@ class SessionDAO(BaseInformation):
         他人会话或已删会话改不到任何行（rowcount=0）。
         SQL 安全：title/user_id/session_id 均为命名绑定参数，经 safe_execute
         执行，杜绝标题内容中的 SQL 注入。
-        被谁调用：control/history_control.py 的会话改名端点
+        被谁调用：app/api/v1/history.py 的会话改名端点
         （文件.函数：history_control 改名处理函数，调用前通常已做
         is_session_owner 校验，WHERE 双键为纵深防护）。
         参数：
@@ -450,7 +450,7 @@ class SessionDAO(BaseInformation):
         history_information 与 session_information 的对应行置 is_deleted=1、
         deleted_at=NOW()，并写撤销快照、清关键词缓存；归属由 UPDATE 的
         WHERE user_id 条件与调用前的 is_session_owner 双重保证。
-        被谁调用：control/history_control.py 的删除会话端点
+        被谁调用：app/api/v1/history.py 的删除会话端点
         （文件.函数：history_control 删除处理函数）。
         参数：
             user_id: 登录态用户 ID。

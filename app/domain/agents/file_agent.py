@@ -17,7 +17,7 @@
       （模块级常量）。
 
 被谁使用（Grep 模块名结果）：
-    - service/agent_service.py：AgentService._create_agents() 中
+    - app/application/chat/agent_service.py：AgentService._create_agents() 中
       FileAgent(message_bus=..., db=None, user_id=..., session_id=...)
       每请求实例化（刻意不注入共享持久库，文件路线只检索会话临时库）；
       _run_retrieval() 按 analysis_result["need_FileAgent"] 经非关键
@@ -33,7 +33,7 @@ Agent 间数据流：
       消费者 SummaryAgent.handle。
 向量库来源：self.db 为本地 PDF 演示库（data/samples/1.pdf，经
     file_analysis.file 的切块/embedding/Chroma 工具构建）；会话上传
-    文件库由 service/temp_knowledge_store 按 user_id+session_id 提供，
+    文件库由 app/infrastructure/vector_store/temp_store 按 user_id+session_id 提供，
     retrieve_scoped 在 self.db 为 None 时仍可独立检索临时库。
 """
 import os
@@ -74,7 +74,7 @@ class FileAgent:
         存在上传文件时，旁路运行 function calling 新工具链做对比。
     继承关系：无基类（不实现 BaseAgent 抽象接口 create_agent），
         编排入口为 handle()，由非关键 Agent 包装器调度并重试。
-    实例化位置：service/agent_service.py 的 AgentService._create_agents()，
+    实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()，
         每请求实例化且 db 固定传 None（不挂载应用级共享持久库，文件路线
         数据域限定为会话临时库 + 本地演示 PDF）。
     关键 self 属性含义与去向：
@@ -100,7 +100,7 @@ class FileAgent:
     ):
         """初始化文件检索 Agent。
 
-        被谁调用：AgentService._create_agents()（service/agent_service.py，
+        被谁调用：AgentService._create_agents()（app/application/chat/agent_service.py，
                   每请求一次，固定 db=None）。
         参数：
         - message_bus：本次请求专属 MessageBus（编排层注入），用于订阅
@@ -189,7 +189,7 @@ class FileAgent:
     def handle(self):
         """执行上传文件检索并把结果回传 SummaryAgent（流水线阶段 3 的 File 分支入口）。
 
-        被谁调用：service/agent_service.py 的 _run_retrieval()，经非关键
+        被谁调用：app/application/chat/agent_service.py 的 _run_retrieval()，经非关键
                   包装器 _run_non_critical_agent(sm, "retrieval_file",
                   agents["file"].handle, fallback_value=None) 调用；异常按
                   retrieval 重试上限重试，耗尽后编排层以空结果继续。
@@ -201,7 +201,7 @@ class FileAgent:
               payload = {"query": str, "top_k": int, "results":
               [{"content": 命中文档正文, "metadata": 元数据}]}；
               检索经 retrieve_scoped 同时覆盖 self.db（PDF 演示库，
-              可为 None）与当前会话临时库（service/temp_knowledge_store）。
+              可为 None）与当前会话临时库（app/infrastructure/vector_store/temp_store）。
         空 query：告警并跳过该消息；无消息时发布空 results，
               SummaryAgent 侧据此走"未检索到"降级。
         影子模式：TOOL_SHADOW_MODE 开启、收到消息且上游标记

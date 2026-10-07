@@ -9,7 +9,7 @@
     - Information_history：继承 BaseInformation，实现 save_information() 的 upsert 写入。
 
 被谁使用：
-    - service/chat_service.py 的 ChatService.__init__ 中实例化
+    - app/application/chat/chat_service.py 的 ChatService.__init__ 中实例化
       （self.history_dao = Information_history()），并在 _save_information()
       中即时持久化 AI 生成的会话标题；
     - app/domain/memory/long_term.py 的长期记忆落库任务构造时实例化（_history_dao），
@@ -35,7 +35,7 @@ class Information_history(BaseInformation):
 
     承担会话历史条目的幂等 upsert（INSERT ... ON DUPLICATE KEY UPDATE），
     不承担查询与删除（查询见 dao/session.py，软删除见 dao/soft_delete.py）。
-    实例化位置：service/chat_service.py 的 ChatService.__init__
+    实例化位置：app/application/chat/chat_service.py 的 ChatService.__init__
     （self.history_dao）、app/domain/memory/long_term.py 的 LongTermMemory 构造
     （self._history_dao）。__init__ 无形参，仅调用父类 ABC 构造；
     不持有数据库连接，会话在 save_information() 内通过 session_scope() 获取。
@@ -55,7 +55,7 @@ class Information_history(BaseInformation):
         单会话内执行，随 with 块自动提交，异常自动回滚。
 
         被谁调用：
-        - service/chat_service.py 的 ChatService._save_information()
+        - app/application/chat/chat_service.py 的 ChatService._save_information()
           （文件.函数：chat_service.ChatService._save_information，标题即时持久化）；
         - app/domain/memory/long_term.py 的长期记忆落库逻辑
           （文件.函数：long_term.LongTermMemory 内的落库方法）。

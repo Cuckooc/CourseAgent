@@ -15,7 +15,7 @@
 - PipelineStateMachine：状态机主体，维护状态、计数、链路日志与循环检测。
 
 被谁使用（Grep 模块名结果）：
-- service/agent_service.py：run_agent() / run_agent_stream() 入口各
+- app/application/chat/agent_service.py：run_agent() / run_agent_stream() 入口各
   PipelineStateMachine(query, user_id, session_id) 创建一次；
   _run_critical_agent / _run_non_critical_agent /
   _run_summary_with_relevance / _run_retrieval / _retry_chat_for_rollback
@@ -138,7 +138,7 @@ class PipelineStateMachine:
     类作用：承载单次对话请求的全部编排运行时数据——当前所处 AgentState、
     每个 Agent 的重试计数、Agent 产物缓存、回退计数/目标、全链路日志
     chain_log，以及基于全局步数与滑动窗口指纹的死循环检测。
-    实例化位置：service/agent_service.py 的 run_agent() 与
+    实例化位置：app/application/chat/agent_service.py 的 run_agent() 与
     run_agent_stream() 入口（每请求一个实例）；FallbackHandler 也持有
     同一实例以切换兜底态。
     关键属性去向：

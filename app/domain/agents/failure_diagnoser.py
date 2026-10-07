@@ -19,7 +19,7 @@
   _parse_response() 为静态文本解析方法。
 
 被谁使用（Grep 模块名结果）：
-- service/agent_service.py：run_agent() 与 run_agent_stream() 入口各
+- app/application/chat/agent_service.py：run_agent() 与 run_agent_stream() 入口各
   FailureDiagnoser() 实例化一次；_run_critical_agent() 的 except 分支
   调 diagnoser.diagnose(query=sm.query, agent_name=..., error=...,
   context=sm.agent_outputs)，结果写入 chain_log 的 diagnosis 事件；
@@ -64,7 +64,7 @@ class FailureDiagnoser:
         调用对失败做归因，产出结构化诊断 dict，供编排层选择 Tier1 澄清、
         重试还是 Tier2 最终兜底。
     继承关系：无基类（独立辅助类，不属于 Agent 流水线节点）。
-    实例化位置：service/agent_service.py 的 run_agent() 与
+    实例化位置：app/application/chat/agent_service.py 的 run_agent() 与
         run_agent_stream() 入口（每请求一个实例，传入 _run_critical_agent）。
     关键 self 属性：self.llm——低温（0.1，求稳定分类）、独立超时
         （settings.AGENT_DIAGNOSER_TIMEOUT）的诊断专用聊天模型。
@@ -85,7 +85,7 @@ class FailureDiagnoser:
         # type: (str, str, str, Optional[Any]) -> Dict[str, str]
         """分析失败原因并给出分类结果。
 
-        被谁调用：service/agent_service.py 的 _run_critical_agent()
+        被谁调用：app/application/chat/agent_service.py 的 _run_critical_agent()
                   except 分支（关键 Agent 捕获异常后立即调用）。
         参数：
         - query：用户原始问题（来源：状态机 sm.query，即 ChatService

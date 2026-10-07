@@ -13,9 +13,9 @@ check() 汇总；pytest 收集时同样按脚本执行）。风险类型：水�
 user_information.role（不走 API），测后无条件恢复为 user。
 
 被测对象来源：
-- 路由：control/admin_control.py（GET /admin/users，admin only）、
-  control/file_control.py（POST /file/path scope=public，teacher/admin）、
-  control/chat_control.py（POST /chat/stream，admin 禁用）；
+- 路由：app/api/v1/admin.py（GET /admin/users，admin only）、
+  app/api/v1/files.py（POST /file/path scope=public，teacher/admin）、
+  app/api/v1/chat.py（POST /chat/stream，admin 禁用）；
 - 守卫：core/deps.py 的 require_role/角色判定（依据 JWT 内/库内 role）。
 
 运行方式：

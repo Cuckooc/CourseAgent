@@ -2,7 +2,7 @@
 模块：review_control.py
 作用：文档审核 HTTP 接口。用户查看/审核本人的 OCR 或多模态文本提取结果；
       teacher/admin 审核员可查看全量队列并代审任意用户文档（通过后知识写入
-      文档上传者的私有库，归属修正逻辑在 service/review_service.py）。
+      文档上传者的私有库，归属修正逻辑在 app/application/review/review_service.py）。
 主要成员：
 - review_router：文档审核路由对象（prefix=/review）；
 - _MODERATOR_ROLES：可代审角色常量元组 ("teacher", "admin")；
@@ -13,7 +13,7 @@
 - get_review：获取单条审核详情（含原文与清洗文本）；
 - approve_review：审核通过并将文本入库知识库（可选编辑覆盖）；
 - reject_review：驳回审核记录（notes 必填）。
-被谁使用：由 control/app.py 通过 `from control.review_control import review_router` 导入并
+被谁使用：由 control/app.py 通过 `from app.api.v1.review import review_router` 导入并
           app.include_router 注册；各端点经 get_current_user 做 JWT 鉴权，权限校验统一走
           _can_moderate（普通用户访问他人记录 403 的水平越权防护不放松）；
           路由由 HTTP 客户端（web/frontend 审核页：我的审核/全部审核两个视图）调用，非内部调用。
@@ -32,7 +32,7 @@ from fastapi import APIRouter, Body, Depends, Query
 
 from app.auth.guards import get_current_user
 from core.responses import BizException, success
-from service.review_service import ReviewService
+from app.application.review.review_service import ReviewService
 
 # 本模块日志器：预留给审核流程异常记录
 logger = logging.getLogger(__name__)

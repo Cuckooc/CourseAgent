@@ -18,7 +18,7 @@
     - _FAIL_KEY_PREFIX：模块级常量，失败计数键前缀。
 
 被谁使用：
-    - control/login_control.py：以 ``from app.auth import account_guard`` 导入，
+    - app/api/v1/auth.py：以 ``from app.auth import account_guard`` 导入，
       在账号密码登录端点 login_by_account 中依次调用 is_locked / record_failure / reset。
 """
 import logging
@@ -52,7 +52,7 @@ def is_locked(identifier: str) -> bool:
     """查询该账号标识是否已被锁定。
 
     功能：读取 Redis 失败计数，达到 settings.LOGIN_MAX_FAILURES 即判定锁定。
-    被谁调用：control/login_control.py 的 login_by_account（账号密码登录端点，密码校验之前的前置拦截）。
+    被谁调用：app/api/v1/auth.py 的 login_by_account（账号密码登录端点，密码校验之前的前置拦截）。
 
     参数：
         identifier: 尝试登录的用户名，来源为 HTTP 请求体 LoginByUsernameRequest.username。
@@ -79,7 +79,7 @@ def record_failure(identifier: Union[str, None]) -> int:
     """登录失败计数 +1（首写设定窗口 TTL，固定窗口到期自动解锁）。
 
     功能：对该用户名的失败计数执行 INCR，并刷新固定窗口 TTL（settings.LOGIN_LOCK_WINDOW_SECONDS）。
-    被谁调用：control/login_control.py 的 login_by_account，密码校验失败后调用；
+    被谁调用：app/api/v1/auth.py 的 login_by_account，密码校验失败后调用；
               调用方用返回值与 settings.LOGIN_MAX_FAILURES 比较，决定本次是否直接返回锁定响应。
 
     返回递增后的失败次数：并发登录场景下「先 is_locked 检查、后 record」存在
@@ -116,7 +116,7 @@ def reset(identifier: Union[str, None]) -> None:
     """登录成功后清零失败计数。
 
     功能：删除该用户名的失败计数键，避免正常用户偶发输错被累积锁定。
-    被谁调用：control/login_control.py 的 login_by_account，密码校验通过、签发 token 之前调用。
+    被谁调用：app/api/v1/auth.py 的 login_by_account，密码校验通过、签发 token 之前调用。
 
     参数：
         identifier: 登录成功的用户名，来源为 HTTP 请求体 LoginByUsernameRequest.username；可为空。

@@ -42,10 +42,10 @@
 - scripts/maintenance、scripts/dev/debug：运维/排障脚本直接调用。
 
 向量库来源：
-- 持久库 db 形参：由 service/vector_store.get_persistent_db 统一持有的
+- 持久库 db 形参：由 app/infrastructure/vector_store/persistent.get_persistent_db 统一持有的
   应用级共享 Chroma（RAGAgent.build_shared_db 封装；dao/knowledge 同用）；
-- 会话临时库：service/temp_knowledge_store.get_temp_store 按
-  user_id+session_id 懒加载（上传文件入库由 service/file_service 写入）；
+- 会话临时库：app/infrastructure/vector_store/temp_store.get_temp_store 按
+  user_id+session_id 懒加载（上传文件入库由 app/application/files/file_service 写入）；
 - embedding 与 scope 过滤构造来自 embedding.text_embedding。
 """
 from __future__ import annotations
@@ -386,7 +386,7 @@ def retrieve_scoped(
               或 None），以及 app/domain/tools/business/knowledge_business.py 的新旧
               工具检索函数与运维/排障脚本。
     参数：
-    - db：持久 Chroma 实例（来源：service/vector_store 共享库；None 时
+    - db：持久 Chroma 实例（来源：app/infrastructure/vector_store/persistent 共享库；None 时
       仅检索会话临时库）；
     - query：检索问题（来源：AnalysisAgent 经总线下发的用户 query）；
     - top_k：最终返回文档条数（可由 Agent 的 top_k/工具协议收敛后传入）；
@@ -419,7 +419,7 @@ def retrieve_scoped(
     # 2. 当前会话临时库向量检索（避免与传入 db 重复查询同一库）
     if session_id is not None and user_id is not None:
         try:
-            from service.temp_knowledge_store import get_temp_store  # 局部导入：领域层不硬依赖业务层
+            from app.infrastructure.vector_store.temp_store import get_temp_store  # 局部导入：避免模块级循环依赖
 
             store = get_temp_store()
             if store.has_session(user_id, session_id):
@@ -447,7 +447,7 @@ def retrieve_scoped(
                 logger.warning("persistent keyword search failed: %s", e)
         if session_id is not None and user_id is not None:
             try:
-                from service.temp_knowledge_store import get_temp_store  # 局部导入：领域层不硬依赖业务层
+                from app.infrastructure.vector_store.temp_store import get_temp_store  # 局部导入：避免模块级循环依赖
 
                 store = get_temp_store()
                 if store.has_session(user_id, session_id):

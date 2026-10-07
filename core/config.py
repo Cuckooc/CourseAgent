@@ -90,8 +90,8 @@ class Settings:
     CORS_ORIGINS: Final[str] = os.getenv("cors_origins", "*")
 
     # ================= 文件上传 =================
-    # 被 control/file_control.py（HTTP 大小/扩展名校验、线程池）、service/file_service.py、
-    # service/knowledge_service.py、app/domain/tools/function_app.domain.tools.py、service/temp_knowledge_store.py 读取。
+    # 被 app/api/v1/files.py（HTTP 大小/扩展名校验、线程池）、app/application/files/file_service.py、
+    # app/application/knowledge/knowledge_service.py、app/domain/tools/function_tools.py、app/infrastructure/vector_store/temp_store.py 读取。
     # upload_max_mb：单文件大小上限（MB），默认 50；经 UPLOAD_MAX_BYTES property 换算后用于 413 拦截。
     UPLOAD_MAX_MB: Final[int] = int(os.getenv("upload_max_mb", "50"))
     # upload_allowed_ext：允许上传的扩展名，逗号分隔，默认 ".pdf,.txt,.md"
@@ -162,7 +162,7 @@ class Settings:
     # ================= 账号安全（P1） =================
     # 登录失败锁定：窗口期内同一用户名失败达 LOGIN_MAX_FAILURES 次后临时锁定。
     # 仅 Redis 可用时生效（降级放行，有限流兜底）。
-    # 被 core/account_guard.py 与 control/login_control.py 读取。
+    # 被 core/account_guard.py 与 app/api/v1/auth.py 读取。
     # login_max_failures：锁定阈值（次），默认 5。
     LOGIN_MAX_FAILURES: Final[int] = int(os.getenv("login_max_failures", "5"))
     # login_lock_window_seconds：计数窗口/锁定时长（秒），默认 900（15 分钟）。
@@ -204,7 +204,7 @@ class Settings:
     PURGE_INTERVAL_HOURS: Final[int] = int(os.getenv("purge_interval_hours", "6"))
 
     # ================= 知识库去重与版本管理 =================
-    # 被 service/knowledge_service.py 等知识库服务读取（上传去重与文档更新链路）。
+    # 被 app/application/knowledge/knowledge_service.py 等知识库服务读取（上传去重与文档更新链路）。
     # dedup_strategy：去重策略，full=全程扫描 / filename=文件名扫描（默认，更快）。
     DEDUP_STRATEGY: Final[str] = os.getenv("dedup_strategy", "filename")
     # update_strategy：更新策略，replace=先删后增+回滚 / version=版本标记 is_latest（默认）。
@@ -227,7 +227,7 @@ class Settings:
     DEGRADE_WEBHOOK_URL: Final[str] = os.getenv("degradation_webhook_url", "")
 
     # ================= 邮箱验证码（SMTP） =================
-    # 被 core/mailer.py 读取；util/user.py 调用 mailer 发送登录验证码。
+    # 被 core/mailer.py 读取；app/application/auth/user.py 调用 mailer 发送登录验证码。
     # smtp_host：SMTP 服务器地址，留空则降级为日志输出验证码（仅开发环境）。
     SMTP_HOST: Final[str] = os.getenv("smtp_host", "")
     # smtp_port：端口，SSL 默认 465，STARTTLS 一般 587。
@@ -246,7 +246,7 @@ class Settings:
 
     # ================= Agent 策略参数 =================
     # 被 multi_agent 子包读取（state_machine.py、各 *_agent.py、failure_diagnoser.py、
-    # verifier.py）及 service/agent_service.py（重试编排与指标上报）。
+    # verifier.py）及 app/application/chat/agent_service.py（重试编排与指标上报）。
     # 各 Agent 最大重试次数（失败后重试，超限进入兜底）；
     # 环境变量同名小写，默认值见各行。
     AGENT_MAX_RETRIES_VAGUE: Final[int] = int(os.getenv("agent_max_retries_vague", "2"))
@@ -316,7 +316,7 @@ class Settings:
         return p if p.is_absolute() else BASE_DIR / p
 
     # chroma_dir：Chroma 持久化目录（相对 BASE_DIR 或绝对路径），默认 storage/chromadb。
-    # 公共知识库向量库（service/vector_store）与文件演示库（app/domain/agents/file_agent）共用此定位；
+    # 公共知识库向量库（app/infrastructure/vector_store/persistent）与文件演示库（app/domain/agents/file_agent）共用此定位；
     # 取代历史上散落在各模块的 ../chromadb_data/ 相对路径（CWD 依赖）。
     CHROMA_DIR_NAME: Final[str] = os.getenv("chroma_dir", "storage/chromadb")
 

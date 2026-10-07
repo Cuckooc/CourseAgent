@@ -19,7 +19,7 @@
     - build_verification_code_email(code)：构造登录验证码邮件的主题与 HTML 正文。
 
 被谁使用：
-    - util/user.py 的邮箱验证码发送流程：先 is_configured 判断，再
+    - app/application/auth/user.py 的邮箱验证码发送流程：先 is_configured 判断，再
       build_verification_code_email 构造内容、send_email 发出（未配置时走日志降级）。
 """
 import logging
@@ -39,7 +39,7 @@ def is_configured() -> bool:
     """SMTP 是否已配置（host/user/password 均非空）。
 
     功能：作为邮件功能的开关判断，未配置时调用方降级（开发环境把验证码打到日志）。
-    被谁调用：util/user.py 发送验证码前；本模块 send_email 内部也再次校验。
+    被谁调用：app/application/auth/user.py 发送验证码前；本模块 send_email 内部也再次校验。
     参数：无。
     返回：bool：True=可连接 SMTP 发信；False=未配置（settings 对应字段为空）。
     """
@@ -52,7 +52,7 @@ def send_email(to_addr: str, subject: str, body_html: str) -> Tuple[bool, str]:
 
     功能：组装 MIME 邮件，按 settings.SMTP_USE_SSL 选择 SMTP_SSL(465) 直连或
     SMTP+STARTTLS(587) 升级，登录后发送；连接/认证超时 15 秒。
-    被谁调用：util/user.py 的邮箱验证码发送流程。
+    被谁调用：app/application/auth/user.py 的邮箱验证码发送流程。
 
     参数：
         to_addr: 收件人邮箱，来源为 HTTP 请求（SendCodeRequest/LoginByEmailRequest 的 email）；
@@ -103,9 +103,9 @@ def build_verification_code_email(code: str) -> Tuple[str, str]:
     """构造验证码邮件的主题与 HTML 正文。
 
     功能：生成固定品牌样式的登录验证码邮件模板，正文明示验证码 5 分钟内有效。
-    被谁调用：util/user.py 的发送验证码流程，产物直接传给 send_email。
+    被谁调用：app/application/auth/user.py 的发送验证码流程，产物直接传给 send_email。
     参数：
-        code: 6 位验证码字符串，来源为 util/user.py 生成并存入 Redis 的验证码。
+        code: 6 位验证码字符串，来源为 app/application/auth/user.py 生成并存入 Redis 的验证码。
     返回：
         Tuple[str, str]：(subject 邮件主题, body HTML 正文)。
     """

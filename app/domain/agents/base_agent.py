@@ -14,7 +14,7 @@
     - app/domain/agents/vague_agent.py：class VagueAgent(BaseAgent)
     - app/domain/agents/analysis_agent.py：class AnalysisAgent(BaseAgent)
     （ChatAgent / RAGAgent / FileAgent / SummaryAgent 为独立实现，
-      不继承本基类；它们在 service/agent_service.py 中由
+      不继承本基类；它们在 app/application/chat/agent_service.py 中由
       AgentService._create_agents() 直接实例化。）
 """
 from abc import ABC, abstractmethod
@@ -41,7 +41,7 @@ class BaseAgent(ABC):
 
     实例化位置：
         本类为抽象类不可直接实例化；两个子类均在
-        service/agent_service.py 的 AgentService._create_agents() 中
+        app/application/chat/agent_service.py 的 AgentService._create_agents() 中
         按"每请求一次"创建（随本次请求的独立 MessageBus 一起构造）。
 
     关键属性去向：
@@ -55,7 +55,7 @@ class BaseAgent(ABC):
         """初始化 Agent 公共组件。
 
         被谁调用：由子类（VagueAgent/AnalysisAgent）的 __init__ 经
-                  super().__init__(...) 调用，service/agent_service.py
+                  super().__init__(...) 调用，app/application/chat/agent_service.py
                   的 _create_agents() 是这些子类的最终实例化位置。
         参数：
         - agent_name：Agent 名称（如 "VagueAgent"/"AnalysisAgent"），
@@ -85,7 +85,7 @@ class BaseAgent(ABC):
         """
         创建代理（抽象方法）：子类的状态机调度入口，执行本 Agent 的核心判定。
 
-        被谁调用：service/agent_service.py 的 _run_critical_agent()
+        被谁调用：app/application/chat/agent_service.py 的 _run_critical_agent()
                   （以 agents["vague"].create_agent / agents["analysis"].create_agent
                   形式被 func(*args) 包装调用）。
         参数：

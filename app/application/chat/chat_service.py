@@ -1,6 +1,6 @@
 """
-模块名：service.chat_service
-作用：对话编排服务（应用级单例），是 control/chat_control.py 与
+模块名：app.application.chat.chat_service
+作用：对话编排服务（应用级单例），是 app/api/v1/chat.py 与
       AgentService 之间的业务门面。负责会话创建与归属校验、上下文记忆/
       画像/关键词注入、上下文改写（LLM+embedding 相似度判定）、标题并行
       预取、调用 AgentService 执行非流式/流式流水线、对话落库（Redis
@@ -23,7 +23,7 @@
 - get_chat_service()：lru_cache 单例工厂。
 
 被谁使用：
-- control/chat_control.py：/chat/send 调 handle()、/chat/stream 调
+- app/api/v1/chat.py：/chat/send 调 handle()、/chat/stream 调
   handle_stream()（SSE）、/chat/recover 调 recover()；user_id 从 JWT
   current_user 注入，session_id 来自请求体。
 """
@@ -34,7 +34,7 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 
-from .agent_service import get_agent_service
+from app.application.chat.agent_service import get_agent_service
 from app.infrastructure.embeddings.embedding_model import get_embedding
 from config.setting import LLMConfig, agent
 from core.config import settings
@@ -47,8 +47,8 @@ from app.domain.memory.short_term import get_short_term_store
 from app.infrastructure.llm.gateway import LLMUnavailableError
 from core.degradation_alert import alert_degradation
 from core.content_filter import filter_text
-from util.context import ContextService
-from util.title import Title
+from app.application.chat.context import ContextService
+from app.application.chat.title import Title
 from util.result_handle import handle_result
 from app.infrastructure.persistence.repositories.session import SessionDAO
 from app.infrastructure.persistence.repositories.history import Information_history
@@ -67,7 +67,7 @@ class ChatService:
 
     实例化位置：不在 control 层直接 new；唯一创建处为本模块末尾的
             get_chat_service()（@lru_cache 应用级单例），由
-            control/chat_control.py 的 send/stream/recover 三个接口调用。
+            app/api/v1/chat.py 的 send/stream/recover 三个接口调用。
 
     关键 self 属性（均为进程级共享重对象，请求间无状态）：
     - agent_service：AgentService 单例（run_agent/run_agent_stream 去向）。
@@ -114,7 +114,7 @@ class ChatService:
               history）外的用户字段用 "key:value" 分号连接，作为后续 LLM
               改写与 embedding 相似度判定的上下文文本。
         被谁调用：_context_query()。
-        参数：context (dict|None)——请求上下文，来源：control/chat_control.py
+        参数：context (dict|None)——请求上下文，来源：app/api/v1/chat.py
               组装（JWT 的 user_id + 请求体 session_id + 内部追加的 history）。
         返回：str——拼接后的用户上下文文本；无用户字段时为空串。
         """
@@ -216,7 +216,7 @@ class ChatService:
         参数：
         - context (dict|None)：请求上下文（含内部键与用户字段，来源：
           control 层 JWT + 请求体，并追加 history/session_id）。
-        - query (str)：用户当轮原始输入（control/chat_control.py 请求体
+        - query (str)：用户当轮原始输入（app/api/v1/chat.py 请求体
           Chat.user_input）。
         返回：str——改写/拼接后的最终查询，去向：AgentService.run_agent(_stream)
               的 query 参数；任何异常都降级返回原始 query，保证主链路不中断。
@@ -250,11 +250,11 @@ class ChatService:
         功能：从 context 取出 JWT 注入的 user_id/session_id，把 user_id
               写入线程局部变量（供 LLM 网关按用户计量 token），随后委托
               _handle_impl 执行完整链路，结束后复位线程局部。
-        被谁调用：control/chat_control.py 的 /chat/send 接口（send）。
+        被谁调用：app/api/v1/chat.py 的 /chat/send 接口（send）。
         参数：
         - user_input (str)：用户本轮提问，来源：请求体 Chat.user_input。
         - context (dict|None)：{"user_id": JWT 解析, "session_id": 请求体}，
-          来源：control/chat_control.py 组装。
+          来源：app/api/v1/chat.py 组装。
         返回：Dict[str, Any]——成功时含 status/title/user_input/user_id/
               session_id/ai_output 等，去向：/chat/send JSON 响应返回前端；
               失败时 {"status": "fail", "message": 友好错误文案}。
@@ -288,7 +288,7 @@ class ChatService:
         - user_id：当前用户 ID（来源：JWT，会话隔离与计量用）。
         - session_id：当前会话 ID（无则为 0，内部新建；per-user 序列）。
         返回：Dict[str, Any]——成功/失败结果 dict，去向：handle() 透传给
-              control/chat_control.py 的 /chat/send 接口 → 前端。
+              app/api/v1/chat.py 的 /chat/send 接口 → 前端。
         异常：LLMUnavailableError 与 Exception 在本方法内捕获并转为 fail
               结果（不向 control 层抛出）。
         """
@@ -369,7 +369,7 @@ class ChatService:
 
         功能：handle() 的流式版本，负责设置/复位线程局部 user_id，实际
               帧生成在 _handle_stream_impl；二者前置逻辑与持久化逻辑一致。
-        被谁调用：control/chat_control.py 的 /chat/stream 接口（stream 的
+        被谁调用：app/api/v1/chat.py 的 /chat/stream 接口（stream 的
                   event_gen 逐帧 json.dumps 为 SSE）。
         参数：
         - user_input (str)：用户本轮提问，来源：请求体 Chat.user_input。
@@ -379,7 +379,7 @@ class ChatService:
         - delta:  {"type": "delta", "content"}（文本增量，已经 filter_text 过滤）
         - done:   {"type": "done", "session_id", "title", "ai_output"}
         - error:  {"type": "error", "message"}
-        去向：经 control/chat_control.py 的 SSE 流式返回前端。
+        去向：经 app/api/v1/chat.py 的 SSE 流式返回前端。
         """
         context = context or {}
         user_id = context.get("user_id")
@@ -406,7 +406,7 @@ class ChatService:
         被谁调用：handle_stream()。
         参数：同 _handle_impl（user_input/context/user_id/session_id）。
         返回：generator——status/delta/done/error 四类字典帧，去向：
-              control/chat_control.py 序列化为 SSE 返回前端。
+              app/api/v1/chat.py 序列化为 SSE 返回前端。
         异常：LLMUnavailableError/Exception 在生成器内捕获并 yield error 帧。
         """
         try:
@@ -589,7 +589,7 @@ class ChatService:
         网络中断恢复：查看短期记忆（当前会话已生成的对话，含中断前已生成的内容），
         不查长期记忆、不重新生成、不重复调用 LLM。
 
-        被谁调用：control/chat_control.py 的 /chat/recover 接口（recover）；
+        被谁调用：app/api/v1/chat.py 的 /chat/recover 接口（recover）；
                   control 层会把返回的 status 字段改名为 recover_status。
         参数：
         - user_id (int)：JWT 注入的用户 ID。
@@ -665,7 +665,7 @@ def get_chat_service() -> ChatService:
 
     功能：lru_cache 保证全进程仅构建一个 ChatService（embedding/LLM 客户端、
           DAO、记忆服务与线程池等重对象只初始化一次）。
-    被谁调用：control/chat_control.py 的 send/stream/recover 接口。
+    被谁调用：app/api/v1/chat.py 的 send/stream/recover 接口。
     返回：ChatService 唯一实例。
     """
     return ChatService()

@@ -6,7 +6,7 @@
 - KnowledgeDeleteRequest / KnowledgeDeleteConfirmRequest：删除预览、删除确认两个请求体模型；
 - list_documents：列出当前用户可见的知识库文件；
 - delete_document_preview / delete_document_confirm：删除文件的预览令牌签发与确认执行。
-被谁使用：由 control/app.py 通过 `from control.knowledge_control import knowledge_router`
+被谁使用：由 control/app.py 通过 `from app.api.v1.knowledge import knowledge_router`
           导入并 app.include_router 注册；JWT 鉴权 + per-user 限流；
           路由由 HTTP 客户端（web/frontend 知识库管理页）调用，非内部调用。
 
@@ -25,7 +25,7 @@ from app.auth.guards import get_current_user
 from app.auth.rate_limit import user_rate_limit
 from app.auth.delete_guard import PendingDeleteStore
 from core.responses import BizException, success
-from service.knowledge_service import get_knowledge_service
+from app.application.knowledge.knowledge_service import get_knowledge_service
 
 # 知识库路由：prefix=/knowledge，由 control/app.py 的 app.include_router(knowledge_router) 注册。
 # 路由级依赖 user_rate_limit(30, 60)：按登录用户限流 30 次/分钟（读操作量级）。

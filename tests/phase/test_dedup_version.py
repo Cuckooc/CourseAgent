@@ -17,7 +17,7 @@
 8. _purge_expired_old_versions — 三年过期清理（临时目录真实 Chroma）
 9. 配置默认值 — DEDUP/UPDATE 策略、相似度阈值、保留天数
 
-被测对象来源：service/vector_store.py、service/file_service.py、
+被测对象来源：app/infrastructure/vector_store/persistent.py、app/application/files/file_service.py、
 embedding/text_embedding.py、embedding/parent_child.py、
 core/purge_scheduler.py、core/config.py。
 
@@ -70,7 +70,7 @@ def check(name, condition):
 # ====================== 1. _cosine_from_l2 ======================
 print("\n=== 1. _cosine_from_l2 — L2 距离转余弦相似度 ===")
 
-from service.vector_store import _cosine_from_l2
+from app.infrastructure.vector_store.persistent import _cosine_from_l2
 
 # 相同向量：L2=0 → cosine=1.0
 check("L2=0 → cosine=1.0", abs(_cosine_from_l2(0.0) - 1.0) < 1e-9)
@@ -92,7 +92,7 @@ check("单调递减", _cosine_from_l2(0.1) > _cosine_from_l2(0.5) > _cosine_from
 # ====================== 2. _build_dedup_where ======================
 print("\n=== 2. _build_dedup_where — scope 隔离条件 ===")
 
-from service.file_service import _build_dedup_where
+from app.application.files.file_service import _build_dedup_where
 
 # public scope：只过滤 scope=public
 w = _build_dedup_where("public", None)
@@ -191,7 +191,7 @@ check("build: 子 metadata parent_id 关联", children[0][1] == children[0][2].m
 print("\n=== 5. _check_duplicate — 去重判定逻辑 ===")
 
 from unittest.mock import MagicMock, patch
-from service.file_service import FileService, _list_existing_files
+from app.application.files.file_service import FileService, _list_existing_files
 
 fs = FileService()
 
@@ -290,7 +290,7 @@ check("filename: 文件名不相似 → new", result["action"] == "new")
 # ====================== 6. replace_document — 策略A ======================
 print("\n=== 6. replace_document — 先删后增+回滚 ===")
 
-from service.vector_store import replace_document
+from app.infrastructure.vector_store.persistent import replace_document
 
 mock_db2 = MagicMock()
 mock_col2 = MagicMock()
@@ -309,7 +309,7 @@ mock_col2.get.return_value = {
 mock_col2.add.return_value = None
 mock_col2.delete.return_value = None
 
-with patch("service.vector_store._flush_collection_index") as mock_flush:
+with patch("app.infrastructure.vector_store.persistent._flush_collection_index") as mock_flush:
     replace_document(
         mock_db2, lock2,
         old_source="/tmp/old.txt",
@@ -332,7 +332,7 @@ mock_col2.get.return_value = {
 }
 mock_col2.add.side_effect = RuntimeError("add failed")
 
-with patch("service.vector_store._flush_collection_index"):
+with patch("app.infrastructure.vector_store.persistent._flush_collection_index"):
     try:
         replace_document(
             mock_db2, lock2,
@@ -353,7 +353,7 @@ check("replace: 回滚用旧 embeddings", rollback_call.kwargs.get("embeddings")
 # ====================== 7. add_new_version — 策略B ======================
 print("\n=== 7. add_new_version — 版本标记 ===")
 
-from service.vector_store import add_new_version
+from app.infrastructure.vector_store.persistent import add_new_version
 
 mock_db3 = MagicMock()
 mock_col3 = MagicMock()
@@ -368,7 +368,7 @@ mock_col3.add.return_value = None
 mock_col3.update.return_value = None
 
 ts = time.time()
-with patch("service.vector_store._flush_collection_index"):
+with patch("app.infrastructure.vector_store.persistent._flush_collection_index"):
     add_new_version(
         mock_db3, lock3,
         old_file_id="old_fid",
@@ -394,7 +394,7 @@ mock_col3.reset_mock()
 mock_col3.get.return_value = {"ids": []}  # 无旧版本
 mock_col3.add.return_value = None
 
-with patch("service.vector_store._flush_collection_index"):
+with patch("app.infrastructure.vector_store.persistent._flush_collection_index"):
     add_new_version(
         mock_db3, lock3,
         old_file_id="no_old",
@@ -441,9 +441,9 @@ try:
     check("purge: 初始 4 块", len(all_data["ids"]) == 4)
 
     # mock get_persistent_db / persistent_lock 指向测试实例
-    with patch("service.vector_store.get_persistent_db", return_value=test_db), \
-         patch("service.vector_store.persistent_lock", return_value=test_lock), \
-         patch("service.vector_store._flush_collection_index"):
+    with patch("app.infrastructure.vector_store.persistent.get_persistent_db", return_value=test_db), \
+         patch("app.infrastructure.vector_store.persistent.persistent_lock", return_value=test_lock), \
+         patch("app.infrastructure.vector_store.persistent._flush_collection_index"):
         from core.purge_scheduler import _purge_expired_old_versions
         deleted_count = _purge_expired_old_versions()
 
@@ -458,9 +458,9 @@ try:
     check("purge: 最新块 latest1 保留", "latest1" in remaining_ids)
 
     # --- 8.2 无过期块时返回 0 ---
-    with patch("service.vector_store.get_persistent_db", return_value=test_db), \
-         patch("service.vector_store.persistent_lock", return_value=test_lock), \
-         patch("service.vector_store._flush_collection_index"):
+    with patch("app.infrastructure.vector_store.persistent.get_persistent_db", return_value=test_db), \
+         patch("app.infrastructure.vector_store.persistent.persistent_lock", return_value=test_lock), \
+         patch("app.infrastructure.vector_store.persistent._flush_collection_index"):
         from core.purge_scheduler import _purge_expired_old_versions
         deleted_count = _purge_expired_old_versions()
     check("purge: 无过期块返回 0", deleted_count == 0)

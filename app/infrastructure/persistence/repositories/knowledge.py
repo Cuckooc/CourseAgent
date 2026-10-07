@@ -3,7 +3,7 @@
 
 作用：
     知识库文档管理 DAO。注意它不直接操作 MySQL 业务表，而是管理两处存储：
-    1) Chroma 向量库（经 service.vector_store.get_persistent_db() 取得应用级
+    1) Chroma 向量库（经 app.infrastructure.vector_store.persistent.get_persistent_db() 取得应用级
        共享 collection）——文档以父子块向量 + metadata 形式存在；
     2) 上传文件目录（settings.UPLOAD_DIR）——文档物理文件。
 
@@ -21,11 +21,11 @@
 - KnowledgeDAO：文档列举 / 单文件信息查询 / 删除（向量分块 + 物理文件）。
 
 被谁使用：
-- service/knowledge_service.py 的 KnowledgeService.__init__ 中实例化
+- app/application/knowledge/knowledge_service.py 的 KnowledgeService.__init__ 中实例化
   KnowledgeDAO(settings.UPLOAD_DIR)，其 list_documents/get_document_info/
   delete_document 直接转发本 DAO 同名方法，上层为
-  control/knowledge_control.py 的知识库管理端点；
-- control/file_control.py 上传处理中直接 import build_stored_filename() 生成落盘文件名。
+  app/api/v1/knowledge.py 的知识库管理端点；
+- app/api/v1/files.py 上传处理中直接 import build_stored_filename() 生成落盘文件名。
 """
 import logging
 import os
@@ -34,7 +34,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from service.vector_store import _flush_collection_index, get_persistent_db, persistent_lock
+from app.infrastructure.vector_store.persistent import _flush_collection_index, get_persistent_db, persistent_lock
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ def build_stored_filename(user_id: int, original_name: str, ext: str) -> str:
     - 原始文件名清洗为安全字符并限长，避免路径注入/超长文件名；
     - hash32（uuid4）：唯一标识，防止同名覆盖与文件名猜解。
 
-    被谁调用：control/file_control.py 的上传处理函数
+    被谁调用：app/api/v1/files.py 的上传处理函数
     （文件.函数：file_control 上传接口处理逻辑，落盘前生成存储名）。
     参数：
         user_id: 上传者用户 ID（登录态），写入文件名前缀作为归属标识。
@@ -115,8 +115,8 @@ class KnowledgeDAO:
     不对应单张 MySQL 表；向量元数据承担“表记录”角色。承担文档的
     列举（list_documents）、单文件信息查询（get_document_info）、
     删除（delete_document：向量分块 + 物理文件），不含文档入库
-    （入库在 service/vector_store.py / service/review_service.py）。
-    实例化位置：service/knowledge_service.py 的 KnowledgeService.__init__
+    （入库在 app/infrastructure/vector_store/persistent.py / app/application/review/review_service.py）。
+    实例化位置：app/application/knowledge/knowledge_service.py 的 KnowledgeService.__init__
     （self.dao = KnowledgeDAO(settings.UPLOAD_DIR)）。
     __init__ 形参：
         upload_dir: 上传文件根目录，来源 core.config.settings.UPLOAD_DIR；
@@ -133,7 +133,7 @@ class KnowledgeDAO:
     def _col(self):
         """懒加载并缓存共享 Chroma collection（首次调用时绑定，之后复用）。
 
-        返回：Chroma collection 实例，来源 service.vector_store.get_persistent_db()._collection；
+        返回：Chroma collection 实例，来源 app.infrastructure.vector_store.persistent.get_persistent_db()._collection；
         被本类 _iter_metadatas/get_document_info/delete_document 使用。
         """
         if self._collection is None:
@@ -197,9 +197,9 @@ class KnowledgeDAO:
         功能：聚合向量库 metadata（经 _iter_metadatas 分批拉取，父子结构只计
         父块、旧版本 is_latest=false 跳过），再扫描上传目录补充“孤儿文件”，
         两侧都按 scope/归属做同等可见性过滤，防止他人私有文件经孤儿通道泄露。
-        被谁调用：service/knowledge_service.py 的 KnowledgeService.list_documents()
+        被谁调用：app/application/knowledge/knowledge_service.py 的 KnowledgeService.list_documents()
         （文件.函数：knowledge_service.KnowledgeService.list_documents），
-        上层端点为 control/knowledge_control.py 的 list_documents。
+        上层端点为 app/api/v1/knowledge.py 的 list_documents。
         参数：
             user_id: 当前登录用户 ID，来源登录态；None 表示匿名上下文（看不到私有）。
             is_admin: 当前用户是否管理员（角色由 control 层依据库内 role 判定）；
@@ -313,9 +313,9 @@ class KnowledgeDAO:
         功能：先经 _resolve() 做路径净化，再按 source 绝对路径查向量库 metadata；
         命中时非 admin 且 metadata.user_id 与当前用户不符则拒绝；
         向量库无记录时退化为按存储名前缀判归属（无主旧格式仅 admin 可见）。
-        被谁调用：service/knowledge_service.py 的 KnowledgeService.get_document_info()
+        被谁调用：app/application/knowledge/knowledge_service.py 的 KnowledgeService.get_document_info()
         （文件.函数：knowledge_service.KnowledgeService.get_document_info），
-        上层端点为 control/knowledge_control.py 的 delete_document_preview。
+        上层端点为 app/api/v1/knowledge.py 的 delete_document_preview。
         参数：
             filename: 前端传入的待查存储文件名（删除确认令牌流程中再次使用）。
             user_id: 当前登录用户 ID，来源登录态。
@@ -356,9 +356,9 @@ class KnowledgeDAO:
         向量删除在进程级 persistent_lock() 写锁内串行执行，并先
         _flush_collection_index 刷掉异步残批再落盘，防止重启后已删条目复现；
         随后 unlink 物理文件（文件可能已不存在，不视为错误）。
-        被谁调用：service/knowledge_service.py 的 KnowledgeService.delete_document()
+        被谁调用：app/application/knowledge/knowledge_service.py 的 KnowledgeService.delete_document()
         （文件.函数：knowledge_service.KnowledgeService.delete_document），
-        上层端点为 control/knowledge_control.py 的 delete_document_confirm
+        上层端点为 app/api/v1/knowledge.py 的 delete_document_confirm
         （已通过二次确认令牌 PendingDeleteStore 校验）。
         参数：
             filename: 前端确认删除的存储文件名（经确认令牌绑定用户与动作）。

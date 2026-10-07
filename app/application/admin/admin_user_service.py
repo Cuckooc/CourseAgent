@@ -1,7 +1,7 @@
 """
-模块名：service.admin_user_service
+模块名：app.application.admin.admin_user_service
 作用：管理端用户管理服务，提供用户列表查询、角色调整与账号注销（软删除 +
-      Redis 残留键清理），是 control/admin_control.py 与 DAO 层之间的业务编排层。
+      Redis 残留键清理），是 app/api/v1/admin.py 与 DAO 层之间的业务编排层。
 
 注销语义为软删除 + 7 天冷静期：
 - MySQL 软删除：会话 / 历史 / 画像 / 账号标记 is_deleted=1（dao.soft_delete）；
@@ -16,7 +16,7 @@
 - _REDIS_PATTERNS：注销时需 SCAN 清理的按用户 Redis 键模式（模块级常量）。
 
 被谁使用：
-- control/admin_control.py：以 `from service import admin_user_service` 导入，
+- app/api/v1/admin.py：以 `from service import admin_user_service` 导入，
   分别在用户列表、角色调整、注销确认（deactivate_user_confirm）接口中调用
   上述三个函数，结果经统一响应封装返回管理端前端。
 """
@@ -46,7 +46,7 @@ def list_all_users() -> list:
     """查询全部用户的基础信息。
 
     功能：透传只读 DAO 查询全量用户列表，供管理端用户管理页展示。
-    被谁调用：control/admin_control.py 的用户列表接口（list_users）。
+    被谁调用：app/api/v1/admin.py 的用户列表接口（list_users）。
     参数：无。
     返回：list——元素为 dao/read.py 的 Information_Read.get_all_users()
           返回的用户记录字典（不含密码哈希字段）；去向：经 control 层
@@ -61,7 +61,7 @@ def update_role(user_id: int, role: str) -> bool:
 
     功能：将目标用户角色更新为 user/teacher（admin 角色由运维侧管理，
           不走本接口）；成功时写一条审计日志。
-    被谁调用：control/admin_control.py 的角色调整接口（update_user_role），
+    被谁调用：app/api/v1/admin.py 的角色调整接口（update_user_role），
               user_id/role 来自管理端请求体（接口侧已做管理员鉴权）。
     参数：
     - user_id (int)：目标用户 ID，来源：管理端请求体（经 JWT 鉴权后的管理员提交）。
@@ -83,7 +83,7 @@ def deactivate_user(user_id: int) -> bool:
     功能：编排账号注销全流程——先由 DAO 完成 MySQL 软删除与 7 天硬删除计划
           写入，再 SCAN 清理该用户在 Redis 中的全部残留键（记忆/画像/用量/
           序列锁）及画像到期队列成员。
-    被谁调用：control/admin_control.py 的 deactivate_user_confirm（管理员二次
+    被谁调用：app/api/v1/admin.py 的 deactivate_user_confirm（管理员二次
               确认凭校验通过后调用）。
     参数：
     - user_id (int)：待注销用户 ID，来源：管理端注销确认请求（经

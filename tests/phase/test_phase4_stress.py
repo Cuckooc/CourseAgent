@@ -16,10 +16,10 @@ concurrent.futures.ThreadPoolExecutor 线程池；全仓无 asyncio。
   出现账号锁定提示（锁定计数在并发下不丢次）。
 
 被测对象来源：
-- 路由：control/file_control.py（POST /file/path）、control/chat_control.py
-  （POST /chat/stream SSE）、control/login_control.py（注册/登录、锁定）；
-- 业务：service/file_service.py 去重阈值（similarity_threshold=0.8、
-  文件名相似度 ≥0.95）、service/vector_store.py（persistent_lock/向量块）。
+- 路由：app/api/v1/files.py（POST /file/path）、app/api/v1/chat.py
+  （POST /chat/stream SSE）、app/api/v1/auth.py（注册/登录、锁定）；
+- 业务：app/application/files/file_service.py 去重阈值（similarity_threshold=0.8、
+  文件名相似度 ≥0.95）、app/infrastructure/vector_store/persistent.py（persistent_lock/向量块）。
 
 运行方式：
     python tests/phase/test_phase4_stress.py
@@ -92,7 +92,7 @@ def deep_cleanup():
     from dotenv import load_dotenv
     load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "env", "qianwen_config.env"))
     import core.config  # noqa: F401
-    from service.vector_store import get_persistent_db, persistent_lock
+    from app.infrastructure.vector_store.persistent import get_persistent_db, persistent_lock
     db = get_persistent_db()
     col = db._collection
     data = col.get(include=["metadatas"])

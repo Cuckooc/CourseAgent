@@ -26,7 +26,7 @@
     reset_verification_store（测试清理）、_purge_expired（内存过期清理）。
 
 被谁使用（Grep）：
-    util/user.py —— send_email_code 调用 generate_code 并发送，
+    app/application/auth/user.py —— send_email_code 调用 generate_code 并发送，
     SMTP 失败时调用 verify_code 作废验证码；
     login_by_email_code 调用 verify_code 完成登录前校验。
 """
@@ -71,7 +71,7 @@ def generate_code(email: str) -> str:
 
     功能：生成 6 位数字码；Redis 路径用 SET NX 原子抢冷却位实现防刷，
         成功后 SETEX 写入验证码；内存路径检查 last_sent 间隔后写入记录。
-    被谁调用：util/user.py 的 send_email_code（发送验证码接口），
+    被谁调用：app/application/auth/user.py 的 send_email_code（发送验证码接口），
         返回空串时上层提示“验证码发送过于频繁，请 60 秒后再试”。
     参数：
         email: 目标邮箱，来源为发送验证码 HTTP 请求体（经上层格式校验）。
@@ -108,7 +108,7 @@ def verify_code(email: str, code: str) -> bool:
     校验验证码：仅校验成功时立即作废（一次性使用）；
     校验失败保留记录（继续受 TTL 与发送冷却约束，暴力猜测由接口限流兜底）。
 
-    被谁调用：util/user.py 的 login_by_email_code（登录校验，失败返回
+    被谁调用：app/application/auth/user.py 的 login_by_email_code（登录校验，失败返回
         “验证码错误或已过期”）；send_email_code 在 SMTP 发送失败时也会
         用本函数作废旧码，保证用户冷却期内可立即重新获取。
     参数：

@@ -1,5 +1,5 @@
 """
-模块名：service.mask_service
+模块名：app.application.files.mask_service
 作用：数据脱敏服务。在知识库文本入库前，对用户个人敏感信息进行正则替换，
       核心原则：禁止用户个人信息（手机号/身份证/邮箱/银行卡）进入 LLM
       调用链路与向量库。
@@ -20,9 +20,9 @@
 - _PHONE_RE/_ID_CARD_RE/_BANK_CARD_RE/_EMAIL_RE：模块级预编译正则常量。
 
 被谁使用：
-- service/file_service.py：process_file/process_temp_file 入库前调用 mask_text；
-- service/review_service.py：ReviewService.approve 用户编辑文本入库前再次脱敏；
-- control/file_control.py：临时文件上传后对提取文本脱敏再送偏好提取。
+- app/application/files/file_service.py：process_file/process_temp_file 入库前调用 mask_text；
+- app/application/review/review_service.py：ReviewService.approve 用户编辑文本入库前再次脱敏；
+- app/api/v1/files.py：临时文件上传后对提取文本脱敏再送偏好提取。
 """
 import re
 from typing import Optional
@@ -91,9 +91,9 @@ def mask_text(text: str) -> str:
 
     功能：依次用四类预编译正则替换文本中的敏感信息，是所有文本入库/送
           LLM 前的统一脱敏入口。
-    被谁调用：service/file_service.py（持久库与临时库入库前）、
-              service/review_service.py（审核通过入库前）、
-              control/file_control.py（临时文件偏好提取前）。
+    被谁调用：app/application/files/file_service.py（持久库与临时库入库前）、
+              app/application/review/review_service.py（审核通过入库前）、
+              app/api/v1/files.py（临时文件偏好提取前）。
     参数：text (str)——待脱敏原文（来源：上传文件提取文本或用户审核编辑文本）。
     返回：str——脱敏后的文本，去向：父子块切分 → embedding → 向量库；
           None/空串原样返回。

@@ -13,7 +13,7 @@
 - _run_async_upload：大上传后台任务（提交并行处理并更新进度、批次 flush）；
 - upload_file：上传路由（同步小上传 / 异步大上传两条路径）；
 - get_upload_status：异步上传任务进度查询路由。
-被谁使用：由 control/app.py 通过 `from control.file_control import file_router` 导入并
+被谁使用：由 control/app.py 通过 `from app.api.v1.files import file_router` 导入并
           app.include_router 注册；路由由 HTTP 客户端（web/frontend 上传组件）调用，非内部调用。
 安全与范围：
 - 必须登录（JWT）；
@@ -35,11 +35,11 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from app.infrastructure.persistence.repositories.knowledge import build_stored_filename
-from service.file_service import FileService
-from service.mask_service import mask_text
-from service.preference_service import extract_preferences
-from service.temp_knowledge_store import get_temp_store
-from service.vector_store import flush_persistent_index
+from app.application.files.file_service import FileService
+from app.application.files.mask_service import mask_text
+from app.application.files.preference_service import extract_preferences
+from app.infrastructure.vector_store.temp_store import get_temp_store
+from app.infrastructure.vector_store.persistent import flush_persistent_index
 from core import upload_task
 from core.config import settings
 from app.auth.guards import get_current_user
@@ -163,7 +163,7 @@ def _save_one(file: UploadFile, target_dir: str, user_id: int = None) -> tuple:
 
 
 # 多文件并行处理池（模块级单例）：worker 内执行 落盘→解析→脱敏→embedding（可并行），
-# 向量库写入由 service/vector_store 的进程锁串行化。worker 数来自配置 UPLOAD_WORKERS。
+# 向量库写入由 app/infrastructure/vector_store/persistent 的进程锁串行化。worker 数来自配置 UPLOAD_WORKERS。
 _upload_executor = ThreadPoolExecutor(
     max_workers=settings.UPLOAD_WORKERS, thread_name_prefix="upload-worker"
 )

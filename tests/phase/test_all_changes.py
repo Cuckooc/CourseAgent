@@ -252,7 +252,7 @@ except Exception as e:
 print("\n=== 6. agent_service.py — FileAgent 不再注入 shared_db ===")
 
 import inspect
-from service.agent_service import AgentService
+from app.application.chat.agent_service import AgentService
 
 source_create = inspect.getsource(AgentService._create_agents)
 check("FileAgent 构造不传入 shared_db", "db=shared_db" not in source_create.split("file_agent")[1].split(")")[0])

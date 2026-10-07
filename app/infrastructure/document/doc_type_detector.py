@@ -3,7 +3,7 @@
 
 作用：
     根据抽样页面的文本密度、乱码比例、图片面积占比与栏布局，
-    将 PDF 分为四类，供 service/file_service 路由到对应解析器：
+    将 PDF 分为四类，供 app/application/files/file_service 路由到对应解析器：
 - pure_text  ：文本层完整，直接用 PyPDF2 提取（file.pdf_text）；
 - scanned    ：扫描件，文本层为空或乱码，走 OCR（ocr_service.ocr_pdf
                → ocr_clean.clean_ocr_text）；
@@ -21,7 +21,7 @@ pure_text，先命中先返回；任一步检测失败均兜底返回 "pure_text
     - detect_pdf_type：模块对外主入口，输出四类标签之一。
 
 被谁使用：
-    - service/file_service.py 的 _extract_text()：PDF 分支第一步调用
+    - app/application/files/file_service.py 的 _extract_text()：PDF 分支第一步调用
       detect_pdf_type，再按返回标签分发解析器
       （文件.函数：file_service._extract_text）。
 """
@@ -148,7 +148,7 @@ def detect_pdf_type(file_path: str) -> str:
     2. 图片面积占比 > 0.30 → "image_rich"；
     3. 双栏页占抽样页比例 ≥ 0.5 → "two_column"；
     4. 以上均不满足 → "pure_text"。
-    被谁调用：service/file_service.py 的 _extract_text()，PDF 分支
+    被谁调用：app/application/files/file_service.py 的 _extract_text()，PDF 分支
     第一步（文件.函数：file_service._extract_text）；返回标签决定
     后续走 PyPDF2 / OCR / 双栏 / 多模态哪条解析路径。
     参数：

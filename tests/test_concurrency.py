@@ -32,12 +32,12 @@
 辅助函数：_sync_post / _sync_get（线程池 worker 专用同步 HTTP 封装）。
 
 被测对象来源：
-- 路由：control/login_control.py（/login/account、/login/me）、
-  control/history_control.py（/history/create、/history/list、/history/update_title）、
-  control/chat_control.py（/chat/feedback）、control/review_control.py（/review/{id}/approve）；
+- 路由：app/api/v1/auth.py（/login/account、/login/me）、
+  app/api/v1/history.py（/history/create、/history/list、/history/update_title）、
+  app/api/v1/chat.py（/chat/feedback）、app/api/v1/review.py（/review/{id}/approve）；
 - 限流：core/deps.py 的 reset_rate_limit_store（每用例前清空窗口）；
 - token_version：dao/user.py 的 Information.increment_token_version（UPDATE ver=ver+1）；
-- 审核：dao/document_review.py 的 DocumentReviewDAO 与 service/review_service.py；
+- 审核：dao/document_review.py 的 DocumentReviewDAO 与 app/application/review/review_service.py；
 - 会话序列：dao/history.py（SessionDAO，以 user_id 为键的 per-user 序列）。
 
 运行方式：

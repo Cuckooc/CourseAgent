@@ -20,7 +20,7 @@
       BACKOFF_BASE_SECONDS）；
     - app/domain/agents/base_agent.py、chat_agent.py、summary_agent.py
       （llm.MODEL/API_KEY/BASE_URL/TEMPERATURE，agent.VERBOSE/MAX_ITERATIONS）；
-    - service/chat_service.py（LLMConfig.SIMILARITY_THRESHOLD、
+    - app/application/chat/chat_service.py（LLMConfig.SIMILARITY_THRESHOLD、
       agent.INTENT_WITH_HISTORY）。
 
 安全约定：env/qianwen_config.env 为本地密钥文件，禁止提交版本库；
@@ -63,7 +63,7 @@ class LLMConfig:
  # 读取方：app/domain/agents/base_agent.py、chat_agent.py、summary_agent.py
  TEMPERATURE:Final[Optional[float]] = float(os.getenv("Temperature","0.9"))
  # 上下文相关性余弦相似度阈值，环境变量 similarity_threshold，默认 0.8：
- # service/chat_service.py 仅当 query 与上下文相似度 ≥ 该值才拼接 RAG 上下文
+ # app/application/chat/chat_service.py 仅当 query 与上下文相似度 ≥ 该值才拼接 RAG 上下文
  SIMILARITY_THRESHOLD:Final[Optional[float]] = float(os.getenv("similarity_threshold","0.8"))
 
  # LLM 网关：超时/重试/退避/降级模型链（逗号分隔，按序尝试；空串表示不降级）
@@ -93,7 +93,7 @@ class AgentConfig:
  Agent 行为配置类：字段在类定义期从环境变量读取，模块末尾导出 agent 单例。
 
  实例化位置：模块末尾 agent=AgentConfig()；读取方为 multi_agent 各 Agent
- 与 service/chat_service.py。
+ 与 app/application/chat/chat_service.py。
  """
  # ReAct Agent 单轮最大工具迭代次数，环境变量 MAX_ITERATIONS，默认 10
  # （防止工具调用死循环）；读取方：app/domain/agents/base_agent.py、chat_agent.py、summary_agent.py
@@ -103,7 +103,7 @@ class AgentConfig:
  VERBOSE:bool = os.getenv("VERBOSE","True").lower() == "true"
  # 意图判定（Vague/Analysis）是否携带早期对话摘要：多轮承接式提问（"那这个呢"）
  # 依赖摘要消解指代；关闭后意图模型只看当前轮原文。
- # 环境变量 intent_with_history，默认 true；读取方：service/chat_service.py
+ # 环境变量 intent_with_history，默认 true；读取方：app/application/chat/chat_service.py
  INTENT_WITH_HISTORY:bool = os.getenv("intent_with_history","true").lower() == "true"
 
 

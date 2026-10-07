@@ -1,5 +1,5 @@
 """
-模块名：service.file_service
+模块名：app.application.files.file_service
 作用：知识库文件入库服务。把上传的 txt/md/pdf 文件解析为文本（按 PDF 类型
       路由纯文本提取/OCR/双栏/多模态四条路径），入库前脱敏，切分为父子块
       并计算 embedding，写入持久化向量库（public/private）或会话临时库
@@ -17,7 +17,7 @@
   Redis 释放锁 Lua 脚本。
 
 被谁使用：
-- control/file_control.py：_process_saved_file 中 `FileService(file_path)`
+- app/api/v1/files.py：_process_saved_file 中 `FileService(file_path)`
   实例化，按 scope 调 process_temp_file（temp）或 process_file
   （private/public）；该函数运行于上传线程池，结果回传上传接口/异步任务进度。
 - tests/phase/test_dedup_version.py：测试直接导入 FileService 及去重辅助函数。
@@ -43,9 +43,9 @@ from app.infrastructure.document.doc_type_detector import detect_pdf_type
 from app.infrastructure.document.file import pdf_text
 from app.infrastructure.document.ocr_clean import clean_ocr_text
 from app.infrastructure.document.ocr_service import ocr_pdf
-from service.mask_service import mask_text
-from service.temp_knowledge_store import get_temp_store
-from service.vector_store import (
+from app.application.files.mask_service import mask_text
+from app.infrastructure.vector_store.temp_store import get_temp_store
+from app.infrastructure.vector_store.persistent import (
     _embed_in_batches,
     _l2_normalize,
     add_new_version,
@@ -172,7 +172,7 @@ def _list_existing_files(db, scope: str, user_id: Optional[int]) -> List[Dict]:
     被谁调用：FileService._check_duplicate() 的 filename 去重策略；
               tests/phase/test_dedup_version.py 亦直接调用。
     参数：
-    - db：持久化 Chroma 实例（来源：service/vector_store.get_persistent_db）。
+    - db：持久化 Chroma 实例（来源：app/infrastructure/vector_store/persistent.get_persistent_db）。
     - scope (str) / user_id (int|None)：范围与归属过滤（同 _build_dedup_where）。
     返回：List[Dict]——文件元数据记录列表；去向：供文件名相似度匹配定位
           旧文件（数据来源：chroma 集合 metadatas）。
@@ -225,7 +225,7 @@ def _extract_text(file_path: str) -> tuple:
           未知类型兜底按纯文本处理。
     被谁调用：FileService.process_file() / process_temp_file() 的第一步。
     参数：file_path (str)——已落盘文件的绝对路径（来源：
-          control/file_control.py 上传后保存的物理文件）。
+          app/api/v1/files.py 上传后保存的物理文件）。
     返回：tuple (text, doc_type)——
     - text (str)：提取出的原始文本（尚未脱敏，脱敏由调用方执行）；
     - doc_type (str)：文件类型 pure_text/scanned/two_column/image_rich，
@@ -262,10 +262,10 @@ class FileService:
     """知识库文件处理服务：解析 → 脱敏 → 切分 → embedding → 去重 → 入库。
 
     类作用：每个上传文件对应一个轻量实例（仅持有默认文件路径），线程安全
-            的并发控制依赖模块级去重锁与 service/vector_store 的进程写锁，
+            的并发控制依赖模块级去重锁与 app/infrastructure/vector_store/persistent 的进程写锁，
             实例本身无跨请求可变状态。
 
-    实例化位置：control/file_control.py 的 _process_saved_file 中
+    实例化位置：app/api/v1/files.py 的 _process_saved_file 中
             `FileService(file_path)`（上传线程池 worker，每文件一个实例）；
             tests/phase/test_dedup_version.py 中有无参实例化。
 
@@ -358,7 +358,7 @@ class FileService:
         （策略A 先删后增+回滚）或 add_new_version（策略B 版本标记）；
         new 走 add_parent_child 全量入库。父向量由子向量均值归一化得到，
         不额外调用 embedding API。输出各阶段耗时日志。
-        被谁调用：control/file_control.py 的 _process_saved_file
+        被谁调用：app/api/v1/files.py 的 _process_saved_file
                   （scope 非 temp 分支；运行于上传线程池）。
         参数：
         - path (str|None)：已落盘文件绝对路径（上传文件对象，None 用 self.path）。
@@ -516,7 +516,7 @@ class FileService:
         （uploads/temp/<uid>_<sid>/chroma）；不做去重判定，也不走
         _dedup_commit_lock（临时目录按会话天然隔离）。会话结束时由
         TempKnowledgeStore.drop 释放，会话滚换时由 relocate 复制迁移。
-        被谁调用：control/file_control.py 的 _process_saved_file
+        被谁调用：app/api/v1/files.py 的 _process_saved_file
                   （scope == "temp" 分支；上传前已做会话归属校验）。
         参数：
         - path (str|None)：已落盘文件绝对路径（位于会话临时目录，None 用 self.path）。

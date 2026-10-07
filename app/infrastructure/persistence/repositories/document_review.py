@@ -6,7 +6,7 @@
     （ORM 模型 db.models.DocumentReview；记录上传文件的原始文本 raw_text、
     清洗文本 cleaned_text、审核状态 status：pending/approved/rejected、
     审核备注 reviewer_notes、创建/审核时间等）。
-    注意：审核通过后的向量库父子块入库不在本 DAO，而在 service/review_service.py。
+    注意：审核通过后的向量库父子块入库不在本 DAO，而在 app/application/review/review_service.py。
 
 主要成员：
     - DocumentReviewDAO：审核记录 CRUD，方法包括
@@ -14,7 +14,7 @@
       update_status() / get_pending_text() / _to_dict()。
 
 被谁使用：
-    - service/review_service.py 的 ReviewService.__init__ 中实例化
+    - app/application/review/review_service.py 的 ReviewService.__init__ 中实例化
       （self._dao = DocumentReviewDAO()），由 submit_for_review / list_reviews /
       list_all_reviews / get_review / approve / reject 等服务方法调用；
     - tests/test_concurrency.py、tests/test_adversarial.py 中直接实例化做并发/对抗测试。
@@ -43,7 +43,7 @@ class DocumentReviewDAO:
 
     承担审核记录的增（create）、查（get_by_id / list_by_user / list_all /
     get_pending_text）、改（update_status）；不提供物理删除。
-    实例化位置：service/review_service.py 的 ReviewService.__init__
+    实例化位置：app/application/review/review_service.py 的 ReviewService.__init__
     （self._dao = DocumentReviewDAO()），以及 tests 中的并发/对抗测试。
     无 __init__ 形参、不持有连接；每个方法内部以 session_scope() 获取
     SQLAlchemy 会话，ORM 操作随 with 块正常退出自动提交、异常自动回滚。
@@ -60,7 +60,7 @@ class DocumentReviewDAO:
     ) -> int:
         """创建一条待审核记录（INSERT，初始 status 固定为 "pending"）。
 
-        被谁调用：service/review_service.py 的 ReviewService.submit_for_review()
+        被谁调用：app/application/review/review_service.py 的 ReviewService.submit_for_review()
         （文件.函数：review_service.ReviewService.submit_for_review），
         入参来自文件提取（OCR/多模态）完成后的上传处理链路。
         参数：
@@ -92,11 +92,11 @@ class DocumentReviewDAO:
     def get_by_id(self, review_id: int) -> Optional[dict]:
         """按主键 ID 获取单条审核记录（SELECT by id）。
 
-        被谁调用：service/review_service.py 的 ReviewService.get_review / approve /
+        被谁调用：app/application/review/review_service.py 的 ReviewService.get_review / approve /
         reject（文件.函数：review_service.ReviewService.get_review、approve、reject），
         审核操作前先取记录并校验 status 是否仍为 pending。
         参数：
-            review_id: 审核记录 ID，来源前端请求（经 control/review_control.py 透传）。
+            review_id: 审核记录 ID，来源前端请求（经 app/api/v1/review.py 透传）。
         返回：Optional[dict]。命中返回 _to_dict() 序列化的记录字段
               （含文本、状态、时间等，供服务层判定与前端回显）；不存在返回 None。
         """
@@ -112,7 +112,7 @@ class DocumentReviewDAO:
         作用：document_review 表无软删字段，账号注销后其审核记录成为孤儿行；
         审核详情/通过/驳回经此判定拒绝孤儿记录，避免审核员操作已注销用户文档
         （approve 尤其会把向量写入已不存在的用户私有库）。
-        被谁调用：service/review_service.py 的 ReviewService.get_review（详情、
+        被谁调用：app/application/review/review_service.py 的 ReviewService.get_review（详情、
                   approve、reject 三条链路共用该前置校验）。
         参数：user_id (int)——记录中的上传者 ID（review["user_id"]）。
         返回：bool。user_information 中存在且 deleted_at IS NULL 返回 True；
@@ -136,7 +136,7 @@ class DocumentReviewDAO:
     ) -> Tuple[List[dict], int]:
         """分页查询指定用户自己的审核记录（SELECT + 可选 status 过滤）。
 
-        被谁调用：service/review_service.py 的 ReviewService.list_reviews()
+        被谁调用：app/application/review/review_service.py 的 ReviewService.list_reviews()
         （文件.函数：review_service.ReviewService.list_reviews），对应用户审核列表页。
         参数：
             user_id: 记录归属用户 ID，强制取登录态当前用户，只能看自己的记录。
@@ -183,7 +183,7 @@ class DocumentReviewDAO:
         无软删字段，账号注销后的残留记录只能靠此 join 在读侧排除（写侧清理由
         注销硬删计划负责）。
 
-        被谁调用：service/review_service.py 的 ReviewService.list_all_reviews()
+        被谁调用：app/application/review/review_service.py 的 ReviewService.list_all_reviews()
         （文件.函数：review_service.ReviewService.list_all_reviews）。
         参数：
         status: 可选状态过滤（pending/approved/rejected），来源前端查询参数。
@@ -223,7 +223,7 @@ class DocumentReviewDAO:
     ) -> bool:
         """更新审核状态（UPDATE：status/reviewed_at，可选 notes 与 cleaned_text）。
 
-        被谁调用：service/review_service.py 的 ReviewService.approve() 与 reject()
+        被谁调用：app/application/review/review_service.py 的 ReviewService.approve() 与 reject()
         （文件.函数：review_service.ReviewService.approve、reject）。
         权限防护：查询条件固定带 id + user_id 双键，只有记录归属本人才能改到行；
         teacher/admin 代审他人文档时，服务层保证传入记录归属 user_id（上传者），

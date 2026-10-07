@@ -9,7 +9,7 @@
     - ChainLogDAO：链路日志写入 DAO，目前仅提供 insert() 一个方法。
 
 被谁使用：
-    - service/agent_service.py 的 AgentService._persist_chain_log()
+    - app/application/chat/agent_service.py 的 AgentService._persist_chain_log()
       （通过线程池异步调用 ChainLogDAO().insert(...)，写库失败不阻塞聊天响应）。
 """
 import json
@@ -27,7 +27,7 @@ class ChainLogDAO:
     """Agent 链路日志数据访问层，对应 MySQL 表 chain_log。
 
     仅承担链路日志的新增（INSERT）操作，不提供查询/修改/删除。
-    实例化位置：service/agent_service.py 的 AgentService._persist_chain_log()
+    实例化位置：app/application/chat/agent_service.py 的 AgentService._persist_chain_log()
     中以 ChainLogDAO() 临时创建（无 __init__ 形参，不持有连接，
     会话在 insert() 内通过 session_scope() 获取并随 with 块自动提交/回滚）。
     """
@@ -41,7 +41,7 @@ class ChainLogDAO:
         SQL 安全：INSERT 文本经 sqlalchemy text() 构造，全部入参以命名绑定参数
         （:user_id 等）传入并经 core.sql_guard.safe_execute 执行，杜绝 SQL 注入。
 
-        被谁调用：service/agent_service.py 的 AgentService._persist_chain_log()
+        被谁调用：app/application/chat/agent_service.py 的 AgentService._persist_chain_log()
         （文件.函数：agent_service.AgentService._persist_chain_log）。
         参数：
             user_id: 发起对话的用户 ID，来源为会话状态对象 SessionManager.user_id

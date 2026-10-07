@@ -12,11 +12,11 @@
       get_by_username / get_by_email / upgrade_password / save_information（空实现）。
 
 被谁使用：
-    - util/user.py 的 UserInformation.__init__ 实例化（注册查重、登录、密码升级）；
+    - app/application/auth/user.py 的 UserInformation.__init__ 实例化（注册查重、登录、密码升级）；
     - core/deps.py 的 get_current_user 中局部实例化（get_by_id/get_by_ids 鉴权）；
-    - control/admin_control.py、service/admin_user_service.py（管理端用户查询）；
-    - control/history_control.py（撤销删除预览时 read_information 读最近消息）；
-    - control/login_control.py（登录后用户信息组装）。
+    - app/api/v1/admin.py、app/application/admin/admin_user_service.py（管理端用户查询）；
+    - app/api/v1/history.py（撤销删除预览时 read_information 读最近消息）；
+    - app/api/v1/auth.py（登录后用户信息组装）。
 
 所有 SQL 均使用 text() + 绑定参数，杜绝 SQL 注入；SELECT 经
 core.sql_guard.safe_execute 执行，无 LIMIT 时由 sql_guard 自动钳制到
@@ -37,10 +37,10 @@ class Information_Read(BaseInformation):
 
     承担账号存在性检查、登录凭据查询、鉴权用户信息查询、管理端用户列表、
     会话最近消息读取；写操作仅 upgrade_password 一个历史密码升级 UPDATE。
-    实例化位置：util/user.py 的 UserInformation.__init__
+    实例化位置：app/application/auth/user.py 的 UserInformation.__init__
     （self.information_read = Information_Read()）、core/deps.py 鉴权依赖、
-    control/admin_control.py、control/history_control.py、control/login_control.py、
-    service/admin_user_service.py。__init__ 无形参，仅调用父类 ABC 构造；
+    app/api/v1/admin.py、app/api/v1/history.py、app/api/v1/auth.py、
+    app/application/admin/admin_user_service.py。__init__ 无形参，仅调用父类 ABC 构造；
     不持有数据库连接，会话在各方法内通过 session_scope() 获取。
     """
 
@@ -55,7 +55,7 @@ class Information_Read(BaseInformation):
         SQL 安全：user_id/session_id 为命名绑定参数；显式 is_deleted = 0
         软删除过滤；LIMIT 6 固定行数上限，防止大结果集拖库；经 safe_execute 执行。
 
-        被谁调用：control/history_control.py 的撤销删除预览逻辑
+        被谁调用：app/api/v1/history.py 的撤销删除预览逻辑
         （文件.函数：history_control 中 read_dao.read_information(...)）。
         参数：
             data: {"user_id": 登录态用户 ID, "session_id": 目标会话 ID}，
@@ -91,7 +91,7 @@ class Information_Read(BaseInformation):
         用户行、session_id 为 NULL。
         SQL 安全：user_id / user_name / email 均为命名绑定参数；两表都带
         is_deleted = 0 过滤；LIMIT 1 限定行数；经 safe_execute 执行。
-        现状：当前 util/user.py 的 UserInformation.user_information() 已改为直接
+        现状：当前 app/application/auth/user.py 的 UserInformation.user_information() 已改为直接
         调用 get_by_id()，本方法在代码库中暂无生产调用方，保留兼容早期聊天
         身份解析链路。
         参数：
@@ -153,7 +153,7 @@ class Information_Read(BaseInformation):
         不拼接外部输入）；is_deleted = 0 过滤；经 safe_execute 执行，
         返回行数还受 SQL_MAX_ROWS 钳制。
 
-        被谁调用：util/user.py 的 UserInformation.check_user()
+        被谁调用：app/application/auth/user.py 的 UserInformation.check_user()
         （文件.函数：user.UserInformation.check_user），注册接口据此返回
         “用户名/邮箱已存在”。
         参数：
@@ -188,9 +188,9 @@ class Information_Read(BaseInformation):
 
         被谁调用：
         - core/deps.py 的 get_current_user()（文件.函数：deps.get_current_user）；
-        - util/user.py 的 UserInformation.user_information()；
-        - control/admin_control.py 多个管理端点（用户操作前确认目标存在）；
-        - control/login_control.py 登录态信息组装。
+        - app/application/auth/user.py 的 UserInformation.user_information()；
+        - app/api/v1/admin.py 多个管理端点（用户操作前确认目标存在）；
+        - app/api/v1/auth.py 登录态信息组装。
         参数：
             user_id: 用户 ID，来源 JWT 解析结果/登录态/管理端请求目标。
         返回：Optional[Dict[str, Any]]。命中返回含 id/user_name/email/role/
@@ -222,7 +222,7 @@ class Information_Read(BaseInformation):
         被谁调用：
         - core/deps.py 的 get_current_user()（文件.函数：deps.get_current_user，
           单元素批量查询，异常返回空 → 鉴权 fail-closed）；
-        - control/admin_control.py 用量统计后批量补用户信息。
+        - app/api/v1/admin.py 用量统计后批量补用户信息。
         参数：
             user_ids: 可迭代的用户 ID 集合（int 或可转 int 的值），来源
                       JWT/管理端聚合出的用户 id 列表；空/None 直接返回 {}。
@@ -254,7 +254,7 @@ class Information_Read(BaseInformation):
         进入管理端响应；is_deleted = 0 排除已注销账号；ORDER BY id ASC 稳定排序。
         SQL 安全：无外部入参，无注入面；经 safe_execute 执行，返回行数由
         sql_guard 钳制到 SQL_MAX_ROWS（默认 10000），防止账号总量异常时全表拉爆。
-        被谁调用：service/admin_user_service.py 的用户列表函数
+        被谁调用：app/application/admin/admin_user_service.py 的用户列表函数
         （文件.函数：admin_user_service.list_users，内部
         Information_Read().get_all_users()）。
         参数：无。
@@ -281,7 +281,7 @@ class Information_Read(BaseInformation):
         历史明文），仅用于服务端密码校验，不得原样返回前端。
         SQL 安全：user_name 命名绑定参数；is_deleted = 0 软删除过滤；
         经 safe_execute 执行。
-        被谁调用：util/user.py 的 UserInformation.login_by_username()
+        被谁调用：app/application/auth/user.py 的 UserInformation.login_by_username()
         （文件.函数：user.UserInformation.login_by_username）；测试夹具亦用。
         参数：
             user_name: 登录表单用户名。
@@ -312,7 +312,7 @@ class Information_Read(BaseInformation):
         功能：邮箱 + 一次性验证码校验通过后，用本方法取回账号以签发 JWT；
         同样带 is_deleted = 0，已注销邮箱无法登录。
         SQL 安全：email 命名绑定参数；经 safe_execute 执行。
-        被谁调用：util/user.py 的 UserInformation.login_by_email_code()
+        被谁调用：app/application/auth/user.py 的 UserInformation.login_by_email_code()
         （文件.函数：user.UserInformation.login_by_email_code）。
         参数：
             email: 登录表单邮箱（验证码已在 service 层校验通过）。
@@ -345,7 +345,7 @@ class Information_Read(BaseInformation):
         SQL 安全：user_id 与新哈希均为命名绑定参数，经 safe_execute 执行；
         注意 UPDATE 语句不追加 is_deleted 条件（行存在即升级，调用方来自成功
         登录路径，账号必然有效），不改变其他列。
-        被谁调用：util/user.py 的 UserInformation.login_by_username()
+        被谁调用：app/application/auth/user.py 的 UserInformation.login_by_username()
         （文件.函数：user.UserInformation.login_by_username，明文校验成功分支）。
         参数：
             user_id: 用户 ID，来源登录查询命中的账号行。

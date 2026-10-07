@@ -17,7 +17,7 @@
     - clean_ocr_text：模块对外主入口，串起整条清洗管线。
 
 被谁使用：
-    - service/file_service.py 的 _extract_text()：doc_type 为 "scanned"
+    - app/application/files/file_service.py 的 _extract_text()：doc_type 为 "scanned"
       时，先调 ocr_service.ocr_pdf 取原始 OCR 文本，再调 clean_ocr_text
       清洗（文件.函数：file_service._extract_text）；清洗后的纯文本
       进入 FileService 的切分 → embedding → 向量库主链路。
@@ -113,7 +113,7 @@ def clean_ocr_text(text: str) -> str:
     功能：按模块 docstring 列出的五步管线顺序处理：去零宽/控制字符 →
     行内空格合并与乱码行丢弃 → 错误断行合并 → 连续空行折叠。
     被谁调用：
-    - service/file_service.py 的 _extract_text()：scanned 分支中
+    - app/application/files/file_service.py 的 _extract_text()：scanned 分支中
       ocr_service.ocr_pdf 返回后立即调用
       （文件.函数：file_service._extract_text）。
     参数：

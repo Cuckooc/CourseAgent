@@ -9,7 +9,7 @@
     - FeedbackDAO：反馈写入 DAO，仅提供 insert()。
 
 被谁使用：
-    - control/chat_control.py 的 feedback() 接口（POST /chat/feedback）
+    - app/api/v1/chat.py 的 feedback() 接口（POST /chat/feedback）
       中以 FeedbackDAO() 临时实例化并调用 insert()。
 """
 import logging
@@ -26,7 +26,7 @@ class FeedbackDAO:
     """用户反馈数据访问层，对应 MySQL 表 chat_feedback。
 
     仅承担反馈记录的新增（INSERT），不提供查询/修改/删除。
-    实例化位置：control/chat_control.py 的 feedback()（FeedbackDAO() 临时创建）。
+    实例化位置：app/api/v1/chat.py 的 feedback()（FeedbackDAO() 临时创建）。
     无 __init__ 形参、不持有连接；insert() 内部以 session_scope() 获取会话，
     随 with 块自动提交/回滚。
     """
@@ -38,7 +38,7 @@ class FeedbackDAO:
         SQL 安全：SQL 经 text() 构造，user_id/session_id/message_index/rating/comment
         全部以命名绑定参数传入并经 core.sql_guard.safe_execute 执行，杜绝 SQL 注入。
 
-        被谁调用：control/chat_control.py 的 feedback()
+        被谁调用：app/api/v1/chat.py 的 feedback()
         （文件.函数：chat_control.feedback）。
         参数：
             user_id: 反馈用户 ID，来源登录态 current_user["user_id"]。

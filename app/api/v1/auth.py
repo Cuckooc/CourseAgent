@@ -9,7 +9,7 @@
 - send_email_code：发送邮箱一次性验证码；
 - login_by_email：邮箱验证码登录（JWT）；
 - me：查询当前登录身份（实时回库）。
-被谁使用：由 control/app.py 通过 `from control.login_control import login_router` 导入并
+被谁使用：由 control/app.py 通过 `from app.api.v1.auth import login_router` 导入并
           app.include_router 注册；路由由 HTTP 客户端（web/frontend）调用，非内部调用。
 说明：登录成功签发 JWT，后续接口通过 Authorization: Bearer <token> 鉴权；
       认证接口启用限流防暴力破解与验证码轰炸；注册/登录失败/锁定事件写入独立审计日志。
@@ -19,7 +19,7 @@ import re
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
-from util.user import UserInformation
+from app.application.auth.user import UserInformation
 from app.infrastructure.persistence.repositories.session import SessionDAO
 from app.infrastructure.persistence.repositories.read import Information_Read
 from app.auth import account_guard

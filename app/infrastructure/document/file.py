@@ -4,7 +4,7 @@
 作用：
     承担上传解析流水线中「纯文本提取 → 文本切分 → Document 封装 →
     Chroma 向量入库」的基础环节。整条流水线位置为：
-    前端上传 → control/file_control → service/file_service → 文件类型探测
+    前端上传 → control/file_control → app/application/files/file_service → 文件类型探测
     （doc_type_detector）→ PDF 转图 / OCR / 双栏 / 多模态清洗
     （pdf_to_images / ocr_service / ocr_clean / two_column_handler /
     multimodal_service）→ 纯文本 → 本模块切分封装 → embedding → 向量库。
@@ -19,9 +19,9 @@
     - test_retrieval：仅本地一键自测使用的相似度检索辅助函数。
 
 被谁使用：
-    - service/file_service.py 的 _extract_text() 调用 pdf_text 处理
+    - app/application/files/file_service.py 的 _extract_text() 调用 pdf_text 处理
       txt/md 与 pure_text 类型 PDF（上传主链路）；
-    - control/file_control.py 的 _process_saved_file() 对 temp 临时文件
+    - app/api/v1/files.py 的 _process_saved_file() 对 temp 临时文件
       调 pdf_text 补提原文，用于用户偏好抽取；
     - embedding/parent_child.py 调 split_str 取父子切分的原子段落；
     - app/domain/agents/file_agent.py 调 pdf_text/split_str/to_documents/
@@ -55,7 +55,7 @@ def  pdf_text(path:str)->str:
     """读取文件文本：按扩展名分发提取。
 
     流水线位置：文本提取环节的纯文本兜底路径。扫描件 / 双栏 / 图文混排
-    PDF 在 service/file_service._extract_text 中已被路由到 OCR、双栏或
+    PDF 在 app/application/files/file_service._extract_text 中已被路由到 OCR、双栏或
     多模态模块；进入本函数 PDF 分支的均为可直接抽取文本层的文件，
     输出纯文本向下交给 split_str 切分、再经 embedding 入向量库。
 
@@ -66,9 +66,9 @@ def  pdf_text(path:str)->str:
       “未解析到文本内容”。
 
     被谁调用：
-    - service/file_service.py：_extract_text() 处理 txt/md 及 pure_text
+    - app/application/files/file_service.py：_extract_text() 处理 txt/md 及 pure_text
       类型 PDF（文件.函数：file_service._extract_text）；
-    - control/file_control.py：_process_saved_file() 对 temp 文件补提
+    - app/api/v1/files.py：_process_saved_file() 对 temp 文件补提
       原文做用户偏好抽取（文件.函数：file_control._process_saved_file）；
     - app/domain/agents/file_agent.py：FileAgent 构建文件向量库；
     - 本文件 __main__ 自测入口。
@@ -177,7 +177,7 @@ def to_documents(chunks: list[str], source: str, scope: str = "private", user_id
     - app/domain/agents/file_agent.py：FileAgent 构建文件向量库
       （文件.类.方法：file_agent.FileAgent，内部调 to_documents）；
     - 本文件 __main__ 自测入口；
-    - 上传主链路中 service/file_service 另有带 file_id/content_hash 的
+    - 上传主链路中 app/application/files/file_service 另有带 file_id/content_hash 的
       同类封装，本函数为 file_analysis 侧的基础版本。
 
     参数：
@@ -217,7 +217,7 @@ def build_chromadb(docs:list[Document],embedding_model,persist_path:str=None)->C
     """把 Document 列表分批写入持久化 Chroma 向量库。
 
     流水线位置：解析-切分-封装之后的向量入库终点；写入后文本即可被
-    RAG 相似度检索命中。线上上传主链路统一走 service/vector_store 与
+    RAG 相似度检索命中。线上上传主链路统一走 app/infrastructure/vector_store/persistent 与
     embedding/text_embedding.build_chromadb（含进程写锁），本函数用于
     file_agent 与本地自测场景。
 

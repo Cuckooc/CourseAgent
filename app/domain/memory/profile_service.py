@@ -3,7 +3,7 @@
 
 作用：维护每用户的画像（profile_text/interests/topics 三字段），对话期间
 异步从对话中提取画像信号，读取时渲染为【用户画像】前缀注入 LLM prompt
-（经 service/chat_service → AgentService → app/domain/agents/ChatAgent 的
+（经 app/application/chat/chat_service → AgentService → app/domain/agents/ChatAgent 的
 user_profile 形参）。数据链路：自动提取/手动编辑 → Redis pending 暂存
 （连续 N 天无更新）→ 惰性/后台 flush → dao/profile.ProfileDAO.upsert 落
 MySQL user_profile 表；读取 = MySQL 基线 + pending 覆盖。画像为 user 级
@@ -34,10 +34,10 @@ MySQL user_profile 表；读取 = MySQL 基线 + pending 覆盖。画像为 user
 - _parse_profile_llm()：解析模型三行格式输出；_EXTRACT_PROMPT：提取提示词。
 
 被谁使用（全仓 import 位置）：
-- service/chat_service.py：ChatService.__init__ 持单例；_get_profile_prefix
+- app/application/chat/chat_service.py：ChatService.__init__ 持单例；_get_profile_prefix
   每轮调 get_profile + render_profile_prefix 注入；_save_information 每轮
   调 extract_from_conversation_async 异步提取；
-- control/profile_control.py：GET/PUT /profile 调 get_profile/update_profile；
+- app/api/v1/profile.py：GET/PUT /profile 调 get_profile/update_profile；
 - control/app.py 的 lifespan 启动钩子：start_background_flusher 启守护线程。
 """
 import logging
@@ -135,7 +135,7 @@ def _parse_profile_llm(text: str) -> Dict[str, str]:
 def render_profile_prefix(profile: Optional[Dict[str, Any]]) -> str:
     """生成注入模型输入的画像前缀；画像为空返回空串。
 
-    被谁调用：service/chat_service.py 的 ChatService._get_profile_prefix
+    被谁调用：app/application/chat/chat_service.py 的 ChatService._get_profile_prefix
     （每轮对话渲染后随 prompt 注入 app/domain/agents/ChatAgent 的 user_profile）。
     参数：profile (dict|None)——get_profile 返回的画像 dict
     （来源：MySQL user_profile 基线 + Redis pending 覆盖）。
@@ -213,8 +213,8 @@ class ProfileService:
     def get_profile(self, user_id: int) -> Dict[str, Any]:
         """读取画像：先惰性 flush 本人到期暂存，再 MySQL 基线 + pending 覆盖。
 
-        被谁调用：control/profile_control.py 的 GET /profile（返回前端）；
-        service/chat_service.py 的 _get_profile_prefix（每轮注入 LLM）；
+        被谁调用：app/api/v1/profile.py 的 GET /profile（返回前端）；
+        app/application/chat/chat_service.py 的 _get_profile_prefix（每轮注入 LLM）；
         _do_extract（合并前读现有画像）；update_profile 写完回读。
         参数：user_id (int)——JWT 注入的用户 ID。
         返回：Dict[str,Any]——{user_id, profile_text, interests, topics,
@@ -259,7 +259,7 @@ class ProfileService:
     ) -> Dict[str, Any]:
         """手动编辑画像 → 暂存 Redis 并重新计时 7 天。
 
-        被谁调用：control/profile_control.py 的 PUT /profile
+        被谁调用：app/api/v1/profile.py 的 PUT /profile
         （个人信息页保存，参数来自 ProfileUpdateRequest 请求体）。
         参数：user_id (int，JWT)；profile_text/interests/topics (str)——
         用户提交的三字段，去空白并按 _PROFILE_TEXT_MAX/_FIELD_MAX 截断。
@@ -281,7 +281,7 @@ class ProfileService:
     def extract_from_conversation_async(self, user_id: int, user_text: str, ai_text: str) -> None:
         """异步从一轮对话提取/合并画像（不阻塞对话落库）。节流见模块说明。
 
-        被谁调用：service/chat_service.py 的 ChatService._save_information
+        被谁调用：app/application/chat/chat_service.py 的 ChatService._save_information
         （每轮拿到完整 LLM 回答后投递一次）。
         参数：user_id (int，JWT)；user_text (str)——本轮用户提问；
         ai_text (str)——本轮助手回答（后两者来自对话请求体与 AgentService
@@ -608,8 +608,8 @@ class ProfileService:
 def get_profile_service() -> ProfileService:
     """应用级单例工厂（@lru_cache(maxsize=1)，首次调用无参构造并缓存）。
 
-    被谁调用：service/chat_service.py（ChatService.__init__）、
-    control/profile_control.py（GET/PUT /profile）、control/app.py
+    被谁调用：app/application/chat/chat_service.py（ChatService.__init__）、
+    app/api/v1/profile.py（GET/PUT /profile）、control/app.py
     lifespan（启动后台落库线程）。
     返回：ProfileService——进程内共享单例。
     """

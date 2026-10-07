@@ -11,7 +11,7 @@
 - create_session / update_session_title：创建会话 / 更新标题；
 - delete_session_preview / delete_session_confirm：删除会话的预览令牌签发与确认执行；
 - undo_delete：撤销最近一次软删除；get_recent_messages：获取指定会话最近消息。
-被谁使用：由 control/app.py 通过 `from control.history_control import history_router` 导入并
+被谁使用：由 control/app.py 通过 `from app.api.v1.history import history_router` 导入并
           app.include_router 注册；全部端点需 JWT 鉴权，user_id 强制取自登录态，
           防止越权访问他人会话；路由由 HTTP 客户端（web/frontend 历史侧边栏）调用，非内部调用。
 """
@@ -275,7 +275,7 @@ def delete_session_confirm(req: DeleteConfirmRequest, current_user: dict = Depen
     if not ok:
         return {"status": "fail", "message": "会话不存在或删除失败"}
     try:
-        from service.temp_knowledge_store import get_temp_store
+        from app.infrastructure.vector_store.temp_store import get_temp_store
         get_temp_store().drop(user_id, req.session_id)
     except Exception as e:
         logger.error("clean temp knowledge failed: %s", e)

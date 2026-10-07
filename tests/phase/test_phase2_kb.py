@@ -13,9 +13,9 @@ TC-3.4 dedup_strategy=full（正常：全量相似度去重）→ skipped
 TC-3.5 update_strategy=replace（正常：替换策略）→ success 且列表仍 1 行
 
 被测对象来源：
-- 路由：control/file_control.py（POST /file/path，scope/dedup_strategy/update_strategy
-  表单参数）、control/knowledge_control.py（GET /knowledge/list）；
-- 业务：service/file_service.py 与 service/knowledge_service.py 的去重
+- 路由：app/api/v1/files.py（POST /file/path，scope/dedup_strategy/update_strategy
+  表单参数）、app/api/v1/knowledge.py（GET /knowledge/list）；
+- 业务：app/application/files/file_service.py 与 app/application/knowledge/knowledge_service.py 的去重
   （full/content/filename 策略）与版本（version/replace）链路、embedding 向量化。
 
 运行方式：

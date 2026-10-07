@@ -118,7 +118,7 @@ def rate_limit(max_times: int, window_seconds: int):
     限流依赖工厂：同一 IP + 路径在 window_seconds 秒内最多访问 max_times 次。
     适用于公开端点（login 等，用户尚未登录）。
 
-    被哪些路由 Depends 使用：control/login_control.py 的
+    被哪些路由 Depends 使用：app/api/v1/auth.py 的
         register(5,60)、login_by_account(10,60)、send_email_code(5,60)、login_by_email(10,60)。
 
     参数：

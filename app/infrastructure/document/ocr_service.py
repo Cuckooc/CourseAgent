@@ -15,7 +15,7 @@
 流水线位置：
     文件类型探测（doc_type_detector 判定为 scanned）之后、OCR 结果
     正则清洗（ocr_clean.clean_ocr_text）之前。上游输入为
-    service/file_service 传入的本地 PDF 路径，下游输出的原始 OCR
+    app/application/files/file_service 传入的本地 PDF 路径，下游输出的原始 OCR
     文本交给 clean_ocr_text 清洗，再进入切分 → embedding → 向量库。
 
 主要成员：
@@ -25,7 +25,7 @@
     - ocr_pdf：模块对外主入口，PDF → 逐页 OCR → 拼接全文。
 
 被谁使用：
-    - service/file_service.py 的 _extract_text()：doc_type 为
+    - app/application/files/file_service.py 的 _extract_text()：doc_type 为
       "scanned" 时调用 ocr_pdf（文件.函数：file_service._extract_text）；
     - 同包 pdf_to_images.py 提供 PDF 转图能力（本模块导入）。
 """
@@ -153,7 +153,7 @@ def _ocr_single_page(image_path: str, api_key: str, model: str) -> str:
 def ocr_pdf(file_path: str) -> str:
     """扫描件 PDF → 逐页 OCR → 拼接全文（模块对外主入口）。
 
-    被谁调用：service/file_service.py 的 _extract_text()，
+    被谁调用：app/application/files/file_service.py 的 _extract_text()，
     doc_type 判定为 "scanned" 时进入本路径
     （文件.函数：file_service._extract_text）；返回的原始文本随后
     交给 ocr_clean.clean_ocr_text 清洗。

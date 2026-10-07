@@ -23,7 +23,7 @@
     - app/domain/agents/chat_agent.py: ChatLLM().generate() 作为主回答模板；
     - app/domain/agents/vague_agent.py: PredictLLM；analysis_agent.py: AnalysisLLM；
       summary_agent.py: InformationLLM（含 .llm 链）；
-    - util/context.py: ContextKey（上下文改写）；util/title.py: TitleLLM（Title 子类）；
+    - app/application/chat/context.py: ContextKey（上下文改写）；app/application/chat/title.py: TitleLLM（Title 子类）；
     - tests/phase/test_all_changes.py: 校验 Predict/Analysis/Chat/Rag/File 模板关键约束。
     说明：RagLLM/FileLLM 当前线上主链路未直接引用（RAG/文件 Agent 在
     app/domain/agents/rag_agent.py、file_agent.py 内自管提示词），仅测试覆盖；
@@ -305,16 +305,16 @@ class AnalysisLLM(LLM):
 class ContextKey(LLM):
     """上下文查询改写提示词类：结合业务上下文补全用户问题中的模糊指代与省略。
 
-    实例化位置：util/context.py:27（ContextService.context_query 在判定为
+    实例化位置：app/application/chat/context.py:27（ContextService.context_query 在判定为
     force 注入模式后调用 ContextKey().generate(...)）；self.llm 网关由
-    util/context.py 自己经 build_chat_model() 构建并 invoke。
+    app/application/chat/context.py 自己经 build_chat_model() 构建并 invoke。
     """
     def __init__(self):
         super().__init__()
     def generate(self, context_text:Dict[str,Any], query: str) -> str:
         """生成上下文改写提示词（本类唯一带形参的 generate）。
 
-        被谁调用：util/context.py 的 ContextService.context_query；
+        被谁调用：app/application/chat/context.py 的 ContextService.context_query；
         参数：context_text —— 上下文信息 dict（人物/时间/地点/业务参数等，
               来源登录态、会话与业务透传）；query —— 用户原始问题。
         返回：str 完整提示词（已把两参数填入模板，而非留占位符），去向
@@ -340,7 +340,7 @@ class ContextKey(LLM):
 class TitleLLM(LLM):
     """会话标题生成提示词类（依据首轮上下文与问题提炼 20 字以内标题）。
 
-    实例化位置：util/title.py 的 Title(TitleLLM) 子类继承本类，
+    实例化位置：app/application/chat/title.py 的 Title(TitleLLM) 子类继承本类，
     并在 Title.title() 中调用 super().generate() 取模板组装链。
     """
     def __init__(self):
@@ -348,7 +348,7 @@ class TitleLLM(LLM):
     def generate(self) -> str:
         """返回会话标题生成提示词模板。
 
-        被谁调用：util/title.py 的 Title.title（super().generate()）；
+        被谁调用：app/application/chat/title.py 的 Title.title（super().generate()）；
         模板占位符：{context_text} 上下文信息、{query} 用户问题；
         返回：str 模板，要求仅输出 20 字以内、无特殊符号的标题，去向
         PromptTemplate → self.llm 链，结果截断后作为会话标题持久化。

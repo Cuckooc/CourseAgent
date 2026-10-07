@@ -30,13 +30,13 @@
 _tamper_payload、_alg_none_token（JWT 拆装/篡改/伪造）。
 
 被测对象来源：
-- 路由：control/login_control.py（/login/account、/login/register、/login/me）、
-  control/history_control.py（/history/create）、control/chat_control.py（/chat/feedback、
-  /chat/send）、control/file_control.py（POST /file/path、GET /file/status/{task_id}）、
-  control/review_control.py（/review/list）、control/admin_control.py（/admin/users）；
+- 路由：app/api/v1/auth.py（/login/account、/login/register、/login/me）、
+  app/api/v1/history.py（/history/create）、app/api/v1/chat.py（/chat/feedback、
+  /chat/send）、app/api/v1/files.py（POST /file/path、GET /file/status/{task_id}）、
+  app/api/v1/review.py（/review/list）、app/api/v1/admin.py（/admin/users）；
 - 鉴权：core/deps.py 的 get_current_user、core/security.py 的 create_access_token；
 - token 互踢：dao/user.py 的 Information.increment_token_version；
-- 上传防护：control/file_control.py 与 service/file_service.py 的扩展名白名单与 magic bytes 校验。
+- 上传防护：app/api/v1/files.py 与 app/application/files/file_service.py 的扩展名白名单与 magic bytes 校验。
 
 运行方式：
     pytest tests/test_security.py            # 需后端 :8000 在线（pytestmark=backend，不可达 skip）
@@ -340,7 +340,7 @@ class TestPathTraversal:
     """路径穿越：文件名 / task_id 等用户输入不应被拼接到文件路径读取/写入。
 
     共同前置：http + user_acct；文件用例经 _multipart_upload 手工构造恶意 filename。
-    被测接口：POST /file/path（service/file_service.py 的 uuid 重命名落盘）、
+    被测接口：POST /file/path（app/application/files/file_service.py 的 uuid 重命名落盘）、
     GET /file/status/{task_id}（core/upload_task.py 内存任务表）。
     """
 

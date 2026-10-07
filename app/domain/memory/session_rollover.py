@@ -33,7 +33,7 @@
 - _new_title()：接续会话标题生成；_soft_delete_empty_session()：失败回滚。
 
 被谁使用（全仓 import 位置）：
-- service/chat_service.py：ChatService._maybe_rollover 在 handle/
+- app/application/chat/chat_service.py：ChatService._maybe_rollover 在 handle/
   handle_stream 本轮落库后调用（唯一生产调用方）；返回的新会话 ID 写入
   响应/done 帧的 session_id（附 rolled_over/previous_session_id 交前端切换）；
   app/domain/agents/ 不直接 import 本模块，滚换后由 chat_service 用新 sid 取
@@ -119,7 +119,7 @@ def maybe_rollover(
     功能：开关/入参/轮数三重前置判定 → Redis SET NX 分布式锁合并并发请求
     → 委托 _do_rollover 完成上下文整体搬迁；任何失败返回 None，调用方按
     旧会话继续。本函数不额外调用 LLM，迁移纯 Redis/MySQL/文件复制。
-    被谁调用：service/chat_service.py 的 ChatService._maybe_rollover
+    被谁调用：app/application/chat/chat_service.py 的 ChatService._maybe_rollover
     （handle/handle_stream 本轮写入短期记忆后，唯一生产调用方）。
     :param user_id: 用户 ID，来源 JWT；
     :param old_session_id: 旧会话 ID，来源对话请求体；
@@ -248,7 +248,7 @@ def _do_rollover(client, user_id: int, old_sid: int, old_title: str) -> int:
 
     # 6) 迁移会话临时知识库（无则跳过；失败仅告警，不阻断滚换）
     try:
-        from service.temp_knowledge_store import get_temp_store
+        from app.infrastructure.vector_store.temp_store import get_temp_store
 
         get_temp_store().relocate(user_id, old_sid, new_sid)
     except Exception as e:

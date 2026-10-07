@@ -15,9 +15,9 @@ TC-7.3 跨用户恢复（恶意/越权）：用户 B 携带自己的 JWT 恢复�
 TC-7.4 异常 session_id（边界：0 与 -1）调 recover，期望 200/400/404/422 优雅处理。
 
 被测对象来源：
-- 路由：control/chat_control.py（POST /chat/stream SSE、POST /chat/recover
+- 路由：app/api/v1/chat.py（POST /chat/stream SSE、POST /chat/recover
   会话恢复与状态判定 completed/missing、/history 本脚本未直接调用）；
-- 业务：service/chat_service.py 的会话状态机与归属校验（user_id 隔离）。
+- 业务：app/application/chat/chat_service.py 的会话状态机与归属校验（user_id 隔离）。
 
 运行方式：
     python tests/phase/test_phase7_network.py

@@ -14,7 +14,7 @@
     - ContextService：唯一业务类，持有 embedding 模型与聊天模型。
 
 被谁使用：
-    - service/chat_service.py：ChatService.__init__ 中实例化为
+    - app/application/chat/chat_service.py：ChatService.__init__ 中实例化为
       self.context_service（约 L92）；_context_query() 在相似度
       改写路径前先调 context_model/context_query 判定与强制改写
       （文件.类.方法：chat_service.ChatService._context_query，
@@ -32,7 +32,7 @@ class ContextService:
     类作用：集中“是否强依赖业务上下文”的启发式规则，并在需要时
     调 LLM 把上下文信息改写进用户问题；无状态判定，模型成员可
     跨请求复用。
-    实例化位置：service/chat_service.py 的 ChatService.__init__
+    实例化位置：app/application/chat/chat_service.py 的 ChatService.__init__
     （self.context_service = ContextService()，约 L92）。
 
     关键属性去向：
@@ -58,7 +58,7 @@ class ContextService:
             其余情况返回 "similarity"，交给 chat_service 用 embedding
             余弦相似度与 LLMConfig.SIMILARITY_THRESHOLD 决定。
             被谁调用：
-            - service/chat_service.py 的 ChatService._context_query()
+            - app/application/chat/chat_service.py 的 ChatService._context_query()
               （文件.类.方法：chat_service.ChatService._context_query）；
             - 本类 context_query() 内部据此决定是否调改写 LLM。
             参数：
@@ -91,7 +91,7 @@ class ContextService:
          model_llm.llm_business.ContextKey 生成改写提示词并调
          self.llm 补全问题中的模糊指代/省略；非 force 模式不调用
          LLM，原样返回 query（相似度判定由 chat_service 负责）。
-         被谁调用：service/chat_service.py 的
+         被谁调用：app/application/chat/chat_service.py 的
          ChatService._context_query()（文件.类.方法：
          chat_service.ChatService._context_query，约 L230）。
          参数：

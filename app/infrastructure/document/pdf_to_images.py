@@ -47,7 +47,7 @@ def pdf_to_images(file_path: str, dpi: int = 200) -> List[str]:
       （显式 dpi=200）。
     参数：
     - file_path (str)：已落盘 PDF 的本地路径，来源：
-      service/file_service._extract_text 传入的上传文件物理路径；
+      app/application/files/file_service._extract_text 传入的上传文件物理路径；
     - dpi (int)：渲染分辨率，默认 200。DPI 200 在 OCR 精度与
       内存/体积间平衡（A4 页 ≈ 1654×2339 px）；fitz 以 72 DPI 为
       基准点，故缩放系数 zoom = dpi / 72。

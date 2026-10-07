@@ -14,8 +14,8 @@
     - get_current_user：chat_control / history_control / file_control / review_control /
       profile_control / knowledge_control / login_control.me，并作为 require_admin、
       forbid_admin、user_rate_limit（app.auth.rate_limit）的子依赖；
-    - require_admin：control/admin_control.py 管理路由；
-    - forbid_admin：control/chat_control.py 对话路由。
+    - require_admin：app/api/v1/admin.py 管理路由；
+    - forbid_admin：app/api/v1/chat.py 对话路由。
 """
 from typing import Dict, Optional
 
@@ -86,7 +86,7 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     再实时回库（Information_Read.get_by_ids）核验数据库中的当前角色：
     管理员被降权后，未过期的旧 token 不得继续行使管理权限。
     数据库异常时 get_by_ids 返回空 → 校验拒绝（fail-closed）。
-    被哪些路由 Depends 使用：control/admin_control.py 管理员路由组。
+    被哪些路由 Depends 使用：app/api/v1/admin.py 管理员路由组。
 
     参数：
         current_user: 上游 get_current_user 依赖的返回值（含 user_id/role），由 FastAPI 注入。
@@ -113,7 +113,7 @@ def forbid_admin(current_user: dict = Depends(get_current_user)) -> dict:
 
     鉴权逻辑：经 get_current_user 解析当前用户后，role == "admin" 即拒绝；
     teacher/user 不受影响。
-    被哪些路由 Depends 使用：control/chat_control.py 对话路由组（与 user_rate_limit 并列）。
+    被哪些路由 Depends 使用：app/api/v1/chat.py 对话路由组（与 user_rate_limit 并列）。
 
     参数：
         current_user: 上游 get_current_user 依赖的返回值，由 FastAPI 注入。

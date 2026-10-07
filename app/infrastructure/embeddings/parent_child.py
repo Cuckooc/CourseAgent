@@ -20,15 +20,15 @@
 - _select_strategy / _pack_parents / _split_children / _base_metadata：内部策略与元数据工具。
 
 被谁使用（Grep "embedding.parent_child" 确认）：
-- service/vector_store.py：add_parent_child（split_parent_child +
+- app/infrastructure/vector_store/persistent.py：add_parent_child（split_parent_child +
   build_parent_child_documents + make_file_id），父/子向量写入持久化 Chroma
   （chromadb_data；子块直接 embedding，父向量=子向量均值归一化）；
-- service/file_service.py：上传/审核入库前的切分与 file_id 生成；
-- service/temp_knowledge_store.py：会话临时库复用同一套父子结构（纯内存 Chroma）；
+- app/application/files/file_service.py：上传/审核入库前的切分与 file_id 生成；
+- app/infrastructure/vector_store/temp_store.py：会话临时库复用同一套父子结构（纯内存 Chroma）；
 - tests/phase/test_dedup_version.py：校验 _base_metadata/build_parent_child_documents。
 
 下游存储与检索去向：
-    父子 Document 经 service/vector_store.py 写入 Chroma（metadata 携带
+    父子 Document 经 app/infrastructure/vector_store/persistent.py 写入 Chroma（metadata 携带
     doc_level/parent_id/file_id/scope/version/is_latest）；检索时
     app/domain/agents/retrieval.py 先用子块粗检，再按 parent_id 取回父块参与精排与 LLM。
     向量必须与库内同为 text-embedding-v2（1536 维），维度约束见 embedding_model 模块说明。
@@ -83,7 +83,7 @@ def make_file_id(source: str) -> str:
     """按物理存储路径生成文件级短 ID（同一文件的父子块共享，跨文件互不相同）。
 
     被谁调用：build_parent_child_documents（file_id 缺省时）；
-    service/file_service.py 与 service/vector_store.py 在入库前显式生成，
+    app/application/files/file_service.py 与 app/infrastructure/vector_store/persistent.py 在入库前显式生成，
     用于去重/版本判断与 Chroma metadata.file_id。
     参数：source —— 文件物理存储路径或唯一来源标识。
     返回：md5 哈希前 16 位十六进制字符串；去向父子块 ID（{fid}-p{i}-c{j}）与 metadata。
@@ -174,8 +174,8 @@ def _split_children(parent_text: str, params: dict) -> List[str]:
 def split_parent_child(text: str) -> List[ParentChildPair]:
     """整篇文本 -> [(父块全文, [子块...]), ...]，父块内容拼接即覆盖全文主要信息。
 
-    被谁调用：service/vector_store.py 的 add_parent_child（持久化入库）、
-    service/file_service.py（上传/更新入库前切分）。
+    被谁调用：app/infrastructure/vector_store/persistent.py 的 add_parent_child（持久化入库）、
+    app/application/files/file_service.py（上传/更新入库前切分）。
     参数：text —— 文件解析并脱敏后的全文（来源 file_analysis 解析结果/DAO 触发）。
     返回：ParentChildPair 列表，去向 build_parent_child_documents 包装为 Document。
     """
@@ -250,18 +250,18 @@ def build_parent_child_documents(
 ) -> Tuple[List[Tuple[str, Document]], List[Tuple[str, str, Document]]]:
     """构建父子 Document 列表（同一文件内完成，绝不跨文件混块）。
 
-    被谁调用：service/vector_store.py 的 add_parent_child 与
-    service/file_service.py 上传/审核入库链路；会话临时库经
+    被谁调用：app/infrastructure/vector_store/persistent.py 的 add_parent_child 与
+    app/application/files/file_service.py 上传/审核入库链路；会话临时库经
     temp_knowledge_store.add_parent_child_text 间接使用。
     参数：pairs —— split_parent_child 的切分结果；source —— 文件来源；
           scope/user_id/session_id/original_name —— 归属与展示元数据；
           file_id —— 外部预生成的文件 ID（None 时由 source 现算）；
           content_hash/version/updated_at/is_latest —— 去重与版本字段，
-          来源为 file_service/vector_store 的版本管理逻辑与 DAO。
+          来源为 file_app/infrastructure/vector_store/persistent 的版本管理逻辑与 DAO。
     :returns: (parents, children)
         parents:  [(parent_id, Document)]  —— doc_level=parent，检索命中子块后按 parent_id 取回
         children: [(child_id, parent_id, Document)] —— doc_level=child，参与向量粗检
-    返回去向：由 service/vector_store.py 分别向量化（父向量=子向量均值归一化）
+    返回去向：由 app/infrastructure/vector_store/persistent.py 分别向量化（父向量=子向量均值归一化）
         后写入持久化 Chroma（chromadb_data）或会话内存库，供 app/domain/agents/retrieval.py 检索。
     """
     fid = file_id or make_file_id(source)

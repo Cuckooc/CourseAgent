@@ -10,7 +10,7 @@
     - handle_result：模块唯一函数。
 
 被谁使用：
-    - service/chat_service.py 的 _handle_impl()：Agent 流水线
+    - app/application/chat/chat_service.py 的 _handle_impl()：Agent 流水线
       返回后立即调用（文件.函数：chat_service.ChatService._handle_impl）；
       归一化结果在 chat_service 内继续追加 title/user_id/session_id，
       且 ai_output 随后会被 filter_text 脱敏过滤后的 answer 覆盖，
@@ -22,11 +22,11 @@ from typing import Dict, Any
 def handle_result(result: Dict[str, Any]) -> Dict[str, Any]:
     """归一化 Agent 原始结果为前端/入库用的扁平字典。
 
-    被谁调用：service/chat_service.py 的 _handle_impl()
+    被谁调用：app/application/chat/chat_service.py 的 _handle_impl()
     （文件.函数：chat_service.ChatService._handle_impl）。
     参数：
     - result (Dict[str, Any])：数据来源为
-      service/agent_service.AgentService.run_agent 的返回值；
+      app/application/chat/agent_service.AgentService.run_agent 的返回值；
       可能含 "user_input"（用户本轮输入）与 "chat_result"
       （dict，Agent 最终回答挂在其 "answer" 键）。
     返回：

@@ -38,9 +38,9 @@
 - _COMPRESS_PROMPT：压缩用 LLM 提示词模板（输出 JSON：summary + keywords）。
 
 被谁使用（全仓 import 位置）：
-- service/chat_service.py：ChatService.__init__ 持有单例；_get_recent_history
+- app/application/chat/chat_service.py：ChatService.__init__ 持有单例；_get_recent_history
   每轮调 build_context 取注入文本（再交 AgentService → app/domain/agents/ChatAgent）；
-- control/history_control.py：删除会话确认接口调 clear 联动清理摘要缓存；
+- app/api/v1/history.py：删除会话确认接口调 clear 联动清理摘要缓存；
 - app/domain/memory/context_memory 内部压缩成功后回调
   app/domain/memory/session_keyword_service.accumulate 累积压缩关键词。
 """
@@ -93,7 +93,7 @@ def _key(user_id: int, session_id: int) -> str:
 class ContextMemoryService:
     """
     上下文记忆服务（应用级单例，经 get_context_memory_service 获取；
-    service/chat_service.py、control/history_control.py 共用同一实例）。
+    app/application/chat/chat_service.py、app/api/v1/history.py 共用同一实例）。
 
     存储策略：
     - Redis 可用：状态存 Redis hash（mem:ctx:{uid}:{sid}，字段 summary 与
@@ -153,7 +153,7 @@ class ContextMemoryService:
         构建本轮对话注入用的上下文文本（摘要 + 最近 N 轮原文）。
         当前轮的用户输入尚未落库，不在 messages 内（由调用方作为 query 传入）。
 
-        被谁调用：service/chat_service.py 的 ChatService._get_recent_history
+        被谁调用：app/application/chat/chat_service.py 的 ChatService._get_recent_history
         （handle/handle_stream 每轮对话开始时一次），返回文本作为 history 注入
         AgentService → app/domain/agents/ChatAgent 的模型输入。
         参数：
@@ -209,7 +209,7 @@ class ContextMemoryService:
     def clear(self, user_id: int, session_id: int) -> None:
         """删除会话时联动清理上下文缓存（Redis hash + 进程内降级副本）。
 
-        被谁调用：control/history_control.py 的 /history/delete/confirm
+        被谁调用：app/api/v1/history.py 的 /history/delete/confirm
         （与 short_term.clear 同处调用，用户删除历史会话时联动）。
         参数：user_id (int，JWT)、session_id (int，请求体)。返回：None。
         异常：Redis 删除失败仅记 debug 日志，仍尽力清理进程内副本，不向上抛错。
@@ -505,8 +505,8 @@ _service_lock = threading.Lock()
 def get_context_memory_service() -> ContextMemoryService:
     """应用级单例工厂（双重检查锁，非每请求新建）。
 
-    被谁调用：service/chat_service.py 的 ChatService.__init__、
-    control/history_control.py 删除会话联动清理。
+    被谁调用：app/application/chat/chat_service.py 的 ChatService.__init__、
+    app/api/v1/history.py 删除会话联动清理。
     返回：ContextMemoryService——共享单例（内部惰性取全局 Redis 连接）。
     """
     global _service

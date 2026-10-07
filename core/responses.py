@@ -20,7 +20,7 @@
     - BizException：app.auth.guards / app.auth.rate_limit / app.auth.authentication
       及 control 下各路由层（admin/chat/file/knowledge/history/review 等）广泛抛出，
       control/app.py 注册 @app.exception_handler(BizException) 统一兜底；
-    - success：control/admin_control.py、knowledge_control.py、
+    - success：app/api/v1/admin.py、knowledge_control.py、
       login_control.py、review_control.py 的端点返回；
     - fail：全仓 Grep 暂无调用方（作为与 success 对称的工具函数保留，
       当前失败路径统一走 BizException）。
@@ -55,7 +55,7 @@ class BizException(Exception):
 def success(**data: Any) -> Dict[str, Any]:
     """构造成功响应体（业务字段直接平铺在顶层，兼容现有前端契约）。
 
-    被谁调用：control/admin_control.py、knowledge_control.py、
+    被谁调用：app/api/v1/admin.py、knowledge_control.py、
         login_control.py、review_control.py 等端点成功返回时。
     参数：
         **data: 任意业务字段（如 token、usage、列表数据），来源为各
