@@ -22,10 +22,11 @@ from pydantic import BaseModel, Field, field_validator
 from util.user import UserInformation
 from app.infrastructure.persistence.repositories.session import SessionDAO
 from app.infrastructure.persistence.repositories.read import Information_Read
-from core import account_guard
+from app.auth import account_guard
 from core.audit import audit
 from core.config import settings
-from core.deps import rate_limit, get_current_user, user_rate_limit
+from app.auth.guards import get_current_user
+from app.auth.rate_limit import rate_limit, user_rate_limit
 from core.responses import success
 
 # 认证路由：prefix=/login，由 control/app.py 的 app.include_router(login_router) 注册

@@ -65,7 +65,7 @@ def _reset_rate_limit():
     清空进程内（或 Redis）限流桶；yield 后无后置动作（账号由 conftest 软删）。
     使用方：本文件全部用例（规避 register 5/60s 与对话 10/60s 限流干扰边界断言）。
     """
-    from core.deps import reset_rate_limit_store  # noqa: WPS433
+    from app.auth.rate_limit import reset_rate_limit_store  # noqa: WPS433
     reset_rate_limit_store()
     yield
 

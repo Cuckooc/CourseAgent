@@ -21,8 +21,9 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from core.deps import get_current_user, user_rate_limit
-from core.delete_guard import PendingDeleteStore
+from app.auth.guards import get_current_user
+from app.auth.rate_limit import user_rate_limit
+from app.auth.delete_guard import PendingDeleteStore
 from core.responses import BizException, success
 from service.knowledge_service import get_knowledge_service
 

@@ -83,7 +83,7 @@ def _reset_rate_limit():
     使用方：本文件全部用例（内存炸弹/连发请求等用例不能被 429 干扰防护断言）；
     yield 后无后置清理（账号由 conftest autouse 软删）。
     """
-    from core.deps import reset_rate_limit_store  # noqa: WPS433
+    from app.auth.rate_limit import reset_rate_limit_store  # noqa: WPS433
     reset_rate_limit_store()
     yield
 

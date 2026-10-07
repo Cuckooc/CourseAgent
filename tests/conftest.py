@@ -15,7 +15,7 @@
 3. 基础设施夹具：base_url / db_engine / http / require_backend；
 4. 测试账号工厂夹具：_created_uids（uid 收集器）、user_acct / teacher_acct / admin_acct
    （三角色账号，直接走 DAO 创建，绕开 register/login 的 rate_limit 与失败计数，
-   用 core.security.create_access_token 签带真实 ver 的 JWT）；
+   用 app.auth.authentication.create_access_token 签带真实 ver 的 JWT）；
 5. autouse 清理夹具 _cleanup_test_accounts：每个用例结束走 dao.soft_delete.soft_delete_user
    软删除本用例创建的全部账号（级联软删业务数据 + 写注销计划表）；
 6. pytest_configure 注册 marker：backend / slow / db。
@@ -189,7 +189,7 @@ def _make_test_user(role: str, suffix: str) -> Dict[str, Any]:
 
     user_name 列限 VARCHAR(20)，前缀 `pu_/pt_/pa_` + 13 位毫秒 = 16 字符（安全）。
     """
-    from core.security import create_access_token, hash_password  # noqa: WPS433
+    from app.auth.authentication import create_access_token, hash_password  # noqa: WPS433
     from app.infrastructure.persistence.repositories.read import Information_Read  # noqa: WPS433
     from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 

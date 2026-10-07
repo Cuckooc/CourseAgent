@@ -1,5 +1,5 @@
 """
-模块名：core.verification（邮箱验证码存储与校验）。
+模块名：app.auth.verification（邮箱验证码存储与校验）。
 
 作用：
     为“邮箱 + 验证码”免密登录生成、暂存并校验 6 位数字验证码。
@@ -9,7 +9,7 @@
     - 验证码 5 分钟有效（_CODE_TTL_SECONDS）；
     - 同一邮箱两次发送间隔至少 60 秒（冷却期内 generate_code 返回空串）；
     - 仅校验成功时立即作废（一次性使用）；校验失败保留记录，
-      暴力猜测由 /login/email 接口的限流兜底（见 core.deps.rate_limit）。
+      暴力猜测由 /login/email 接口的限流兜底（见 app.auth.rate_limit.rate_limit）。
 
 存储键设计（Redis）：
     - vc:{email}：验证码本体，SETEX 写入，TTL 5 分钟；

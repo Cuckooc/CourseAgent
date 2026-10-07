@@ -42,7 +42,8 @@ from service.temp_knowledge_store import get_temp_store
 from service.vector_store import flush_persistent_index
 from core import upload_task
 from core.config import settings
-from core.deps import get_current_user, user_rate_limit
+from app.auth.guards import get_current_user
+from app.auth.rate_limit import user_rate_limit
 from core.responses import BizException
 
 # 本模块日志器：记录偏好提取失败、后台 flush 失败等非阻断异常

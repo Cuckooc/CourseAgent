@@ -30,8 +30,8 @@
 """
 from app.infrastructure.persistence.repositories.read import Information_Read
 from app.infrastructure.persistence.repositories.user import Information
-from core import verification
-from core.security import create_access_token, hash_password, verify_password
+from app.auth import verification
+from app.auth.authentication import create_access_token, hash_password, verify_password
 from typing import Any, Dict
 import logging
 
@@ -123,7 +123,7 @@ class UserInformation:
         参数：
         - data (Dict[str, Any])：前端注册表单（user_name 用户名、
           user_pwd 明文密码、email 邮箱），明文密码不出本方法：
-          入库前经 core.security.hash_password 做 bcrypt 哈希。
+          入库前经 app.auth.authentication.hash_password 做 bcrypt 哈希。
         返回：
         - Dict[str, Any]：{status, message}。DAO 返回 "success" 时
           为成功并记录 info 日志；用户名/邮箱冲突或任意异常均返回
@@ -207,7 +207,7 @@ class UserInformation:
     def send_email_code(self, email: str) -> Dict[str, Any]:
         """发送邮箱登录一次性验证码（60s 冷却 / 5min 有效）。
 
-        功能：先做邮箱格式粗校验，再经 core.verification 生成验证码
+        功能：先做邮箱格式粗校验，再经 app.auth.verification 生成验证码
         （带 60 秒发送冷却）；core.mailer 已配置 SMTP 时真实发信，
         未配置时降级把验证码打到服务日志（仅开发环境）。SMTP 发送
         失败会立即作废刚生成的码，避免用户在冷却期内无法重发。
@@ -251,7 +251,7 @@ class UserInformation:
         参数：
         - email (str)：前端 LoginByEmailRequest.email 表单邮箱；
         - code (str)：前端表单填写的 6 位验证码，与
-          send_email_code 生成并存于 core.verification 的码做一次性
+          send_email_code 生成并存于 app.auth.verification 的码做一次性
           校验（成功即失效，5 分钟有效）。
         返回：
         - Dict[str, Any]：验证码错误/过期或邮箱未注册返回 fail 结构；

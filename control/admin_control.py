@@ -20,8 +20,9 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from core.audit import audit
-from core.deps import require_admin, user_rate_limit
-from core.delete_guard import PendingDeleteStore
+from app.auth.guards import require_admin
+from app.auth.rate_limit import user_rate_limit
+from app.auth.delete_guard import PendingDeleteStore
 from core.responses import BizException, success
 from core.usage import usage_snapshot, user_usage_snapshot
 from app.infrastructure.persistence.repositories.read import Information_Read

@@ -30,7 +30,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, Query
 
-from core.deps import get_current_user
+from app.auth.guards import get_current_user
 from core.responses import BizException, success
 from service.review_service import ReviewService
 

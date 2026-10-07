@@ -1,5 +1,5 @@
 """
-模块名：core.security（安全模块：密码哈希与 JWT 令牌）。
+模块名：app.auth.authentication（安全模块：密码哈希与 JWT 令牌）。
 
 作用：
     - 密码安全：使用 bcrypt 对用户口令做单向哈希与校验；

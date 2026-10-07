@@ -1,5 +1,5 @@
 """
-模块名：core.account_guard
+模块名：app.auth.account_guard
 
 作用：
     登录失败锁定。窗口期内同一账号标识（用户名）失败达阈值后临时锁定该账号的登录尝试。
@@ -18,7 +18,7 @@
     - _FAIL_KEY_PREFIX：模块级常量，失败计数键前缀。
 
 被谁使用：
-    - control/login_control.py：以 ``from core import account_guard`` 导入，
+    - control/login_control.py：以 ``from app.auth import account_guard`` 导入，
       在账号密码登录端点 login_by_account 中依次调用 is_locked / record_failure / reset。
 """
 import logging
@@ -58,13 +58,13 @@ def is_locked(identifier: str) -> bool:
         identifier: 尝试登录的用户名，来源为 HTTP 请求体 LoginByUsernameRequest.username。
     返回：
         bool：True 表示已锁定（登录端点直接拒绝并返回提示）；False 放行。
-        Redis 不可用、identifier 为空或读取异常时一律返回 False（降级放行，由 core.deps 的 IP 限流兜底）。
+        Redis 不可用、identifier 为空或读取异常时一律返回 False（降级放行，由 app.auth.rate_limit 的 IP 限流兜底）。
     """
     if not identifier:
         return False
     try:
         # Redis 降级：get_redis 返回 None（未配置 redis_url/连接失败）时不阻断登录，直接放行；
-        # 此时安全性由 core.deps 的 IP 级滑动窗口限流兜底
+        # 此时安全性由 app.auth.rate_limit 的 IP 级滑动窗口限流兜底
         r = get_redis()
         if r is None:
             return False

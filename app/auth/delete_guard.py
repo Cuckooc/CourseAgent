@@ -1,5 +1,5 @@
 """
-模块名：core.delete_guard
+模块名：app.auth.delete_guard
 
 作用：
     删除操作二次确认。所有高危 DELETE 操作采用「预览 → 确认」两步：
@@ -58,7 +58,7 @@ class PendingDeleteStore:
         被谁调用：control/knowledge_control.py、history_control.py、admin_control.py
                   的删除 preview 端点（先于真正删除）。
         参数：
-            user_id: 发起删除的用户 id，来源为 core.deps.get_current_user 解析结果；
+            user_id: 发起删除的用户 id，来源为 app.auth.guards.get_current_user 解析结果；
             action: 删除动作标识（delete_document/delete_session/deactivate_user），调用方约定；
             target_info: 删除目标快照 dict（如文档 id/会话 id/被停用用户信息），
                          来源为 HTTP 请求参数经 preview 组装，verify 时原样回传。
@@ -103,7 +103,7 @@ class PendingDeleteStore:
                   的删除 confirm 端点（真正执行删除前）。
         参数：
             token: 前端回传的 confirm_token，来源为 HTTP confirm 请求体；
-            user_id: 当前登录用户 id，来源为 core.deps.get_current_user（不信任请求体）；
+            user_id: 当前登录用户 id，来源为 app.auth.guards.get_current_user（不信任请求体）；
             action: 本次确认的动作标识，来源为 confirm 端点按路由约定的常量。
         返回：
             Optional[Dict[str, Any]]：校验通过返回载荷中的 target_info（删除目标快照，

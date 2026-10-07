@@ -121,7 +121,7 @@ def alert_degradation(
                来源为上游 service/agent 传入的环节名；
         severity: 严重级别，"warn"（中间环节降级，用户仍有回答）| "critical"（LLM 整体不可用）；
         query: 用户提问原文，来源为 HTTP 对话请求（截断 500 字），默认空串；
-        user_id: 当前用户 id，来源为 core.deps.get_current_user 的解析结果，可为 None；
+        user_id: 当前用户 id，来源为 app.auth.guards.get_current_user 的解析结果，可为 None；
         session_id: 当前会话 id，来源为上游 service 的会话上下文，可为 None；
         error: 异常/错误描述字符串（截断 500 字），默认空串；
         flow_context: 各 agent 输出快照 dict，用于事后排查，可为 None。
@@ -175,7 +175,7 @@ def alert_chain_failure(
 
     参数：
         query: 用户提问原文，来源为 HTTP 对话请求（日志内截断 500 字、消息文本截断 100 字）；
-        user_id: 当前用户 id，来源为 core.deps.get_current_user，可为 None；
+        user_id: 当前用户 id，来源为 app.auth.guards.get_current_user，可为 None；
         session_id: 当前会话 id，来源为上游 service 会话上下文，可为 None；
         chain_log: 各 agent 状态转换与输出/错误快照的列表，来源为 multi_agent 状态机流转记录。
     返回：None。DEGRADE_NOTIFY_ENABLED 关闭时直接返回；写入/推送失败只告警不抛出。

@@ -22,8 +22,9 @@ from pydantic import BaseModel, Field
 
 from app.infrastructure.persistence.repositories.session import SessionDAO
 from app.infrastructure.persistence.repositories.read import Information_Read
-from core.deps import get_current_user, user_rate_limit
-from core.delete_guard import PendingDeleteStore
+from app.auth.guards import get_current_user
+from app.auth.rate_limit import user_rate_limit
+from app.auth.delete_guard import PendingDeleteStore
 from core.responses import BizException
 from memory.context_memory import get_context_memory_service
 from memory.short_term import get_short_term_store

@@ -18,7 +18,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from core.deps import get_current_user, user_rate_limit
+from app.auth.guards import get_current_user
+from app.auth.rate_limit import user_rate_limit
 from memory.profile_service import get_profile_service
 
 # 用户画像路由：prefix=/profile，由 control/app.py 的 app.include_router(profile_router) 注册。

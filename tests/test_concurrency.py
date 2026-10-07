@@ -130,7 +130,7 @@ class TestConcurrentLogin:
         """5 个不同账号并发登录：全部应 success。
         通过 DAO 直接创建 5 个账号，再并发走 /login/account。
         """
-        from core.security import create_access_token, hash_password  # noqa: WPS433
+        from app.auth.authentication import create_access_token, hash_password  # noqa: WPS433
         from app.infrastructure.persistence.repositories.read import Information_Read  # noqa: WPS433
         from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 
@@ -305,7 +305,7 @@ class TestRateLimitConcurrency:
         先 reset_rate_limit_store 清状态，确保起点干净。
         """
         # 清空限流窗口（测试间状态隔离）
-        from core.deps import reset_rate_limit_store  # noqa: WPS433
+        from app.auth.rate_limit import reset_rate_limit_store  # noqa: WPS433
         reset_rate_limit_store()
 
         with ThreadPoolExecutor(max_workers=50) as ex:

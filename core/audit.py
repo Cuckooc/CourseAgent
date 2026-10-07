@@ -87,7 +87,7 @@ def audit(
 
     参数：
         action: 事件名（字符串常量，调用方约定，如 "login_failed"）；
-        actor: 操作者信息 dict，通常来自 core.deps.get_current_user 的返回值
+        actor: 操作者信息 dict，通常来自 app.auth.guards.get_current_user 的返回值
                {"user_id","user_name","role"}；登录/匿名事件可只传 {"user_name": ...}；
         target: 操作对象（用户 id、用户名、文件名等，可为 dict 或标量），来源为 HTTP 请求参数；
         result: 事件结果，默认 "success"，失败场景调用方传 "fail"；

@@ -17,8 +17,8 @@
     - fail()：构造失败响应体。
 
 被谁使用（Grep）：
-    - BizException：core.deps、core.security 及 control 下各路由层
-      （admin/chat/file/knowledge/history/review 等）广泛抛出，
+    - BizException：app.auth.guards / app.auth.rate_limit / app.auth.authentication
+      及 control 下各路由层（admin/chat/file/knowledge/history/review 等）广泛抛出，
       control/app.py 注册 @app.exception_handler(BizException) 统一兜底；
     - success：control/admin_control.py、knowledge_control.py、
       login_control.py、review_control.py 的端点返回；
@@ -33,8 +33,9 @@ class BizException(Exception):
 
     作用：在 service/dao/deps 等非 Web 层表达“可预期的业务失败”，
     携带 HTTP 状态码与提示信息一路抛到路由外。
-    实例化位置（raise 处）：core.deps（鉴权/限流 401/403/429）、
-    core.security（token 解析失败 401）、control 下各路由的参数/权限校验；
+    实例化位置（raise 处）：app.auth.guards（鉴权 401/403）、app.auth.rate_limit
+    （限流 429）、app.auth.authentication（token 解析失败 401）、
+    control 下各路由的参数/权限校验；
     捕获位置：control/app.py 的 biz_exception_handler，
     转为 {"status":"fail","code":...,"message":...,"request_id":...} 响应体。
     关键属性去向：message 进入响应 message 字段；http_status 作为 HTTP

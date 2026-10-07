@@ -24,7 +24,8 @@ from typing import Optional
 from service.chat_service import get_chat_service
 from app.infrastructure.persistence.repositories.feedback import FeedbackDAO
 from core.audit import audit
-from core.deps import get_current_user, forbid_admin, user_rate_limit
+from app.auth.guards import get_current_user, forbid_admin
+from app.auth.rate_limit import user_rate_limit
 from core.responses import BizException
 from core.usage import check_user_budget
 

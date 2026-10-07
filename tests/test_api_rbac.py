@@ -249,7 +249,7 @@ def test_token_version_kick(http, user_acct):
     assert status_old == 401, f"互踢后旧 token 应 401，实际 {status_old}"
 
     # 用新 ver 签发新 token → 200
-    from core.security import create_access_token
+    from app.auth.authentication import create_access_token
     from app.infrastructure.persistence.repositories.read import Information_Read
     row = Information_Read().get_by_id(user_acct["user_id"])
     new_ver = int(row["token_version"])
