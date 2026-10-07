@@ -42,12 +42,12 @@ from typing import List, Optional, Tuple
 
 from langchain_chroma import Chroma
 
-from embedding.parent_child import (
+from app.infrastructure.embeddings.parent_child import (
     build_parent_child_documents,
     make_file_id,
     split_parent_child,
 )
-from embedding.text_embedding import get_embedding
+from app.infrastructure.embeddings.text_embedding import get_embedding
 from core.config import settings
 
 # 模块级日志器：向量写入/替换/flush 落盘与异常告警日志走该 logger

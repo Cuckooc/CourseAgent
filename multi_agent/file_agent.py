@@ -38,14 +38,14 @@ Agent 间数据流：
 """
 import os
 from .message_bus import MessageBus
-from file_analysis.file import (
+from app.infrastructure.document.file import (
     pdf_text,
     split_str,
     get_embedding,
     to_documents,
     build_chromadb,
 )
-from model_llm.gateway import build_chat_model
+from app.infrastructure.llm.gateway import build_chat_model
 from multi_agent.retrieval import retrieve_scoped
 from typing import Optional
 from langchain_chroma import Chroma

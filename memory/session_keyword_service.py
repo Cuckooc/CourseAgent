@@ -45,8 +45,8 @@ import time
 from typing import Dict, List, Optional, Set, Tuple
 
 from core.config import settings
-from core.redis_client import get_redis
-from dao.session_keyword import SessionKeywordDAO
+from app.infrastructure.redis.redis_client import get_redis
+from app.infrastructure.persistence.repositories.session_keyword import SessionKeywordDAO
 
 logger = logging.getLogger(__name__)
 

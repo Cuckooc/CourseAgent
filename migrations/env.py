@@ -33,7 +33,7 @@ from alembic import context
 sys.path.insert(0, dirname(dirname(__file__)))
 
 # 导入 ORM 基类：其 metadata 注册了 db/models.py 中全部表，供 autogenerate 比对
-from db.models import Base  # noqa: E402
+from app.infrastructure.persistence.models import Base  # noqa: E402
 
 # Alembic 配置对象（对应 alembic.ini 与命令行参数）
 config = context.config
@@ -54,7 +54,7 @@ def _db_url() -> str:
           password/database/charset 拼接，含 charset=utf8mb4），与运行时
           完全一致，避免在 alembic.ini 中明文写密码。
     """
-    from db.session import _DB_URL
+    from app.infrastructure.persistence.session import _DB_URL
 
     return _DB_URL
 

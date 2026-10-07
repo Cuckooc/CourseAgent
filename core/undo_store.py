@@ -71,7 +71,7 @@ class UndoStore:
             "deleted_at": deleted_at,
         }
         # 延迟 import 避免潜在的模块循环依赖
-        from core.redis_client import get_redis
+        from app.infrastructure.redis.redis_client import get_redis
         r = get_redis()
         if r is not None:
             try:
@@ -97,7 +97,7 @@ class UndoStore:
             {"table","pk","deleted_at"} 字典供恢复逻辑使用；
             无记录返回 None（端点转为“没有可撤销的删除记录”错误）。
         """
-        from core.redis_client import get_redis
+        from app.infrastructure.redis.redis_client import get_redis
         r = get_redis()
         payload = None
         if r is not None:
@@ -126,7 +126,7 @@ class UndoStore:
         返回：Optional[Dict[str, Any]]；有记录返回其副本（内存路径返回拷贝，
             防止调用方误改内部数据），无记录返回 None。
         """
-        from core.redis_client import get_redis
+        from app.infrastructure.redis.redis_client import get_redis
         r = get_redis()
         if r is not None:
             try:

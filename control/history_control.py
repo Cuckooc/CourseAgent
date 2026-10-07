@@ -20,8 +20,8 @@ import logging
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from dao.session import SessionDAO
-from dao.read import Information_Read
+from app.infrastructure.persistence.repositories.session import SessionDAO
+from app.infrastructure.persistence.repositories.read import Information_Read
 from core.deps import get_current_user, user_rate_limit
 from core.delete_guard import PendingDeleteStore
 from core.responses import BizException
@@ -304,7 +304,7 @@ def undo_delete(current_user: dict = Depends(get_current_user)):
     if record is None:
         raise BizException("没有可撤销的删除记录", http_status=404)
 
-    from dao.soft_delete import recover_last_deleted
+    from app.infrastructure.persistence.repositories.soft_delete import recover_last_deleted
     recovered = recover_last_deleted(user_id)
     if recovered is None:
         raise BizException("恢复失败，记录可能已被彻底清理", http_status=500)

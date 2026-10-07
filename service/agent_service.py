@@ -55,11 +55,11 @@ from multi_agent.state_machine import (
 from multi_agent.failure_diagnoser import FailureDiagnoser
 from multi_agent.verifier import IntentVerifier
 from multi_agent.fallback import FallbackHandler
-from model_llm.gateway import LLMUnavailableError
+from app.infrastructure.llm.gateway import LLMUnavailableError
 from core.config import settings
 from core.degradation_alert import alert_degradation
 from core.metrics import record_agent_execution
-from dao.chain_log import ChainLogDAO
+from app.infrastructure.persistence.repositories.chain_log import ChainLogDAO
 from core.prompt_registry import get_prompt_version
 
 # 模块级日志器：编排流程的阶段日志、重试/降级/循环检测告警均走该 logger

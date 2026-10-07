@@ -126,7 +126,7 @@ class TestPrivilegeEscalation:
         role in (teacher, admin) 可查看/审核，其余普通用户访问他人记录仍 403。
         """
         from conftest import _make_test_user  # noqa: WPS433
-        from dao.document_review import DocumentReviewDAO  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO  # noqa: WPS433
 
         # user_acct 创建一条 review
         dao = DocumentReviewDAO()
@@ -252,7 +252,7 @@ class TestReplayAttack:
         前置：user_acct 创建 + 第一次 approve（成功）。
         approve 接口有双 Body 参数（edited_text, notes），用 JSON dict 发送。
         """
-        from dao.document_review import DocumentReviewDAO  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO  # noqa: WPS433
 
         dao = DocumentReviewDAO()
         review_id = dao.create(
@@ -286,7 +286,7 @@ class TestReplayAttack:
         """重放 reject 同一 review：第二次应 fail "状态不允许"。
         reject 请求体为 JSON 对象 {"notes": "原因"}（后端 Body(embed=True)）。
         """
-        from dao.document_review import DocumentReviewDAO  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO  # noqa: WPS433
 
         dao = DocumentReviewDAO()
         review_id = dao.create(

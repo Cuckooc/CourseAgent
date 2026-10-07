@@ -24,7 +24,7 @@ from core.deps import require_admin, user_rate_limit
 from core.delete_guard import PendingDeleteStore
 from core.responses import BizException, success
 from core.usage import usage_snapshot, user_usage_snapshot
-from dao.read import Information_Read
+from app.infrastructure.persistence.repositories.read import Information_Read
 from service import admin_user_service
 
 # 管理路由：prefix=/admin；由 control/app.py 的 app.include_router(admin_router) 注册。

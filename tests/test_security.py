@@ -420,7 +420,7 @@ class TestJWTSecurity:
         """ver 不匹配（用户被踢）：旧 token 失效。
         通过 increment_token_version 后用旧 token 访问，应 401。
         """
-        from dao.user import Information
+        from app.infrastructure.persistence.repositories.user import Information
         info = Information()
         new_ver = info.increment_token_version(user_acct["user_id"])
         # 旧 token 仍带旧 ver，应被拒

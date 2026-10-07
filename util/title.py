@@ -18,7 +18,7 @@
       生成标题随对话结果保存入库并回传前端，异常时 chat_service
       另有“新会话”兜底。
 """
-from model_llm.llm_business import TitleLLM
+from app.infrastructure.llm.llm_business import TitleLLM
 from typing import Dict, Any
 from langchain_core.prompts import PromptTemplate
 

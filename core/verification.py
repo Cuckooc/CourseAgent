@@ -36,7 +36,7 @@ import threading
 import time
 from typing import Dict
 
-from core.redis_client import get_redis
+from app.infrastructure.redis.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 

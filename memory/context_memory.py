@@ -51,8 +51,8 @@ import time
 from typing import Callable, Dict, List, Optional, Tuple
 
 from core.config import settings
-from core.redis_client import get_redis
-from dao.session import SessionDAO
+from app.infrastructure.redis.redis_client import get_redis
+from app.infrastructure.persistence.repositories.session import SessionDAO
 from memory.short_term import get_short_term_store
 
 logger = logging.getLogger(__name__)
@@ -401,7 +401,7 @@ class ContextMemoryService:
                     )
                 )
             else:
-                from model_llm.gateway import build_chat_model
+                from app.infrastructure.llm.gateway import build_chat_model
 
                 llm = build_chat_model()
                 resp = llm.invoke(

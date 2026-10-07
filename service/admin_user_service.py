@@ -22,8 +22,8 @@
 """
 import logging
 
-from dao.user import Information
-from dao.read import Information_Read
+from app.infrastructure.persistence.repositories.user import Information
+from app.infrastructure.persistence.repositories.read import Information_Read
 
 # 模块级日志器：注销/角色变更等管理动作的审计日志统一走该 logger
 logger = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ def deactivate_user(user_id: int) -> bool:
           不影响 MySQL 注销主流程（残留键随 TTL 自然过期）。
     """
     # 延迟导入：Redis 客户端按请求获取，避免模块导入期强依赖 Redis 可用性
-    from core.redis_client import get_redis
+    from app.infrastructure.redis.redis_client import get_redis
 
     # 数据去向：dao/user.py 的 Information.deactivate_user
     # → dao/soft_delete.py 软删除会话/历史/画像/账号 + 写 account_deletion_schedule

@@ -22,10 +22,10 @@
       注意：本类 __init__ 构建的 embedding_model 供该类语义扩展用，
       chat_service 另有自己的 embedding 相似度计算路径。
 """
-from embedding.text_embedding import get_embedding
+from app.infrastructure.embeddings.text_embedding import get_embedding
 from typing import Dict, Any
-from model_llm.gateway import build_chat_model
-from model_llm.llm_business import ContextKey
+from app.infrastructure.llm.gateway import build_chat_model
+from app.infrastructure.llm.llm_business import ContextKey
 class ContextService:
     """上下文注入模式判定与查询改写服务。
 

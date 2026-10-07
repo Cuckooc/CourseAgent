@@ -46,10 +46,10 @@ from typing import Optional
 from sqlalchemy import text
 
 from core.config import settings
-from core.redis_client import get_redis
+from app.infrastructure.redis.redis_client import get_redis
 from core.sql_guard import safe_execute
-from dao.session import SessionDAO
-from db.session import session_scope
+from app.infrastructure.persistence.repositories.session import SessionDAO
+from app.infrastructure.persistence.session import session_scope
 
 logger = logging.getLogger(__name__)
 

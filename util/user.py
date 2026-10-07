@@ -28,8 +28,8 @@
       login_by_email）；control 层另外负责审计日志（audit）与会话
       列表装配，本模块只返回业务结果字典。
 """
-from dao.read import Information_Read
-from dao.user import Information
+from app.infrastructure.persistence.repositories.read import Information_Read
+from app.infrastructure.persistence.repositories.user import Information
 from core import verification
 from core.security import create_access_token, hash_password, verify_password
 from typing import Any, Dict

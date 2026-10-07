@@ -236,7 +236,7 @@ def test_jwt_missing_auth_header_rejected(http):
 
 def test_token_version_kick(http, user_acct):
     """token_version 单点互踢：重新登录后旧 token 立即 401，新 token 200。"""
-    from dao.user import Information
+    from app.infrastructure.persistence.repositories.user import Information
 
     # 旧 token 先验证可用
     status, _, _ = http("GET", "/login/me", token=user_acct["token"])
@@ -250,7 +250,7 @@ def test_token_version_kick(http, user_acct):
 
     # 用新 ver 签发新 token → 200
     from core.security import create_access_token
-    from dao.read import Information_Read
+    from app.infrastructure.persistence.repositories.read import Information_Read
     row = Information_Read().get_by_id(user_acct["user_id"])
     new_ver = int(row["token_version"])
     new_token = create_access_token(
@@ -294,7 +294,7 @@ def test_sql_injection_rejected(http):
 
     # UNIQUE 约束覆盖软删行 → 必须硬删才能释放槽位
     from sqlalchemy import text as _t
-    from db.session import engine as _engine
+    from app.infrastructure.persistence.session import engine as _engine
 
     def _hard_delete():
         with _engine.connect() as conn:

@@ -33,7 +33,7 @@
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from dao.document_review import DocumentReviewDAO
+from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO
 from service.mask_service import mask_text
 from service.vector_store import add_parent_child, flush_persistent_index, get_persistent_db, persistent_lock
 

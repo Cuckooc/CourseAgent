@@ -42,9 +42,9 @@ from typing import List
 from sqlalchemy import text
 
 from core.config import settings
-from core.locks import try_acquire_cycle_lock
+from app.infrastructure.redis.locks import try_acquire_cycle_lock
 from core.sql_guard import safe_execute
-from db.session import session_scope
+from app.infrastructure.persistence.session import session_scope
 
 logger = logging.getLogger(__name__)
 

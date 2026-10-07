@@ -138,7 +138,7 @@ def test_chat_feedback_like(http, user_acct):
 
     # 验证落库
     uid = user_acct["user_id"]
-    with __import__("db.session", fromlist=["engine"]).engine.connect() as conn:
+    with __import__("app.infrastructure.persistence.session", fromlist=["engine"]).engine.connect() as conn:
         cnt = conn.execute(
             text(
                 "SELECT COUNT(*) FROM chat_feedback WHERE user_id = :uid AND session_id = :sid AND rating = 1"

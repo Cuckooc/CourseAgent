@@ -39,14 +39,14 @@ Agent 间数据流：
 import os
 from functools import lru_cache
 from .message_bus import MessageBus
-from embedding.text_embedding import (
+from app.infrastructure.embeddings.text_embedding import (
     build_chromadb,
     split_documents,
     get_embedding,
     load_json_data,
     json_to_documents,
 )
-from model_llm.gateway import build_chat_model
+from app.infrastructure.llm.gateway import build_chat_model
 from multi_agent.retrieval import retrieve_scoped
 from typing import Optional
 from langchain_chroma import Chroma

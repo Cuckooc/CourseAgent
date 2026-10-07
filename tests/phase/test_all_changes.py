@@ -159,7 +159,7 @@ check("file: 返回有效结果（可能命中 legacy file_analysis/ 目录）",
 # ====================== 3. llm_business.py ======================
 print("\n=== 3. llm_business.py — prompt 领域适配 ===")
 
-from model_llm.llm_business import (
+from app.infrastructure.llm.llm_business import (
     PredictLLM, AnalysisLLM, ChatLLM, RagLLM, FileLLM
 )
 

@@ -49,9 +49,9 @@ from functools import lru_cache
 from typing import Any, Dict, Optional
 
 from core.config import settings
-from core.locks import try_acquire_cycle_lock
-from core.redis_client import get_redis
-from dao.profile import ProfileDAO
+from app.infrastructure.redis.locks import try_acquire_cycle_lock
+from app.infrastructure.redis.redis_client import get_redis
+from app.infrastructure.persistence.repositories.profile import ProfileDAO
 
 logger = logging.getLogger(__name__)
 
@@ -342,7 +342,7 @@ class ProfileService:
         topics）；LLM 调用异常时返回 None，调用方跳过本轮更新。
         """
         try:
-            from model_llm.gateway import build_chat_model
+            from app.infrastructure.llm.gateway import build_chat_model
 
             llm = build_chat_model()
             resp = llm.invoke(prompt)

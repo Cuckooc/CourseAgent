@@ -48,7 +48,7 @@ from datetime import datetime
 from typing import Dict, Optional, Tuple
 
 from core.config import settings
-from core.redis_client import get_redis
+from app.infrastructure.redis.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 

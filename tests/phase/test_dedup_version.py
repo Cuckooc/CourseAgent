@@ -115,7 +115,7 @@ check("private None: user_id=0", w["$and"][1] == {"user_id": 0})
 # ====================== 3. build_scope_filter ======================
 print("\n=== 3. build_scope_filter — 检索范围过滤（仅 scope 维度） ===")
 
-from embedding.text_embedding import build_scope_filter
+from app.infrastructure.embeddings.text_embedding import build_scope_filter
 
 f = build_scope_filter(user_id=4475)
 # is_latest 不能放进 Chroma where（不支持 $exists，且历史块无该字段，曾导致
@@ -135,7 +135,7 @@ check("no user: scope=public", f_no_user == {"scope": "public"})
 # ====================== 4. _base_metadata / build_parent_child_documents ======================
 print("\n=== 4. metadata 字段完整性 ===")
 
-from embedding.parent_child import _base_metadata, build_parent_child_documents, make_file_id
+from app.infrastructure.embeddings.parent_child import _base_metadata, build_parent_child_documents, make_file_id
 
 meta = _base_metadata(
     source="/tmp/test.txt", file_id="abc123", scope="private",
@@ -164,7 +164,7 @@ check("meta_old: 无 original_name", "original_name" not in meta_old)
 
 # build_parent_child_documents：父子块结构 + 元数据传播
 text = "这是一段测试文本，用于验证父子块切分。" * 10
-from embedding.parent_child import split_parent_child
+from app.infrastructure.embeddings.parent_child import split_parent_child
 pairs = split_parent_child(text)
 fid = make_file_id("/tmp/test.txt")
 parents, children = build_parent_child_documents(

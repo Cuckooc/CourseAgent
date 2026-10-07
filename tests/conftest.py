@@ -143,7 +143,7 @@ def db_engine():
     test_file_upload.py（落库副作用校验）。仅执行 SELECT 的用例无清理；
     写入由用例自行回滚或软删。
     """
-    from db.session import engine  # noqa: WPS433 (测试夹具延迟导入)
+    from app.infrastructure.persistence.session import engine  # noqa: WPS433 (测试夹具延迟导入)
     return engine
 
 
@@ -190,8 +190,8 @@ def _make_test_user(role: str, suffix: str) -> Dict[str, Any]:
     user_name 列限 VARCHAR(20)，前缀 `pu_/pt_/pa_` + 13 位毫秒 = 16 字符（安全）。
     """
     from core.security import create_access_token, hash_password  # noqa: WPS433
-    from dao.read import Information_Read  # noqa: WPS433
-    from dao.user import Information  # noqa: WPS433
+    from app.infrastructure.persistence.repositories.read import Information_Read  # noqa: WPS433
+    from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 
     prefix = {"user": "pu", "teacher": "pt", "admin": "pa"}[role]
     uname = f"{prefix}_{suffix}"  # ≤ 16 字符，< VARCHAR(20)
@@ -293,7 +293,7 @@ def _cleanup_test_accounts(_created_uids):
     yield
     if not _created_uids:
         return
-    from dao.soft_delete import soft_delete_user  # noqa: WPS433
+    from app.infrastructure.persistence.repositories.soft_delete import soft_delete_user  # noqa: WPS433
     for uid in _created_uids:
         try:
             soft_delete_user(uid)

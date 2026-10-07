@@ -28,7 +28,7 @@ import re
 
 from .base_agent import BaseAgent
 from typing import Dict, Any
-from model_llm.llm_business import AnalysisLLM
+from app.infrastructure.llm.llm_business import AnalysisLLM
 from langchain_core.prompts import PromptTemplate
 from .message_bus import MessageBus
 
@@ -225,7 +225,7 @@ class AnalysisAgent(BaseAgent):
             return output
 
         except Exception as e:
-            from model_llm.gateway import LLMUnavailableError
+            from app.infrastructure.llm.gateway import LLMUnavailableError
             if isinstance(e, LLMUnavailableError):
                 # 模型服务整体不可用：交由 ChatService 统一降级
                 raise

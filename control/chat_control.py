@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from service.chat_service import get_chat_service
-from dao.feedback import FeedbackDAO
+from app.infrastructure.persistence.repositories.feedback import FeedbackDAO
 from core.audit import audit
 from core.deps import get_current_user, forbid_admin, user_rate_limit
 from core.responses import BizException

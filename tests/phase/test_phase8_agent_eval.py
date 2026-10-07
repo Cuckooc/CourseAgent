@@ -241,7 +241,7 @@ def db_exec(sql, params=None):
     调用方：set_role 等需要直连 MySQL 的辅助点；连接配置来自 env/config.env。
     """
     from sqlalchemy import text
-    from db.session import session_scope
+    from app.infrastructure.persistence.session import session_scope
     with session_scope() as s:
         return s.execute(text(sql), params or {})
 
@@ -257,7 +257,7 @@ def last_chain_log(uid):
     用于 C2 轨迹层断言（transition/step/error 事件、状态收敛）。
     """
     from sqlalchemy import text
-    from db.session import session_scope
+    from app.infrastructure.persistence.session import session_scope
     with session_scope() as s:
         row = s.execute(
             text("SELECT log_data FROM chain_log WHERE user_id=:u ORDER BY id DESC LIMIT 1"),
@@ -737,7 +737,7 @@ check("C7.5 错误会话快速失败(<2s, 不进入LLM链路)", time.time() - t0
       f"{time.time()-t0:.1f}s")
 
 # 网关故障分类（纯函数）
-from model_llm.gateway import _is_retryable, _EmptyResponseError, LLMUnavailableError, LLMGateway
+from app.infrastructure.llm.gateway import _is_retryable, _EmptyResponseError, LLMUnavailableError, LLMGateway
 
 
 class _Fake(Exception):
@@ -836,7 +836,7 @@ check("C9.2 admin 按用户月度用量可查且含 A",
 # 预算熔断（进程内：写入超量日计数 + 临时打开日限额开关）
 from core import usage as usage_mod
 from core.config import settings
-from core.redis_client import get_redis
+from app.infrastructure.redis.redis_client import get_redis
 
 r_redis = get_redis()
 date = datetime.now().strftime("%Y-%m-%d")

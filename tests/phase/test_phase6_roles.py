@@ -33,7 +33,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "env", "config.env"))
 load_dotenv(os.path.join(os.path.dirname(__file__), "env", "qianwen_config.env"))
 import core.config  # noqa
-from db.session import session_scope
+from app.infrastructure.persistence.session import session_scope
 from sqlalchemy import text
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连）

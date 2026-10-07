@@ -34,7 +34,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
-from dao.knowledge import build_stored_filename
+from app.infrastructure.persistence.repositories.knowledge import build_stored_filename
 from service.file_service import FileService
 from service.mask_service import mask_text
 from service.preference_service import extract_preferences
@@ -210,7 +210,7 @@ def _process_saved_file(index: int, stored_name: str, file_path: str, original_n
             if scope == "temp":
                 # 临时文件入库后顺带提取用户偏好：原文经脱敏再抽取，失败不阻断上传主流程
                 try:
-                    from file_analysis.file import pdf_text
+                    from app.infrastructure.document.file import pdf_text
                     raw_text = pdf_text(file_path)
                     masked_text = mask_text(raw_text)
                     extract_preferences(masked_text, user_id)
@@ -362,7 +362,7 @@ async def upload_file(
         raise BizException("临时知识库必须指定 session_id", http_status=400)
     if scope == "temp":
         # 会话归属校验：会话号为 per-user 序列，仅允许往自己的会话上传临时知识库
-        from dao.session import SessionDAO
+        from app.infrastructure.persistence.repositories.session import SessionDAO
 
         if not SessionDAO().is_session_owner(user_id, session_id):
             raise BizException("会话不存在或无权限操作", http_status=403)

@@ -73,7 +73,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[str, o
         raise BizException("无效的登录凭证", http_status=401)
     # 实时回库校验用户存在性：用户被删除后，其未过期的历史 token 立即失效。
     # get_by_id 查询异常或用户不存在均返回 None → 统一按登录失效处理（fail-closed）。
-    from dao.read import Information_Read  # 局部导入避免 core→dao 循环依赖
+    from app.infrastructure.persistence.repositories.read import Information_Read  # 局部导入避免 core→dao 循环依赖
 
     row = Information_Read().get_by_id(user_id)
     if not row:
@@ -111,7 +111,7 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     """
     if current_user.get("role") != "admin":
         raise BizException("没有权限执行此操作", http_status=403)
-    from dao.read import Information_Read  # 局部导入避免 core→dao 循环依赖
+    from app.infrastructure.persistence.repositories.read import Information_Read  # 局部导入避免 core→dao 循环依赖
 
     uid = int(current_user["user_id"])
     row = Information_Read().get_by_ids([uid]).get(uid)
@@ -174,7 +174,7 @@ def reset_rate_limit_store() -> None:
     """
     with _rl_lock:
         _rl_buckets.clear()
-    from core.redis_client import get_redis
+    from app.infrastructure.redis.redis_client import get_redis
 
     r = get_redis()
     if r is not None:
@@ -198,7 +198,7 @@ def _check_window(key: str, max_times: int, window_seconds: int) -> None:
     """
     now = time.time()
 
-    from core.redis_client import get_redis
+    from app.infrastructure.redis.redis_client import get_redis
 
     r = get_redis()
     if r is not None:

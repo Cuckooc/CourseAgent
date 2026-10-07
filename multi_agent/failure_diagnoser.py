@@ -29,7 +29,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-from model_llm.gateway import build_chat_model
+from app.infrastructure.llm.gateway import build_chat_model
 from core.config import settings
 
 logger = logging.getLogger(__name__)

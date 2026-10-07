@@ -111,7 +111,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("shutdown vector index flush failed: %s", e)
     # 关闭：释放数据库连接池
-    from db.session import engine
+    from app.infrastructure.persistence.session import engine
 
     engine.dispose()
     logger.info("Application shutdown: db engine disposed")
@@ -257,7 +257,7 @@ def readyz():
     """
     from sqlalchemy import text
 
-    from db.session import engine
+    from app.infrastructure.persistence.session import engine
 
     try:
         with engine.connect() as conn:

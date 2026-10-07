@@ -33,16 +33,16 @@ from difflib import SequenceMatcher
 from typing import Dict, List, Optional
 
 from core.config import settings
-from embedding.parent_child import (
+from app.infrastructure.embeddings.parent_child import (
     build_parent_child_documents,
     make_file_id,
     split_parent_child,
 )
-from embedding.text_embedding import get_embedding
-from file_analysis.doc_type_detector import detect_pdf_type
-from file_analysis.file import pdf_text
-from file_analysis.ocr_clean import clean_ocr_text
-from file_analysis.ocr_service import ocr_pdf
+from app.infrastructure.embeddings.text_embedding import get_embedding
+from app.infrastructure.document.doc_type_detector import detect_pdf_type
+from app.infrastructure.document.file import pdf_text
+from app.infrastructure.document.ocr_clean import clean_ocr_text
+from app.infrastructure.document.ocr_service import ocr_pdf
 from service.mask_service import mask_text
 from service.temp_knowledge_store import get_temp_store
 from service.vector_store import (
@@ -113,7 +113,7 @@ def _dedup_commit_lock(scope: str, user_id: Optional[int], content_hash: str):
     redis_client = None
     redis_key = f"lock:dedup:{key}"
     try:
-        from core.redis_client import get_redis
+        from app.infrastructure.redis.redis_client import get_redis
 
         redis_client = get_redis()
     except Exception:  # noqa: BLE001 - Redis 探测异常按未配置处理
@@ -247,11 +247,11 @@ def _extract_text(file_path: str) -> tuple:
             raw = ocr_pdf(file_path)
             return clean_ocr_text(raw), doc_type
         elif doc_type == "two_column":
-            from file_analysis.two_column_handler import extract_two_column
+            from app.infrastructure.document.two_column_handler import extract_two_column
             logger.info("Two-column PDF detected, using column-ordered extraction: %s", file_path)
             return extract_two_column(file_path), doc_type
         elif doc_type == "image_rich":
-            from file_analysis.multimodal_service import extract_with_multimodal
+            from app.infrastructure.document.multimodal_service import extract_with_multimodal
             logger.info("Image-rich PDF detected, running multimodal extraction: %s", file_path)
             return extract_with_multimodal(file_path), doc_type
 

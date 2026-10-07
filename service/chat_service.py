@@ -35,7 +35,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from .agent_service import get_agent_service
-from embedding.embedding_model import get_embedding
+from app.infrastructure.embeddings.embedding_model import get_embedding
 from config.setting import LLMConfig, agent
 from core.config import settings
 from core.usage import reset_current_user_id, set_current_user_id
@@ -44,14 +44,14 @@ from memory.profile_service import get_profile_service, render_profile_prefix
 from memory.session_keyword_service import get_session_keyword_service
 from memory.session_rollover import maybe_rollover
 from memory.short_term import get_short_term_store
-from model_llm.gateway import LLMUnavailableError
+from app.infrastructure.llm.gateway import LLMUnavailableError
 from core.degradation_alert import alert_degradation
 from core.content_filter import filter_text
 from util.context import ContextService
 from util.title import Title
 from util.result_handle import handle_result
-from dao.session import SessionDAO
-from dao.history import Information_history
+from app.infrastructure.persistence.repositories.session import SessionDAO
+from app.infrastructure.persistence.repositories.history import Information_history
 
 # 模块级日志器：对话链路的阶段日志与各类降级/失败告警统一走该 logger
 logger = logging.getLogger(__name__)

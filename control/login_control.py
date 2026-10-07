@@ -20,8 +20,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
 from util.user import UserInformation
-from dao.session import SessionDAO
-from dao.read import Information_Read
+from app.infrastructure.persistence.repositories.session import SessionDAO
+from app.infrastructure.persistence.repositories.read import Information_Read
 from core import account_guard
 from core.audit import audit
 from core.config import settings

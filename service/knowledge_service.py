@@ -22,7 +22,7 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from core.config import settings
-from dao.knowledge import KnowledgeDAO
+from app.infrastructure.persistence.repositories.knowledge import KnowledgeDAO
 
 # 模块级日志器：文档删除等管理动作的审计日志走该 logger
 logger = logging.getLogger(__name__)

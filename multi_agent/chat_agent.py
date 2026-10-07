@@ -30,8 +30,8 @@ Agent 间数据流：
 """
 from .message_bus import MessageBus
 from config.setting import llm,agent
-from model_llm.gateway import build_chat_model, LLMUnavailableError
-from model_llm.llm_business import ChatLLM
+from app.infrastructure.llm.gateway import build_chat_model, LLMUnavailableError
+from app.infrastructure.llm.llm_business import ChatLLM
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough

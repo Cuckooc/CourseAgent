@@ -131,8 +131,8 @@ class TestConcurrentLogin:
         通过 DAO 直接创建 5 个账号，再并发走 /login/account。
         """
         from core.security import create_access_token, hash_password  # noqa: WPS433
-        from dao.read import Information_Read  # noqa: WPS433
-        from dao.user import Information  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.read import Information_Read  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 
         # 创建 5 个账号（避免 rate_limit：rate_limit(10, 60) 在并发 5 个请求内安全）
         accounts = []
@@ -185,7 +185,7 @@ class TestTokenVersionKickout:
 
     def test_old_token_invalid_after_increment(self, http, user_acct):
         """单线程：increment → 旧 token 401。验证基础互踢逻辑。"""
-        from dao.user import Information  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
         info = Information()
         info.increment_token_version(user_acct["user_id"])
         status, _, _ = http("GET", "/login/me", token=user_acct["token"])
@@ -195,7 +195,7 @@ class TestTokenVersionKickout:
         """并发 5 次 increment_token_version：返回的 ver 值应严格递增（无重复）。
         验证 SQL UPDATE ... SET ver=ver+1 的原子性。
         """
-        from dao.user import Information  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 
         def _inc_once(_):
             info = Information()
@@ -418,7 +418,7 @@ class TestConcurrentReview:
         随后并发 update_status 全部成功（每次都把 status 改成 approved）。
         标 xfail：业务漏洞待后续修复，测试本身保留以回归追踪。
         """
-        from dao.document_review import DocumentReviewDAO  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO  # noqa: WPS433
 
         dao = DocumentReviewDAO()
         review_id = dao.create(

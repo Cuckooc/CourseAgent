@@ -44,7 +44,7 @@ import chromadb
 from langchain_chroma import Chroma
 
 from core.config import settings
-from embedding.text_embedding import get_embedding
+from app.infrastructure.embeddings.text_embedding import get_embedding
 
 # 模块级日志器：临时库创建/恢复/迁移/销毁日志走该 logger
 logger = logging.getLogger(__name__)
