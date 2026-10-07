@@ -13,7 +13,7 @@
     - FileAgent：独立实现（不继承 BaseAgent），入口方法 handle()；
       __init__rag() 负责从本地 PDF 构建/加载演示向量库（懒加载）；
     - _BASE_DIR / _DEFAULT_PDF_PATH / _DEFAULT_PERSIST_PATH：项目根、
-      默认演示 PDF（file_analysis/1.pdf）与其 Chroma 持久化目录
+      默认演示 PDF（data/samples/1.pdf）与其 Chroma 持久化目录
       （模块级常量）。
 
 被谁使用（Grep 模块名结果）：
@@ -31,7 +31,7 @@ Agent 间数据流：
     - 输出（生产者）：bus.publish("FileAgent", "SummaryAgent", result_msg)，
       payload 为 {"query", "top_k", "results":[{content, metadata}]}，
       消费者 SummaryAgent.handle。
-向量库来源：self.db 为本地 PDF 演示库（file_analysis/1.pdf，经
+向量库来源：self.db 为本地 PDF 演示库（data/samples/1.pdf，经
     file_analysis.file 的切块/embedding/Chroma 工具构建）；会话上传
     文件库由 service/temp_knowledge_store 按 user_id+session_id 提供，
     retrieve_scoped 在 self.db 为 None 时仍可独立检索临时库。
@@ -58,8 +58,8 @@ logger = logging.getLogger(__name__)
 
 # 项目根目录（multi_agent 的上一级）：把默认资源路径锚定到项目而非 CWD
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# 默认演示 PDF：本地文件问答的演示语料（file_analysis/1.pdf）
-_DEFAULT_PDF_PATH = os.path.join(_BASE_DIR, "file_analysis", "1.pdf")
+# 默认演示 PDF：本地文件问答的演示语料（data/samples/1.pdf，数据/源码分离）
+_DEFAULT_PDF_PATH = os.path.join(_BASE_DIR, "data", "samples", "1.pdf")
 # 演示 PDF 向量库的 Chroma 持久化目录
 _DEFAULT_PERSIST_PATH = os.path.join(_BASE_DIR, "chromadb_data")
 
@@ -122,7 +122,8 @@ class FileAgent:
         self.session_id = session_id
         # 影子模式决策 LLM：惰性创建（默认关闭时不增加每请求对象开销）
         self._shadow_llm = None
-        # 修复旧实现使用相对路径（../file_analysis/1.pdf）导致按 CWD 解析错误
+        # 资源路径以项目根锚定（_DEFAULT_PDF_PATH/_DEFAULT_PERSIST_PATH），
+        # 避免历史上相对路径按 CWD 解析导致找不到演示 PDF
         self.pdf_path = pdf_path or _DEFAULT_PDF_PATH
         self.persist_path = persist_path or _DEFAULT_PERSIST_PATH
         self.top_k = top_k

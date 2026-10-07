@@ -284,7 +284,8 @@ def test_retrieval(db: Chroma, query: str, top_k: int = 3)->list[Document]:
 # ====================== 主流程（一键运行） ======================
 if __name__ == "__main__":
 
-    pdf_path = Path("1.pdf")
+    # 演示样本已移出源码目录（数据/源码分离），锚定项目根 data/samples
+    pdf_path = Path(os.path.join(os.path.dirname(current_dir), "data", "samples", "1.pdf"))
     text = pdf_text(pdf_path)
     splitted_docs = split_str(text)
     embeddings = get_embedding()

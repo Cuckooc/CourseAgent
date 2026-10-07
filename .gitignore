@@ -26,7 +26,10 @@ docs/*
 
 # 临时/测试产物
 /b.txt
-/file_analysis/*.pdf
+.acl-report/
+# 演示 PDF（17.8MB）随数据/源码分离移至 data/samples，但维持「不入库」原约定；
+# data/samples 下其余知识库样本 PDF 正常入库
+/data/samples/1.pdf
 
 # Python
 __pycache__/
