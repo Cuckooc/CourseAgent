@@ -22,11 +22,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
-from dotenv import load_dotenv
 from config.setting import llm
 from app.infrastructure.llm.gateway import build_chat_model
-# 导入期加载本地环境变量文件 env/qianwen_config.env（相对运行 cwd 的 ../env；本地密钥文件，禁止入库）
-load_dotenv('../env/qianwen_config.env')
+# 环境变量由 config/setting.py 在导入期统一 load_dotenv(env/qianwen_config.env) 加载，此处不再重复加载
 class LLM(ABC):
     """LLM 抽象基类：封装模型配置读取与网关客户端构造，子类只负责提供提示词模板。
 

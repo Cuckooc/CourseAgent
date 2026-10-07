@@ -49,7 +49,7 @@ from core.degradation_alert import alert_degradation
 from core.content_filter import filter_text
 from app.application.chat.context import ContextService
 from app.application.chat.title import Title
-from util.result_handle import handle_result
+from app.util.result import handle_result
 from app.infrastructure.persistence.repositories.session import SessionDAO
 from app.infrastructure.persistence.repositories.history import Information_history
 

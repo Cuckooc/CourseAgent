@@ -26,5 +26,5 @@ EXPOSE 8000
 
 # 多 worker：WEB_CONCURRENCY 控制（默认 4），uvicorn 内置多进程管理器
 # --proxy-headers：信任反向代理传来的真实 IP/协议（compose 内仅 nginx 可达）
-CMD ["sh", "-c", "python -m uvicorn control.app:app --host 0.0.0.0 --port 8000 \
+CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 \
       --workers ${WEB_CONCURRENCY:-4} --proxy-headers --forwarded-allow-ips='*'"]

@@ -45,7 +45,7 @@ cp env/qianwen_config.env.example env/qianwen_config.env
 mysql -u root -p < course.sql
 
 # 6. 启动后端（默认 8000 端口）
-uvicorn control.app:app --reload
+uvicorn app.main:app --reload
 
 # 7. 启动前端（另开终端）
 cd web/frontend

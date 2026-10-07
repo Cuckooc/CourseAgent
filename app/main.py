@@ -1,5 +1,5 @@
 """
-模块：app.py
+模块：app.main
 作用：FastAPI 应用入口，负责生命周期钩子、中间件、全局异常处理、全部路由注册与前端 SPA 静态托管。
 主要成员：
 - lifespan：应用生命周期异步上下文管理器（启动后台守护任务，关闭时落盘向量索引并释放数据库连接池）；
@@ -9,7 +9,7 @@
 - healthz / readyz / metrics：K8s 存活探针、就绪探针、Prometheus 指标端点；
 - spa_index / spa_fallback / api_fallback_other_methods：前端构建产物存在时的 SPA 托管与兜底路由；
 - root：无前端产物时的纯 API 根路径探活响应。
-被谁使用：由 Dockerfile / docker-compose 以 `uvicorn control.app:app` 启动（docs 文档亦多处引用）；
+被谁使用：由 Dockerfile / docker-compose 以 `uvicorn app.main:app` 启动（docs 文档亦多处引用）；
           本文件 import 并注册 app/api/v1 下 auth/chat/files/history/admin/knowledge/profile/review 八个子路由模块。
 """
 import logging
@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown: db engine disposed")
 
 
-# 全局 FastAPI 应用实例：uvicorn 启动目标（control.app:app），下方所有中间件、
+# 全局 FastAPI 应用实例：uvicorn 启动目标（app.main:app），下方所有中间件、
 # 异常处理器、业务路由与 SPA 兜底路由均注册到该对象
 app = FastAPI(title="智能课程咨询服务", version=__version__, lifespan=lifespan)
 

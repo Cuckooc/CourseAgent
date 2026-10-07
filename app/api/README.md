@@ -28,7 +28,7 @@ control/
 - K8s 探针：`GET /healthz`（存活）、`GET /readyz`（MySQL 就绪）、`GET /metrics`
 - 前端 SPA 单端口托管：构建产物存在时 `/` 返回 index.html，未知 GET 路径回退 index.html，API 前缀保持 JSON 404/405 语义
 
-**启动方式**: `uvicorn control.app:app`（Dockerfile / docker-compose 使用）
+**启动方式**: `uvicorn app.main:app`（Dockerfile / docker-compose 使用）
 
 ### `chat_control.py` - 对话接口
 

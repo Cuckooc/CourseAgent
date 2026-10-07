@@ -1,5 +1,5 @@
 """
-模块名：result_handle.py（Agent 对话结果的归一化拼装）
+模块名：app.util.result（Agent 对话结果的归一化拼装）
 
 作用：
     把 AgentService.run_agent 返回的原始结果字典（含用户输入与

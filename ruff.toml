@@ -8,8 +8,6 @@ target-version = "py38"
 select = ["E4", "E7", "E9", "F"]
 
 [lint.per-file-ignores]
-# 手工测试脚本存在路径 hack 式导入顺序，不纳入 E402 检查
-"service/test.py" = ["E402"]
-"app/domain/agents/test.py" = ["E402"]
+# 已迁移/不存在的旧路径保留项（service/test.py、app/domain/agents/test.py）待阶段6统一清理
 "tests/conftest.py" = ["E402"]
 "app/infrastructure/document/file.py" = ["E402"]

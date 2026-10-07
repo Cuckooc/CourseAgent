@@ -19,7 +19,7 @@ cp env/qianwen_config.env.example env/qianwen_config.env
 mysql -u root -p < course.sql
 
 # 启动
-uvicorn control.app:app --reload          # 后端 :8000
+uvicorn app.main:app --reload          # 后端 :8000
 cd web/frontend && npm install && npm run dev   # 前端
 ```
 
