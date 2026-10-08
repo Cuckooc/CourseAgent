@@ -35,7 +35,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from app.application.chat.agent_service import get_agent_service
-from app.infrastructure.embeddings.embedding_model import get_embedding
+from app.application.ports.embeddings import get_retrying_embedding
 from config.setting import LLMConfig, agent
 from core.config import settings
 from core.usage import reset_current_user_id, set_current_user_id
@@ -87,7 +87,7 @@ class ChatService:
     def __init__(self):
         # __init__ 无形参：所有协作者均经各自单例工厂获取，保证单例下只构建一次
         self.agent_service = get_agent_service()
-        self.embedding_model = get_embedding()
+        self.embedding_model = get_retrying_embedding()
         self.context_service = ContextService()
         self.title_service = Title()
         self.session_dao = get_session_dao()

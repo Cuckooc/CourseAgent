@@ -12,6 +12,7 @@ from app.application.chat.chat_service import get_chat_service
 from app.application.knowledge.knowledge_service import get_knowledge_service
 from app.application.ports.kv import register_cycle_lock, register_redis_provider
 from app.application.ports.llm import register_chat_model_builder
+from app.application.ports import embeddings as _embeddings_ports
 from app.application.ports import persistence as _persistence_ports
 from app.infrastructure.persistence.repositories import (
     chain_log as _chain_log_impl,
@@ -28,6 +29,11 @@ from app.infrastructure.persistence.repositories import (
     user as _user_impl,
 )
 from app.infrastructure.persistence.session import session_scope as _session_scope_impl
+from app.infrastructure.embeddings import (
+    embedding_model as _embedding_model_impl,
+    parent_child as _parent_child_impl,
+    text_embedding as _text_embedding_impl,
+)
 from core.config import settings
 from app.application.ports.vector import (
     get_persistent_db,
@@ -81,6 +87,12 @@ _persistence_ports.register_document_review_dao(_document_review_impl.DocumentRe
 _persistence_ports.register_build_stored_filename(_knowledge_impl.build_stored_filename)
 _persistence_ports.register_recover_last_deleted(_soft_delete_impl.recover_last_deleted)
 _persistence_ports.register_session_scope(_session_scope_impl)
+
+# Port↔Adapter 装配：嵌入/切块 Port ← infrastructure embeddings 实现
+_embeddings_ports.register_embedding_provider(_text_embedding_impl.get_embedding)
+_embeddings_ports.register_retrying_embedding_provider(_embedding_model_impl.get_embedding)
+_embeddings_ports.register_text_embedding_ops(_text_embedding_impl)
+_embeddings_ports.register_parent_child_ops(_parent_child_impl)
 
 __all__ = [
     "get_chat_service",

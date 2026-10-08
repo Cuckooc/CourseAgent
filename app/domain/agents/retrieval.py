@@ -55,7 +55,7 @@ from typing import Dict, List, Optional, Tuple
 
 from langchain_core.documents import Document
 
-from app.infrastructure.embeddings.text_embedding import MAX_L2_DISTANCE, build_scope_filter, get_embedding
+from app.application.ports.embeddings import MAX_L2_DISTANCE, build_scope_filter, get_embedding
 
 logger = logging.getLogger(__name__)
 

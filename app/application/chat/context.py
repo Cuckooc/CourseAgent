@@ -22,7 +22,7 @@
       注意：本类 __init__ 构建的 embedding_model 供该类语义扩展用，
       chat_service 另有自己的 embedding 相似度计算路径。
 """
-from app.infrastructure.embeddings.text_embedding import get_embedding
+from app.application.ports.embeddings import get_embedding
 from typing import Dict, Any
 from app.application.ports.llm import build_chat_model
 from app.infrastructure.llm.llm_business import ContextKey

@@ -33,12 +33,12 @@ from difflib import SequenceMatcher
 from typing import Dict, List, Optional
 
 from core.config import settings
-from app.infrastructure.embeddings.parent_child import (
+from app.application.ports.embeddings import (
     build_parent_child_documents,
     make_file_id,
     split_parent_child,
+    get_embedding,
 )
-from app.infrastructure.embeddings.text_embedding import get_embedding
 from app.infrastructure.document.doc_type_detector import detect_pdf_type
 from app.infrastructure.document.file import pdf_text
 from app.infrastructure.document.ocr_clean import clean_ocr_text

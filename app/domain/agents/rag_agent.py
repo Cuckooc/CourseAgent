@@ -40,7 +40,7 @@ Agent 间数据流：
 import os
 from functools import lru_cache
 from .message_bus import MessageBus
-from app.infrastructure.embeddings.text_embedding import (
+from app.application.ports.embeddings import (
     build_chromadb,
     split_documents,
     get_embedding,

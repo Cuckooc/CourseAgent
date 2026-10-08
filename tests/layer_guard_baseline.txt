@@ -1,13 +1,9 @@
 app/api/deps.py:14 app.infrastructure.vector_store.persistent
 app/api/v1/files.py:214 app.infrastructure.document.file
-app/application/chat/chat_service.py:38 app.infrastructure.embeddings.embedding_model
-app/application/chat/context.py:25 app.infrastructure.embeddings.text_embedding
 app/application/chat/context.py:28 app.infrastructure.llm.llm_business
 app/application/chat/title.py:21 app.infrastructure.llm.llm_business
 app/application/files/file_service.py:250 app.infrastructure.document.two_column_handler
 app/application/files/file_service.py:254 app.infrastructure.document.multimodal_service
-app/application/files/file_service.py:36 app.infrastructure.embeddings.parent_child
-app/application/files/file_service.py:41 app.infrastructure.embeddings.text_embedding
 app/application/files/file_service.py:42 app.infrastructure.document.doc_type_detector
 app/application/files/file_service.py:43 app.infrastructure.document.file
 app/application/files/file_service.py:44 app.infrastructure.document.ocr_clean
@@ -15,8 +11,6 @@ app/application/files/file_service.py:45 app.infrastructure.document.ocr_service
 app/domain/agents/analysis_agent.py:32 app.infrastructure.llm.llm_business
 app/domain/agents/chat_agent.py:34 app.infrastructure.llm.llm_business
 app/domain/agents/file_agent.py:41 app.infrastructure.document.file
-app/domain/agents/rag_agent.py:43 app.infrastructure.embeddings.text_embedding
-app/domain/agents/retrieval.py:58 app.infrastructure.embeddings.text_embedding
 app/domain/agents/summary_agent.py:36 app.infrastructure.llm.llm_business
 app/domain/agents/vague_agent.py:24 app.infrastructure.llm.llm_business
 app/infrastructure/persistence/repositories/soft_delete.py:96 app.domain.memory.session_keyword_service
