@@ -8,9 +8,7 @@ target-version = "py38"
 select = ["E4", "E7", "E9", "F"]
 
 [lint.per-file-ignores]
-# 已迁移/不存在的旧路径保留项（service/test.py、app/domain/agents/test.py）待阶段6统一清理
 "tests/conftest.py" = ["E402"]
-"app/infrastructure/document/file.py" = ["E402"]
 # tests/phase 为脚本式分段验证（文件头 sys.path/env 引导 + 各段落间就地 import），
 # E402 是该体裁的结构性写法，整目录豁免
 "tests/phase/*.py" = ["E402"]

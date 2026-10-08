@@ -15,8 +15,7 @@
     - split_str：按段落空行与最大长度把纯文本切分为 chunk 列表；
     - to_documents：把 chunk 封装为 langchain Document，并写入
       scope / user_id / session_id / original_name 等元数据；
-    - build_chromadb：分批把 Document 写入持久化 Chroma 向量库；
-    - test_retrieval：仅本地一键自测使用的相似度检索辅助函数。
+    - build_chromadb：分批把 Document 写入持久化 Chroma 向量库。
 
 被谁使用：
     - app/application/files/file_service.py 的 _extract_text() 调用 pdf_text 处理
@@ -25,26 +24,17 @@
       调 pdf_text 补提原文，用于用户偏好抽取；
     - embedding/parent_child.py 调 split_str 取父子切分的原子段落；
     - app/domain/agents/file_agent.py 调 pdf_text/split_str/to_documents/
-      build_chromadb 构建文件问答向量库；
-    - 本文件 __main__ 块为本地一键自测入口。
+      build_chromadb 构建文件问答向量库。
 """
 
 from __future__ import annotations
 
-import sys
 import os
-from pathlib import Path
-# 把项目根目录（本文件所在目录的上一级）加入 sys.path，保证以脚本方式
-# 直接运行本文件时也能 import 到 embedding 等项目内模块
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(current_dir)) 
+import logging
 from PyPDF2 import PdfReader
-from app.infrastructure.embeddings.text_embedding import get_embedding
 from core.config import settings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
-import os
-import logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -255,55 +245,3 @@ def build_chromadb(docs:list[Document],embedding_model,persist_path:str=None)->C
     count=db._collection.count()
     logger.info(f"build_chromadb success,total {count} documents")
     return db
-def test_retrieval(db: Chroma, query: str, top_k: int = 3)->list[Document]:
-    """本地自测 RAG 检索效果（非线上链路函数）。
-
-    功能：对给定问题做带距离分数的相似度检索，按魔数阈值 0.5 过滤后
-    返回至多 top_k 条 Document。
-    被谁调用：仅本文件 __main__ 自测入口；线上检索口径以
-    embedding/text_embedding.py 的 test_retrieval / 各 agent 检索器为准。
-
-    参数：
-    - db (Chroma)：build_chromadb 返回的向量库实例；
-    - query (str)：测试用问题文本；
-    - top_k (int)：最多返回条数，默认 3。
-
-    返回：
-    - list[Document]：过滤后的命中文档列表。
-    """
-    logger.info(f"\n🔍 测试检索，问题：{query}")
-    results = db.similarity_search_with_score(query, k=top_k)
-    context=[]
-    # 距离阈值魔数 0.5：score 小于该值的命中被跳过（历史自测过滤口径）
-    threshold=0.5
-    for doc,score in results:
-        if score<threshold:
-            continue
-        context.append(doc)
-        if len(context) >= top_k:
-            break
-
-    return context
-
-# ====================== 主流程（一键运行） ======================
-if __name__ == "__main__":
-
-    # 演示样本已移出源码目录（数据/源码分离），锚定项目根 data/samples
-    pdf_path = Path(os.path.join(os.path.dirname(current_dir), "data", "samples", "1.pdf"))
-    text = pdf_text(pdf_path)
-    splitted_docs = split_str(text)
-    embeddings = get_embedding()
-    docs = to_documents(splitted_docs, pdf_path)
-    db = build_chromadb(docs, embeddings)
-    test_retrieval(db, "基于改进 Census 变换与梯度融合的立体匹配算法，在 Middlebury 数据集上的平均非遮挡区域误匹配率和全部区域误匹配率分别是多少")
-
-    
-    
-    
- 
-
-    
-    
-
-
-
