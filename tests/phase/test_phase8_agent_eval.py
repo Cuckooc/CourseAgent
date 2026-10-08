@@ -26,12 +26,12 @@ C7  混沌注入    超长/空/脏参数 422 / 他人会话 error 帧 / 网关�
 C8  隔离性      失败上传无残留 / 跨用户会话·知识库隔离 / 失败不产生半截记录
 C9  成本延迟    /metrics 指标 / admin 用量(模型+用户拆账) / 预算熔断 / P50/P99
 C10 回归        黄金数据集重跑（dedup 83 + boundary + roles）版本间退化率
-C11 上线验证    金标集自动评分+人工抽检表 / 点赞点踩纠错链路 / 影子灰度适用性说明
+C11 上线验证    金标集自动评分+人工抽检表 / 点赞点踩纠错链路 / 灰度适用性说明
 
 判定原则：
 - 接口/结构类断言硬性通过/失败；
 - LLM 智能表现用「要点关键词」自动评分，全部原文落盘 phase8_llm_answers.txt 供人工金标抽检；
-- 不适用项（无价目表/无影子设施）显式标注 N/A，不计入失败。
+- 不适用项（无价目表/无灰度设施）显式标注 N/A，不计入失败。
 """
 import glob
 import io
@@ -88,7 +88,7 @@ def check(name, cond, detail=""):
 
 
 def note(name, detail=""):
-    """N/A 记录辅助：用于无价目表/无影子设施等不适用项，累加 NA 且不计失败。"""
+    """N/A 记录辅助：用于无价目表/无灰度设施等不适用项，累加 NA 且不计失败。"""
     global NA
     NA += 1
     print(f"  [N/A ] {name}" + (f"  ({detail})" if detail else ""))
@@ -899,7 +899,7 @@ print(f"  [指标] 黄金集回归: {reg_total - reg_fail}/{reg_total} 通过, "
       f"版本间退化率={reg_fail}/{reg_total}")
 
 # ================================================================ C11 上线验证
-section("C11 上线验证：金标抽检 / 反馈纠错 / 影子灰度")
+section("C11 上线验证：金标抽检 / 反馈纠错 / 灰度")
 
 # C11 上线金标问答数据集（正常 + 1 条注入回归）：(问题, 判定 lambda 回答->通过布尔)
 GOLD = [
@@ -943,7 +943,7 @@ r_fb_l = requests.post(f"{BASE}/chat/feedback", headers=hdr(tok_a),
                        json={"session_id": sid_long, "message_index": 0, "rating": 1,
                              "comment": "x" * 501}, timeout=30)
 check("C11.2 超长 comment(501) 被拒绝(422)", r_fb_l.status_code == 422, str(r_fb_l.status_code))
-note("C11.3 新旧 Agent 影子跑/灰度小流量：单机无影子/灰度设施，需上线环境实施，N/A")
+note("C11.3 新旧 Agent 灰度小流量：单机无灰度设施，需上线环境实施，N/A")
 
 # ================================================================ 清理
 section("清理：测试数据")

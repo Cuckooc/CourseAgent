@@ -6,8 +6,7 @@
     经 MessageBus 发布的检索任务（query），在应用级共享 Chroma 持久
     向量库（公共 + 当前用户私有）及当前会话临时库上做混合检索
     （retrieve_scoped：向量 + 关键词 RRF 融合 + rerank），把命中文档
-    构造成 results 经总线回传给 SummaryAgent；并内置 P1 影子模式，
-    在开关打开时旁路执行 function calling 新工具链做结果对比。
+    构造成 results 经总线回传给 SummaryAgent。
 
 主要成员：
     - load_or_build_db：模块级函数，加载持久向量库，缺失时从内置 JSON
@@ -47,14 +46,10 @@ from app.application.ports.embeddings import (
     load_json_data,
     json_to_documents,
 )
-from app.application.ports.llm import build_chat_model
 from app.domain.agents.retrieval import retrieve_scoped
 from typing import Optional
 from langchain_chroma import Chroma
 import logging
-
-from core.config import settings
-from app.domain.tools.protocol import ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +90,7 @@ class RAGAgent:
     类作用：
         订阅 AnalysisAgent 发布的检索任务，在公共/私有持久向量库与当前
         会话临时库上执行 retrieve_scoped 混合检索，把命中片段回传给
-        SummaryAgent；开关 settings.TOOL_SHADOW_MODE 打开时旁路运行
-        function calling 新工具链（app.domain.tools.shadow）做新旧结果对比。
+        SummaryAgent。
     继承关系：无基类（不实现 BaseAgent 抽象接口 create_agent），
         编排入口为 handle()，由非关键 Agent 包装器调度并重试。
     实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()，
@@ -107,8 +101,7 @@ class RAGAgent:
           作为 retrieve_scoped 的 db 形参（公共 + user_id 私有范围）；
         - self.user_id/self.session_id：来源编排层（JWT/会话上下文），
           决定检索 scope 过滤与是否合并会话临时库；
-        - self.top_k：默认每路检索返回条数，可被消息中的 top_k 覆盖；
-        - self._shadow_llm：影子模式专用 LLM，惰性创建并绑定 user_id。
+        - self.top_k：默认每路检索返回条数，可被消息中的 top_k 覆盖。
     """
 
     def __init__(
@@ -144,30 +137,11 @@ class RAGAgent:
         self.top_k = top_k
         self.user_id = user_id
         self.session_id = session_id
-        # 影子模式决策 LLM：惰性创建（默认关闭时不增加每请求对象开销）
-        self._shadow_llm = None
         # 支持注入应用级共享向量库（单例），避免每个请求重复加载
         self.db: Optional[Chroma] = db
         if self.db is None:
             self.db = load_or_build_db(self.json_path, self.persist_path)
         logger.info("RAGAgent initialized successfully")
-
-    def _get_shadow_llm(self):
-        """惰性获取影子模式专用 LLM（仅 TOOL_SHADOW_MODE 开启且命中影子
-        条件时才创建，避免每请求平白增加对象开销）。
-
-        被谁调用：_run_shadow()。
-        返回：聊天模型实例；若模型支持 set_user_id 则绑定 self.user_id
-              （用于影子链路的用量计量/画像透传），绑定失败静默忽略。
-        """
-        if self._shadow_llm is None:
-            self._shadow_llm = build_chat_model()
-            if hasattr(self._shadow_llm, "set_user_id"):
-                try:
-                    self._shadow_llm.set_user_id(self.user_id)
-                except Exception:
-                    pass
-        return self._shadow_llm
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -234,32 +208,3 @@ class RAGAgent:
             }
         self.bus.publish("RAGAgent", "SummaryAgent", result_msg)
         logger.info("RAGAgent handled successfully")
-
-        # P1 影子模式：旁路执行 function calling 工具链并与旧结果对比，不影响主流程
-        if settings.TOOL_SHADOW_MODE and messages:
-            self._run_shadow(data, result_msg)
-
-    def _run_shadow(self, payload: dict, legacy_result: dict) -> None:
-        """P1 影子模式：旁路执行 function calling 新工具链并与旧链路结果对比。
-
-        被谁调用：handle() 末尾——settings.TOOL_SHADOW_MODE 开启且本 Agent
-                  实际收到消息时（RAGAgent 无额外文件条件，FileAgent 还
-                  要求 has_uploaded_files）。
-        参数：
-        - payload：上游 AnalysisAgent 的消息 dict（影子新链路的输入）；
-        - legacy_result：本 Agent 旧链路刚产出的 result_msg（对比基准）。
-        返回：None。影子结果只用于观测对比（app.domain.tools.shadow.run_shadow 内部
-              记录/落库），任何异常都被吞掉记 debug 日志，绝不影响主链路。
-        """
-        try:
-            from app.domain.tools.shadow import run_shadow
-
-            ctx = ToolContext(
-                user_id=self.user_id,
-                session_id=self.session_id,
-                role="user",
-                task_id=getattr(self.bus, "task_id", ""),
-            )
-            run_shadow("RAGAgent", self._get_shadow_llm(), payload, legacy_result, ctx)
-        except Exception as e:  # noqa: BLE001 影子链路任何异常都不得影响主链路
-            logger.debug("RAGAgent shadow run failed: %s", e, exc_info=True)

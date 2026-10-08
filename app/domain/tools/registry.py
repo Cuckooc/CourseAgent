@@ -27,7 +27,6 @@ LLM 无法通过参数伪造 user_id / session_id。
 
 被谁使用：
     - app/domain/tools/dispatcher.py：get_spec() 按 tool_name 查 ToolSpec；
-    - app/domain/tools/shadow.py：tools_for() 取本决策层工具做 bind_tools 影子决策；
     - tests/app/domain/tools/test_tool_layer_p1.py：注册表隔离与工具层单测。
 """
 from __future__ import annotations
@@ -117,8 +116,6 @@ def tools_for(owner_agent: str, ctx: ToolContext) -> List[StructuredTool]:
     """生成某决策层在本次请求中可绑定的 LangChain 工具列表。
 
     被谁调用：
-    - app/domain/tools/shadow.py 的 run_shadow()：取工具喂给 llm.bind_tools 做影子决策；
-    - P2 主链路接入后将由 RAGAgent/FileAgent 在每轮决策前调用；
     - tests/app/domain/tools/test_tool_layer_p1.py：验证按决策层隔离。
     参数：
         owner_agent：决策层名，决定可见工具集合（跨域工具不出现在 Schema 中）；

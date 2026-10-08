@@ -28,7 +28,7 @@ LLM 在工具参数中传入这些字段一律忽略（dispatcher 负责剔除�
     - app/domain/tools/business/knowledge_business.py：用上述模型声明并注册
       knowledge_search / session_file_search 两个工具；
     - app/domain/agents/rag_agent.py、app/domain/agents/file_agent.py：
-      仅在影子模式分支构造 ToolContext 传给 app.domain.tools.shadow.run_shadow；
+      构造 ToolContext 传给工具层；
     - tests/app/domain/tools/test_tool_layer_p1.py：协议边界与工具层单测。
 """
 from __future__ import annotations
@@ -53,10 +53,6 @@ class ToolContext:
     不可被业务代码或 LLM 参数篡改。
 
     实例化位置：
-        - app/domain/agents/rag_agent.py 的 RAGAgent._run_shadow()；
-        - app/domain/agents/file_agent.py 的 FileAgent._run_shadow()；
-          均以 Agent 自身的 user_id/session_id（来源 app/application/chat/agent_service.py
-          按登录态与会话注入）、role="user"、bus.task_id 构造；
         - app/domain/tools/registry.py 的 tools_for() 接收本次请求的 ctx 并闭包注入；
         - tests/app/domain/tools/test_tool_layer_p1.py 的单测直接构造。
     关键属性去向：user_id/session_id 传入 retrieve_scoped 做数据域过滤
@@ -154,9 +150,8 @@ class ToolResult:
 
     data 结构由各工具自行约定（检索类为 [{"content","metadata"}, ...]，
     与 MessageBus 中 SummaryAgent 现有消费契约保持一致）。
-    结果去向：dispatcher 汇总后交给调用方——影子模式下由 app/domain/tools/shadow.py
-    做新旧链路指纹对比；未来主链路接入后回灌 LLM 或直接组装答案，
-    经 SSE 推送前端；失败/降级信息同时进入日志与 chain_log 链路记录。
+    结果去向：dispatcher 汇总后交给调用方（回灌 LLM 或直接组装答案，
+    经 SSE 推送前端）；失败/降级信息同时进入日志与 chain_log 链路记录。
     """
 
     # 工具名：取自 ToolSpec.name，如 "knowledge_search"

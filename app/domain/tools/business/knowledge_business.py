@@ -25,7 +25,7 @@
 被谁使用（间接调用链）：
     - app/domain/tools/registry.py 首次查询时 import app.domain.tools.business → 本模块完成注册；
     - app/domain/tools/dispatcher.py 的 ToolDispatcher._run_one() 经 ToolSpec.business_fn
-      回调这两个函数（上游入口为 StructuredTool 直调或 app/domain/tools/shadow.py）；
+      回调这两个函数（上游入口为 StructuredTool 直调）；
     - tests/app/domain/tools/test_tool_layer_p1.py 直接构造参数模型与 ToolContext 调用；
     - 数据源依赖：app/infrastructure/vector_store/persistent.get_persistent_db（持久 Chroma 库）、
       app/infrastructure/vector_store/temp_store.get_temp_store（会话临时库注册表）、
@@ -58,7 +58,7 @@ def _doc_to_dto(doc: Document, prefer_output: bool) -> dict:
     被谁调用：knowledge_search_fn（prefer_output=True）与
               session_file_search_fn（prefer_output=False）逐条转换召回结果，
               以保持与 rag_agent/file_agent 旧链路发布给 SummaryAgent 的
-              消息结构完全一致，影子模式指纹对比与下游消费均可复用。
+              消息结构完全一致，下游消费均可复用。
     参数：
         doc：retrieve_scoped 返回的 LangChain Document（page_content + metadata）；
         prefer_output：正文取值策略——持久库内置 JSON 数据的正文存
@@ -86,8 +86,7 @@ def knowledge_search_fn(
           强制过滤，LLM 无法越权访问他人私有库。
     被谁调用：不由外部直接 import 调用；注册为 ToolSpec.business_fn 后，
               由 app/domain/tools/dispatcher.py 的 ToolDispatcher._run_one() 在线程池中
-              回调（影子模式经 app/domain/tools/shadow.py，未来主链路经 Agent function
-              calling）；tests/app/domain/tools/test_tool_layer_p1.py 单测直调。
+              回调（Agent function calling）；tests/app/domain/tools/test_tool_layer_p1.py 单测直调。
     工具名/入参 schema：knowledge_search；入参模型 KnowledgeSearchArgs
               （{"query": str, "top_k": int=3}，dispatcher 已完成 query 截断
               200 字、top_k 钳制 [1,10]）。
@@ -96,8 +95,8 @@ def knowledge_search_fn(
     数据源：app/infrastructure/vector_store/persistent.get_persistent_db() 返回的持久 Chroma 库；
             检索算法 app/domain/agents/retrieval.retrieve_scoped。
     返回：ToolResult，data 为 [{"content", "metadata"}, ...]（content 优先取
-          metadata.output），去向为回灌 Agent 拼入 LLM prompt / SSE 答案，
-          影子模式下供 app/domain/tools/shadow.py 做指纹对比；query 为空时返回成功空集。
+          metadata.output），去向为回灌 Agent 拼入 LLM prompt / SSE 答案；
+          query 为空时返回成功空集。
     显式不传 session_id：retrieve_scoped 仅在 session_id 非空时合并临时库，
           临时库归属 FileAgent 域，避免同一片段被两路重复召回。
     """
@@ -133,8 +132,8 @@ def session_file_search_fn(
     功能：在 {user_id}_{session_id} 物理隔离的会话临时向量库中检索本会话
           上传文件切片；只认当前会话，不跨会话、不触达他人临时库。
     被谁调用：注册为 ToolSpec.business_fn 后由
-              app/domain/tools/dispatcher.py 的 ToolDispatcher._run_one() 回调
-              （影子模式经 app/domain/tools/shadow.py）；tests/tools 单测直调。
+              app/domain/tools/dispatcher.py 的 ToolDispatcher._run_one() 回调；
+              tests/tools 单测直调。
     工具名/入参 schema：session_file_search；入参模型 SessionFileSearchArgs
               （{"query": str, "top_k": int=3}，同样经 dispatcher 钳制）。
     参数：args.query 来源 LLM 决策的检索词；ctx.user_id/ctx.session_id 为

@@ -6,8 +6,7 @@
     经 MessageBus 发布的检索任务（query），对当前会话上传文件构成的
     向量库（会话临时库 + 可选的本地 PDF 演示库）执行 retrieve_scoped
     混合检索（向量 + 关键词 RRF 融合 + rerank），把命中片段构造成
-    results 经总线回传 SummaryAgent；同样内置 P1 影子模式旁路对比
-    function calling 新工具链。
+    results 经总线回传 SummaryAgent。
 
 主要成员：
     - FileAgent：独立实现（不继承 BaseAgent），入口方法 handle()；
@@ -45,14 +44,12 @@ from app.application.ports.document import (
     file_build_chromadb,
 )
 from app.application.ports.embeddings import get_embedding
-from app.application.ports.llm import build_chat_model
 from app.domain.agents.retrieval import retrieve_scoped
 from typing import Optional
 from langchain_chroma import Chroma
 import logging
 
 from core.config import settings
-from app.domain.tools.protocol import ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +67,7 @@ class FileAgent:
     类作用：
         订阅 AnalysisAgent 发布的文件检索任务，在当前会话上传文件向量库
         （及可选的本地 PDF 演示库）上执行 retrieve_scoped 混合检索，把
-        命中片段经总线回传 SummaryAgent；TOOL_SHADOW_MODE 开启且本会话
-        存在上传文件时，旁路运行 function calling 新工具链做对比。
+        命中片段经总线回传 SummaryAgent。
     继承关系：无基类（不实现 BaseAgent 抽象接口 create_agent），
         编排入口为 handle()，由非关键 Agent 包装器调度并重试。
     实例化位置：app/application/chat/agent_service.py 的 AgentService._create_agents()，
@@ -84,8 +80,7 @@ class FileAgent:
         - self.user_id/self.session_id：来源编排层（JWT/会话上下文），
           决定会话临时库定位（temp/{user_id}_{session_id}）与 scope；
         - self.top_k：默认返回条数，可被消息中的 top_k 覆盖；
-        - self.pdf_path/self.persist_path：演示 PDF 与其持久化目录；
-        - self._shadow_llm：影子模式专用 LLM，惰性创建并绑定 user_id。
+        - self.pdf_path/self.persist_path：演示 PDF 与其持久化目录。
     """
 
     def __init__(
@@ -120,8 +115,6 @@ class FileAgent:
         # 知识库范围过滤：公共 + user_id 的私有 + session_id 的会话临时库
         self.user_id = user_id
         self.session_id = session_id
-        # 影子模式决策 LLM：惰性创建（默认关闭时不增加每请求对象开销）
-        self._shadow_llm = None
         # 资源路径以项目根锚定（_DEFAULT_PDF_PATH/_DEFAULT_PERSIST_PATH），
         # 避免历史上相对路径按 CWD 解析导致找不到演示 PDF
         self.pdf_path = pdf_path or _DEFAULT_PDF_PATH
@@ -169,23 +162,6 @@ class FileAgent:
             self.db = file_build_chromadb(docs, embeddings, persist_path=self.persist_path)
         logger.info("FileAgent initialized successfully")
 
-    def _get_shadow_llm(self):
-        """惰性获取影子模式专用 LLM（仅 TOOL_SHADOW_MODE 开启且命中影子
-        条件时才创建，避免每请求平白增加对象开销）。
-
-        被谁调用：_run_shadow()。
-        返回：聊天模型实例；若模型支持 set_user_id 则绑定 self.user_id
-              （用量计量/画像透传），绑定失败静默忽略。
-        """
-        if self._shadow_llm is None:
-            self._shadow_llm = build_chat_model()
-            if hasattr(self._shadow_llm, "set_user_id"):
-                try:
-                    self._shadow_llm.set_user_id(self.user_id)
-                except Exception:
-                    pass
-        return self._shadow_llm
-
     def handle(self):
         """执行上传文件检索并把结果回传 SummaryAgent（流水线阶段 3 的 File 分支入口）。
 
@@ -204,8 +180,6 @@ class FileAgent:
               可为 None）与当前会话临时库（app/infrastructure/vector_store/temp_store）。
         空 query：告警并跳过该消息；无消息时发布空 results，
               SummaryAgent 侧据此走"未检索到"降级。
-        影子模式：TOOL_SHADOW_MODE 开启、收到消息且上游标记
-              has_uploaded_files 时，调 _run_shadow 旁路对比（不影响主流程）。
         """
         messages = self.bus.subscribe("FileAgent")
         result_msg = {"query": "", "top_k": self.top_k, "results": []}
@@ -231,32 +205,3 @@ class FileAgent:
             }
         self.bus.publish("FileAgent", "SummaryAgent", result_msg)
         logger.info("FileAgent handled successfully")
-
-        # P1 影子模式：本会话有上传文件时旁路执行新工具链并对比，不影响主流程
-        if settings.TOOL_SHADOW_MODE and messages and data.get("has_uploaded_files"):
-            self._run_shadow(data, result_msg)
-
-    def _run_shadow(self, payload: dict, legacy_result: dict) -> None:
-        """P1 影子模式：旁路执行 session_file_search 新工具链并与旧结果对比。
-
-        被谁调用：handle() 末尾——settings.TOOL_SHADOW_MODE 开启、收到消息
-                  且 payload 标记 has_uploaded_files（本会话确有上传文件）时。
-        参数：
-        - payload：上游 AnalysisAgent 的消息 dict（影子新链路的输入，
-          含 query/user_id/session_id 等）；
-        - legacy_result：旧链路刚产出的 result_msg（对比基准）。
-        返回：None。影子结果只用于观测对比（app.domain.tools.shadow.run_shadow 内部
-              记录/落库），任何异常都被吞掉记 debug 日志，绝不影响主链路。
-        """
-        try:
-            from app.domain.tools.shadow import run_shadow
-
-            ctx = ToolContext(
-                user_id=self.user_id,
-                session_id=self.session_id,
-                role="user",
-                task_id=getattr(self.bus, "task_id", ""),
-            )
-            run_shadow("FileAgent", self._get_shadow_llm(), payload, legacy_result, ctx)
-        except Exception as e:  # noqa: BLE001 影子链路任何异常都不得影响主链路
-            logger.debug("FileAgent shadow run failed: %s", e, exc_info=True)

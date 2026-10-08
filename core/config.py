@@ -272,12 +272,7 @@ class Settings:
 
     # ================= 工具调用层（function calling） =================
     # 被 tools 子包读取（protocol.py 的 ToolSpec 边界、dispatcher.py 的调度与超时、
-    # function_app.domain.tools.py 的具体工具）；app/domain/agents/rag_agent.py、file_agent.py 亦读取。
-    # 影子模式：开启后 RAGAgent/FileAgent 在旧检索链路之外旁路执行新工具决策链，
-    # 仅记录 tool_calls 与新旧结果差异，不改变实际回答（P1 灰度验证用，默认关闭）
-    TOOL_SHADOW_MODE: Final[bool] = os.getenv("tool_shadow_mode", "false").lower() in (
-        "1", "true", "yes",
-    )
+    # function_app.domain.tools.py 的具体工具）。
     # 每个决策层单轮最多执行的工具调用数（防 LLM 无界调用）
     TOOL_MAX_CALLS_PER_TURN: Final[int] = int(os.getenv("tool_max_calls_per_turn", "5"))
     # 检索工具参数边界
