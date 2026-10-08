@@ -49,6 +49,10 @@ os.environ.setdefault("jwt_secret", "test-secret-for-validation")
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "env", "qianwen_config.env"))
 
+# Port↔Adapter 组合根装配：FileService 等业务类构造经 application Port 取
+# 基础设施实现，必须先 import deps 完成注册（须在 load_dotenv 之后，保证 api_key 就绪）
+import app.api.deps  # noqa: F401
+
 PASS = 0  # 全局通过断言计数
 FAIL = 0  # 全局失败断言计数（末尾非 0 则 sys.exit(1)）
 

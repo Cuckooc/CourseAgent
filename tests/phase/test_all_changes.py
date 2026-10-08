@@ -34,6 +34,10 @@ import shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault("jwt_secret", "test-secret-for-validation")
 
+# Port↔Adapter 组合根装配：本脚本直接实例化 AnalysisAgent/FileAgent 等业务类，
+# 其构造经 application Port 取基础设施实现，必须先 import deps 完成注册
+import app.api.deps  # noqa: F401
+
 PASS = 0  # 全局通过断言计数
 FAIL = 0  # 全局失败断言计数（末尾非 0 则 sys.exit(1)）
 
@@ -276,7 +280,9 @@ check("_run_summary_with_relevance 方法存在", hasattr(AgentService, "_run_su
 
 source_summary = inspect.getsource(AgentService._run_summary_with_relevance)
 check("相关性回退: 调用 score_relevance", "score_relevance" in source_summary)
-check("相关性回退: 阈值 0.6", "0.6" in source_summary)
+check("相关性回退: 阈值 0.6",
+      "AGENT_SUMMARY_RELEVANCE_THRESHOLD" in source_summary
+      and settings.AGENT_SUMMARY_RELEVANCE_THRESHOLD == 0.6)
 check("相关性回退: 最多 3 轮", "max_rounds" in source_summary)
 check("相关性回退: 超限后降级为空结果", "treating as empty" in source_summary or "fallback_output" in source_summary)
 check("相关性回退: 回退时重新检索", "_run_retrieval" in source_summary)
