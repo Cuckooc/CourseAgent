@@ -38,13 +38,13 @@ Agent 间数据流：
 """
 import os
 from .message_bus import MessageBus
-from app.infrastructure.document.file import (
+from app.application.ports.document import (
     pdf_text,
     split_str,
-    get_embedding,
     to_documents,
-    build_chromadb,
+    file_build_chromadb,
 )
+from app.application.ports.embeddings import get_embedding
 from app.application.ports.llm import build_chat_model
 from app.domain.agents.retrieval import retrieve_scoped
 from typing import Optional
@@ -166,7 +166,7 @@ class FileAgent:
             )
         else:
             docs = to_documents(splitted_docs, self.pdf_path)
-            self.db = build_chromadb(docs, embeddings, persist_path=self.persist_path)
+            self.db = file_build_chromadb(docs, embeddings, persist_path=self.persist_path)
         logger.info("FileAgent initialized successfully")
 
     def _get_shadow_llm(self):

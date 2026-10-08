@@ -10,6 +10,7 @@
 """
 from app.application.ports.kv import register_cycle_lock, register_redis_provider
 from app.application.ports.llm import register_chat_model_builder
+from app.application.ports import document as _document_ports
 from app.application.ports import embeddings as _embeddings_ports
 from app.application.ports import llm_business as _llm_business_ports
 from app.application.ports import persistence as _persistence_ports
@@ -32,6 +33,14 @@ from app.infrastructure.embeddings import (
     embedding_model as _embedding_model_impl,
     parent_child as _parent_child_impl,
     text_embedding as _text_embedding_impl,
+)
+from app.infrastructure.document import (
+    doc_type_detector as _doc_type_detector_impl,
+    file as _document_file_impl,
+    multimodal_service as _multimodal_impl,
+    ocr_clean as _ocr_clean_impl,
+    ocr_service as _ocr_service_impl,
+    two_column_handler as _two_column_impl,
 )
 from core.config import settings
 from app.application.ports.vector import (
@@ -97,6 +106,14 @@ _embeddings_ports.register_parent_child_ops(_parent_child_impl)
 # Port↔Adapter 装配：业务提示词链 Port ← infrastructure llm_business 实现
 # （必须先于下方 app 服务导入完成：title.py 在类定义期经 Port 取 TitleLLM 基类）
 _llm_business_ports.register_llm_business_ops(_llm_business_impl)
+
+# Port↔Adapter 装配：文档解析 Port ← infrastructure document 实现
+_document_ports.register_document_file_ops(_document_file_impl)
+_document_ports.register_doc_type_detector_ops(_doc_type_detector_impl)
+_document_ports.register_ocr_clean_ops(_ocr_clean_impl)
+_document_ports.register_ocr_service_ops(_ocr_service_impl)
+_document_ports.register_two_column_ops(_two_column_impl)
+_document_ports.register_multimodal_ops(_multimodal_impl)
 
 # 应用服务导入须位于全部 Port 注册之后：其模块级类定义/单例构造可能经
 # Port 取实现（如 title.Title 继承 get_title_llm_cls()）

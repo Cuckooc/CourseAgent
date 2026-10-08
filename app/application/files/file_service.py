@@ -39,10 +39,12 @@ from app.application.ports.embeddings import (
     split_parent_child,
     get_embedding,
 )
-from app.infrastructure.document.doc_type_detector import detect_pdf_type
-from app.infrastructure.document.file import pdf_text
-from app.infrastructure.document.ocr_clean import clean_ocr_text
-from app.infrastructure.document.ocr_service import ocr_pdf
+from app.application.ports.document import (
+    clean_ocr_text,
+    detect_pdf_type,
+    ocr_pdf,
+    pdf_text,
+)
 from app.application.files.mask_service import mask_text
 from app.application.ports.vector import get_temp_store
 from app.application.ports.vector import (
@@ -247,11 +249,11 @@ def _extract_text(file_path: str) -> tuple:
             raw = ocr_pdf(file_path)
             return clean_ocr_text(raw), doc_type
         elif doc_type == "two_column":
-            from app.infrastructure.document.two_column_handler import extract_two_column
+            from app.application.ports.document import extract_two_column
             logger.info("Two-column PDF detected, using column-ordered extraction: %s", file_path)
             return extract_two_column(file_path), doc_type
         elif doc_type == "image_rich":
-            from app.infrastructure.document.multimodal_service import extract_with_multimodal
+            from app.application.ports.document import extract_with_multimodal
             logger.info("Image-rich PDF detected, running multimodal extraction: %s", file_path)
             return extract_with_multimodal(file_path), doc_type
 

@@ -211,7 +211,7 @@ def _process_saved_file(index: int, stored_name: str, file_path: str, original_n
             if scope == "temp":
                 # 临时文件入库后顺带提取用户偏好：原文经脱敏再抽取，失败不阻断上传主流程
                 try:
-                    from app.infrastructure.document.file import pdf_text
+                    from app.application.ports.document import pdf_text
                     raw_text = pdf_text(file_path)
                     masked_text = mask_text(raw_text)
                     extract_preferences(masked_text, user_id)
