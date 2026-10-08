@@ -178,7 +178,7 @@ class RAGAgent:
         实例由 app.infrastructure.vector_store.persistent 统一持有（含进程写锁）；首次使用且库为空时，
         在此播种内置 JSON 公共知识库（保持历史启动行为）。
         """
-        from app.infrastructure.vector_store.persistent import get_persistent_db, persistent_lock
+        from app.application.ports.vector import get_persistent_db, persistent_lock
 
         db = get_persistent_db()
         if db._collection.count() == 0:

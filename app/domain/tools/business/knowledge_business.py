@@ -38,8 +38,8 @@ import logging
 from langchain_core.documents import Document
 
 from app.domain.agents.retrieval import retrieve_scoped
-from app.infrastructure.vector_store.temp_store import get_temp_store
-from app.infrastructure.vector_store.persistent import get_persistent_db
+from app.application.ports.vector import get_temp_store
+from app.application.ports.vector import get_persistent_db
 from app.domain.tools.protocol import (
     KnowledgeSearchArgs,
     SessionFileSearchArgs,

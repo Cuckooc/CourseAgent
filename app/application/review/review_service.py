@@ -35,7 +35,12 @@ from typing import Dict, List, Optional, Tuple
 
 from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO
 from app.application.files.mask_service import mask_text
-from app.infrastructure.vector_store.persistent import add_parent_child, flush_persistent_index, get_persistent_db, persistent_lock
+from app.application.ports.vector import (
+    add_parent_child,
+    flush_persistent_index,
+    get_persistent_db,
+    persistent_lock,
+)
 
 # 模块级日志器：审核提交/通过/驳回与入库失败日志走该 logger
 logger = logging.getLogger(__name__)

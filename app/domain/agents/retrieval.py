@@ -419,7 +419,7 @@ def retrieve_scoped(
     # 2. 当前会话临时库向量检索（避免与传入 db 重复查询同一库）
     if session_id is not None and user_id is not None:
         try:
-            from app.infrastructure.vector_store.temp_store import get_temp_store  # 局部导入：避免模块级循环依赖
+            from app.application.ports.vector import get_temp_store  # 经 Port 门面获取（原 temp_store 局部导入）
 
             store = get_temp_store()
             if store.has_session(user_id, session_id):
@@ -447,7 +447,7 @@ def retrieve_scoped(
                 logger.warning("persistent keyword search failed: %s", e)
         if session_id is not None and user_id is not None:
             try:
-                from app.infrastructure.vector_store.temp_store import get_temp_store  # 局部导入：避免模块级循环依赖
+                from app.application.ports.vector import get_temp_store  # 经 Port 门面获取（原 temp_store 局部导入）
 
                 store = get_temp_store()
                 if store.has_session(user_id, session_id):

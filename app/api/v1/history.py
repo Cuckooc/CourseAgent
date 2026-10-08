@@ -275,7 +275,7 @@ def delete_session_confirm(req: DeleteConfirmRequest, current_user: dict = Depen
     if not ok:
         return {"status": "fail", "message": "会话不存在或删除失败"}
     try:
-        from app.infrastructure.vector_store.temp_store import get_temp_store
+        from app.application.ports.vector import get_temp_store
         get_temp_store().drop(user_id, req.session_id)
     except Exception as e:
         logger.error("clean temp knowledge failed: %s", e)

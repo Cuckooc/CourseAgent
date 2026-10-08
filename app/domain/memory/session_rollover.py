@@ -248,7 +248,7 @@ def _do_rollover(client, user_id: int, old_sid: int, old_title: str) -> int:
 
     # 6) 迁移会话临时知识库（无则跳过；失败仅告警，不阻断滚换）
     try:
-        from app.infrastructure.vector_store.temp_store import get_temp_store
+        from app.application.ports.vector import get_temp_store
 
         get_temp_store().relocate(user_id, old_sid, new_sid)
     except Exception as e:

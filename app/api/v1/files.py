@@ -38,8 +38,8 @@ from app.infrastructure.persistence.repositories.knowledge import build_stored_f
 from app.application.files.file_service import FileService
 from app.application.files.mask_service import mask_text
 from app.application.files.preference_service import extract_preferences
-from app.infrastructure.vector_store.temp_store import get_temp_store
-from app.infrastructure.vector_store.persistent import flush_persistent_index
+from app.application.ports.vector import get_temp_store
+from app.application.ports.vector import flush_persistent_index
 from core import upload_task
 from core.config import settings
 from app.auth.guards import get_current_user

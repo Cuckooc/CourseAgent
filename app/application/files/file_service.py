@@ -44,14 +44,14 @@ from app.infrastructure.document.file import pdf_text
 from app.infrastructure.document.ocr_clean import clean_ocr_text
 from app.infrastructure.document.ocr_service import ocr_pdf
 from app.application.files.mask_service import mask_text
-from app.infrastructure.vector_store.temp_store import get_temp_store
-from app.infrastructure.vector_store.persistent import (
-    _embed_in_batches,
-    _l2_normalize,
+from app.application.ports.vector import get_temp_store
+from app.application.ports.vector import (
     add_new_version,
     add_parent_child,
+    embed_in_batches as _embed_in_batches,
     find_max_similarity,
     get_persistent_db,
+    l2_normalize as _l2_normalize,
     persistent_lock,
     replace_document,
 )
