@@ -29,7 +29,7 @@
 """
 import logging
 import time
-from typing import Optional
+from typing import Callable, Optional
 
 from sqlalchemy import text
 
@@ -37,6 +37,22 @@ from core.sql_guard import safe_execute
 from app.infrastructure.persistence.session import session_scope
 
 logger = logging.getLogger(__name__)
+
+# 会话软删成功后的联动回调（如清理会话关键词等缓存）。
+# 分层约束：infrastructure 不得 import app.domain，缓存清理由业务层实现，
+# 经组合根 app/api/deps.py 调 register_session_deleted_hook 注入
+# （依赖倒置）；未装配（如测试直接清库）时静默跳过。
+_session_deleted_hook: Optional[Callable[[int, int], None]] = None
+
+
+def register_session_deleted_hook(hook: Callable[[int, int], None]) -> None:
+    """注册会话软删成功后的联动回调（组合根启动时调用一次）。
+
+    参数：hook —— 签名 (user_id, session_id) -> None；回调内异常仅告警，
+          不影响 soft_delete_session 的成功返回。
+    """
+    global _session_deleted_hook
+    _session_deleted_hook = hook
 
 
 def soft_delete_session(user_id: int, session_id: int) -> bool:
@@ -46,7 +62,8 @@ def soft_delete_session(user_id: int, session_id: int) -> bool:
     (user_id, session_id) 且未删除的行置 is_deleted=1、deleted_at=NOW()；
     两条语句同生共死，任一异常整体回滚。以会话主表（history）影响行数
     判断是否成功。成功后额外：写 UndoStore 撤销快照（供撤销端点找回）、
-    经 SessionKeywordService.clear() 联动软删会话关键词（失败仅告警）。
+    经 register_session_deleted_hook 注入的联动回调清理会话关键词缓存
+    （回调由组合根装配，失败仅告警）。
     SQL 安全：uid/sid 命名绑定参数；WHERE 带 user_id 做归属隔离，
     is_deleted=0 避免重复更新；经 safe_execute 执行。
     被谁调用：dao/session.py 的 SessionDAO.delete_session()
@@ -92,11 +109,11 @@ def soft_delete_session(user_id: int, session_id: int) -> bool:
                 pk={"session_id": session_id},
                 deleted_at=str(time.time()),
             )
-            try:
-                from app.domain.memory.session_keyword_service import get_session_keyword_service
-                get_session_keyword_service().clear(user_id, session_id)
-            except Exception as e:
-                logger.warning("keyword clear on session delete failed: %s", e)
+            if _session_deleted_hook is not None:
+                try:
+                    _session_deleted_hook(user_id, session_id)
+                except Exception as e:
+                    logger.warning("session deleted hook failed: %s", e)
         return ok
     except Exception as e:
         logger.error("Error soft-deleting session: %s", e)

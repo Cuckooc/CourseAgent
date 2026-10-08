@@ -97,6 +97,15 @@ _persistence_ports.register_build_stored_filename(_knowledge_impl.build_stored_f
 _persistence_ports.register_recover_last_deleted(_soft_delete_impl.recover_last_deleted)
 _persistence_ports.register_session_scope(_session_scope_impl)
 
+# 会话软删联动：infrastructure 软删事务成功后回调 domain 清理关键词缓存
+# （依赖倒置：infra 不 import domain，由组合根把两者接起来）
+from app.domain.memory.session_keyword_service import (  # noqa: E402
+    get_session_keyword_service as _get_session_keyword_service,
+)
+_soft_delete_impl.register_session_deleted_hook(
+    lambda uid, sid: _get_session_keyword_service().clear(uid, sid)
+)
+
 # Port↔Adapter 装配：嵌入/切块 Port ← infrastructure embeddings 实现
 _embeddings_ports.register_embedding_provider(_text_embedding_impl.get_embedding)
 _embeddings_ports.register_retrying_embedding_provider(_embedding_model_impl.get_embedding)
