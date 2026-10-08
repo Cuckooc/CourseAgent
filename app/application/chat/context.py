@@ -25,7 +25,7 @@
 from app.application.ports.embeddings import get_embedding
 from typing import Dict, Any
 from app.application.ports.llm import build_chat_model
-from app.infrastructure.llm.llm_business import ContextKey
+from app.application.ports.llm_business import build_context_rewrite_prompt
 class ContextService:
     """上下文注入模式判定与查询改写服务。
 
@@ -108,7 +108,7 @@ class ContextService:
          if self.context_model(context)=="force":
 
               # ContextKey 把上下文与原问题填进改写提示词（只优化问句，不答题）
-              prompt=ContextKey().generate(context,query)
+              prompt=build_context_rewrite_prompt(context,query)
               response=self.llm.invoke(prompt)
               # 兼容 LangChain AIMessage（.content）与裸字符串两种返回形态
               if hasattr(response,"content"):

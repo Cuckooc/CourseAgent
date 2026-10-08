@@ -33,7 +33,7 @@ from app.application.ports.llm import build_chat_model, LLMUnavailableError
 from core.degradation_alert import alert_degradation
 from core.output_validator import validate_json_output, SummaryOutput
 from langchain_core.prompts import PromptTemplate
-from app.infrastructure.llm.llm_business import InformationLLM
+from app.application.ports.llm_business import get_information_llm
 import json
 import logging
 from typing import List, Tuple
@@ -166,10 +166,10 @@ class SummaryAgent:
             return output
 
         # 汇总提示词模板：来源 model_llm/llm_business.py 的 InformationLLM
-        prompt=InformationLLM().generate()
+        prompt=get_information_llm().generate()
         prompt=PromptTemplate.from_template(prompt)
         # LCEL 链：模板变量 rag_results 为拼接后的全部检索片段；输出要求 JSON（summary/keywords）
-        chain=prompt | InformationLLM().llm
+        chain=prompt | get_information_llm().llm
 
         try:
              result=chain.invoke({ "rag_results": context})

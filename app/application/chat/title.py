@@ -18,11 +18,11 @@
       生成标题随对话结果保存入库并回传前端，异常时 chat_service
       另有“新会话”兜底。
 """
-from app.infrastructure.llm.llm_business import TitleLLM
+from app.application.ports.llm_business import get_title_llm_cls
 from typing import Dict, Any
 from langchain_core.prompts import PromptTemplate
 
-class Title(TitleLLM):
+class Title(get_title_llm_cls()):
     """会话标题生成器（TitleLLM 提示词模板的可调用封装）。
 
     类作用：复用父类 TitleLLM 的 generate() 模板与 __init__ 中构建的

@@ -8,11 +8,10 @@
 当前阶段为骨架实现：对既有单例工厂做简单委派，
     后续可在此替换为显式实例化或按配置切换 Adapter。
 """
-from app.application.chat.chat_service import get_chat_service
-from app.application.knowledge.knowledge_service import get_knowledge_service
 from app.application.ports.kv import register_cycle_lock, register_redis_provider
 from app.application.ports.llm import register_chat_model_builder
 from app.application.ports import embeddings as _embeddings_ports
+from app.application.ports import llm_business as _llm_business_ports
 from app.application.ports import persistence as _persistence_ports
 from app.infrastructure.persistence.repositories import (
     chain_log as _chain_log_impl,
@@ -44,6 +43,7 @@ from app.application.ports.vector import (
     register_persistent_ops,
     register_temp_store_provider,
 )
+from app.infrastructure.llm import llm_business as _llm_business_impl
 from app.infrastructure.llm.gateway import build_chat_model as _build_chat_model_impl
 from app.infrastructure.redis.locks import try_acquire_cycle_lock as _cycle_lock_impl
 from app.infrastructure.redis.redis_client import get_redis as _get_redis_impl
@@ -93,6 +93,15 @@ _embeddings_ports.register_embedding_provider(_text_embedding_impl.get_embedding
 _embeddings_ports.register_retrying_embedding_provider(_embedding_model_impl.get_embedding)
 _embeddings_ports.register_text_embedding_ops(_text_embedding_impl)
 _embeddings_ports.register_parent_child_ops(_parent_child_impl)
+
+# Port↔Adapter 装配：业务提示词链 Port ← infrastructure llm_business 实现
+# （必须先于下方 app 服务导入完成：title.py 在类定义期经 Port 取 TitleLLM 基类）
+_llm_business_ports.register_llm_business_ops(_llm_business_impl)
+
+# 应用服务导入须位于全部 Port 注册之后：其模块级类定义/单例构造可能经
+# Port 取实现（如 title.Title 继承 get_title_llm_cls()）
+from app.application.chat.chat_service import get_chat_service  # noqa: E402
+from app.application.knowledge.knowledge_service import get_knowledge_service  # noqa: E402
 
 __all__ = [
     "get_chat_service",

@@ -21,7 +21,7 @@ import datetime
 from .base_agent import BaseAgent
 from typing import Dict,Any
 from app.application.ports.llm import LLMUnavailableError
-from app.infrastructure.llm.llm_business import PredictLLM
+from app.application.ports.llm_business import build_predict_prompt
 from langchain_core.prompts import PromptTemplate
 from .message_bus import MessageBus
 import logging
@@ -52,7 +52,7 @@ class VagueAgent(BaseAgent):
         """
         super().__init__(agent_name="VagueAgent", bus=bus, memory=memory, tools=tools)
         # 意图判定提示词模板：来源 PredictLLM（model_llm/llm_business.py）
-        self.prompt = PredictLLM().generate()
+        self.prompt = build_predict_prompt()
         self.verbose = self.agent_verbose
         # 早期对话摘要：消解多轮承接式提问中的指代（无摘要时为"无"）
         self.history_summary = history_summary

@@ -29,7 +29,7 @@ import re
 from .base_agent import BaseAgent
 from typing import Dict, Any
 from app.application.ports.llm import LLMUnavailableError
-from app.infrastructure.llm.llm_business import AnalysisLLM
+from app.application.ports.llm_business import build_analysis_prompt
 from langchain_core.prompts import PromptTemplate
 from .message_bus import MessageBus
 
@@ -85,7 +85,7 @@ class AnalysisAgent(BaseAgent):
           无摘要时 create_agent 内回填"无"。
         """
         super().__init__(agent_name="AnalysisAgent", bus=bus, memory=memory, tools=tools)
-        self.prompt = AnalysisLLM().generate()
+        self.prompt = build_analysis_prompt()
         self.verbose = self.agent_verbose
         self.user_id = user_id
         self.session_id = session_id

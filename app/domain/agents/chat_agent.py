@@ -31,7 +31,7 @@ Agent 间数据流：
 from .message_bus import MessageBus
 from config.setting import llm,agent
 from app.application.ports.llm import build_chat_model, LLMUnavailableError
-from app.infrastructure.llm.llm_business import ChatLLM
+from app.application.ports.llm_business import build_chat_prompt
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -129,7 +129,7 @@ class ChatAgent:
             context = "暂无相关信息"
 
         # 最终回答提示词模板：来源 model_llm/llm_business.py 的 ChatLLM
-        prompt = ChatPromptTemplate.from_template(ChatLLM().generate())
+        prompt = ChatPromptTemplate.from_template(build_chat_prompt())
 
     # 构建链式调用（LCEL）：先注入日期/检索上下文/历史/画像/关键词/问题等模板变量
         chain = (
