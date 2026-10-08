@@ -60,9 +60,9 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[str, o
         raise BizException("无效的登录凭证", http_status=401)
     # 实时回库校验用户存在性：用户被删除后，其未过期的历史 token 立即失效。
     # get_by_id 查询异常或用户不存在均返回 None → 统一按登录失效处理（fail-closed）。
-    from app.infrastructure.persistence.repositories.read import Information_Read  # 局部导入避免 core→dao 循环依赖
+    from app.application.ports.persistence import get_read_dao  # 局部导入：保持 guards 模块无重依赖
 
-    row = Information_Read().get_by_id(user_id)
+    row = get_read_dao().get_by_id(user_id)
     if not row:
         raise BizException("登录已失效，请重新登录", http_status=401)
     # 单点互踢：JWT 的 ver 声明必须等于库内 token_version，否则视为旧 token 立即失效。
@@ -98,10 +98,10 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
     """
     if current_user.get("role") != "admin":
         raise BizException("没有权限执行此操作", http_status=403)
-    from app.infrastructure.persistence.repositories.read import Information_Read  # 局部导入避免 core→dao 循环依赖
+    from app.application.ports.persistence import get_read_dao  # 局部导入：保持 guards 模块无重依赖
 
     uid = int(current_user["user_id"])
-    row = Information_Read().get_by_ids([uid]).get(uid)
+    row = get_read_dao().get_by_ids([uid]).get(uid)
     if not row or row.get("role") != "admin":
         raise BizException("没有权限执行此操作", http_status=403)
     return current_user

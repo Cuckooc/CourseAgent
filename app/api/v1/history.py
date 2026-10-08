@@ -20,8 +20,7 @@ import logging
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from app.infrastructure.persistence.repositories.session import SessionDAO
-from app.infrastructure.persistence.repositories.read import Information_Read
+from app.application.ports.persistence import get_session_dao, get_read_dao
 from app.auth.guards import get_current_user
 from app.auth.rate_limit import user_rate_limit
 from app.auth.delete_guard import PendingDeleteStore
@@ -140,7 +139,7 @@ def get_session_list(
     返回：HTTP JSON 响应，data/sessions 均为当前页会话列表（按最后消息时间倒序），
           另含 total（该范围总数）、page、page_size、has_more；记录不足一页时全部返回。
     """
-    session_dao = SessionDAO()
+    session_dao = get_session_dao()
     offset = (page - 1) * page_size
     result = session_dao.get_session_list_paged(
         current_user["user_id"], range_=range, limit=page_size, offset=offset
@@ -174,7 +173,7 @@ def get_session_detail(req: SessionDetailRequest, current_user: dict = Depends(g
     消息在短期记忆（Redis）里，此处拼接两段返回完整记录。
     """
     user_id = current_user["user_id"]
-    session_dao = SessionDAO()
+    session_dao = get_session_dao()
     messages = session_dao.get_session_detail(user_id, req.session_id)
     try:
         messages = messages + get_short_term_store().pending_messages(user_id, req.session_id)
@@ -196,7 +195,7 @@ def create_session(req: CreateSessionRequest, current_user: dict = Depends(get_c
     - current_user：Depends(get_current_user) 注入的 JWT 用户信息。
     返回：成功返回 {status:"success", session_id, title}；失败返回 {status:"fail", message}。
     """
-    session_dao = SessionDAO()
+    session_dao = get_session_dao()
     new_session_id = session_dao.create_session(current_user["user_id"], req.title)
     if new_session_id > 0:
         return {"status": "success", "session_id": new_session_id, "title": req.title}
@@ -216,7 +215,7 @@ def update_session_title(req: UpdateTitleRequest, current_user: dict = Depends(g
     返回：成功返回 {status:"success", message:"更新成功"}；
           会话不存在或不属于当前用户时返回 {status:"fail", message:"更新失败"}。
     """
-    session_dao = SessionDAO()
+    session_dao = get_session_dao()
     success = session_dao.update_session_title(current_user["user_id"], req.session_id, req.title)
     if success:
         return {"status": "success", "message": "更新成功"}
@@ -237,7 +236,7 @@ def delete_session_preview(req: DeleteSessionRequest, current_user: dict = Depen
     异常：会话不存在或不属于当前用户时抛 BizException(404)。
     """
     user_id = current_user["user_id"]
-    session_dao = SessionDAO()
+    session_dao = get_session_dao()
     if not session_dao.is_session_owner(user_id, req.session_id):
         raise BizException("会话不存在或不属于当前用户", http_status=404)
     token = PendingDeleteStore.create_token(
@@ -270,7 +269,7 @@ def delete_session_confirm(req: DeleteConfirmRequest, current_user: dict = Depen
     if target.get("session_id") != req.session_id:
         raise BizException("确认令牌与会话 ID 不匹配", http_status=400)
 
-    session_dao = SessionDAO()
+    session_dao = get_session_dao()
     ok = session_dao.delete_session(user_id, req.session_id)
     if not ok:
         return {"status": "fail", "message": "会话不存在或删除失败"}
@@ -305,7 +304,7 @@ def undo_delete(current_user: dict = Depends(get_current_user)):
     if record is None:
         raise BizException("没有可撤销的删除记录", http_status=404)
 
-    from app.infrastructure.persistence.repositories.soft_delete import recover_last_deleted
+    from app.application.ports.persistence import recover_last_deleted
     recovered = recover_last_deleted(user_id)
     if recovered is None:
         raise BizException("恢复失败，记录可能已被彻底清理", http_status=500)
@@ -326,7 +325,7 @@ def get_recent_messages(req: RecentMessagesRequest, current_user: dict = Depends
     返回：HTTP JSON 响应 {status:"success", data: messages}，messages 为该会话消息记录。
     说明：旧实现为 GET 携带 body（FastAPI 不会解析），已修正为 POST + Pydantic 模型。
     """
-    read_dao = Information_Read()
+    read_dao = get_read_dao()
     messages = read_dao.read_information(
         {"user_id": current_user["user_id"], "session_id": req.session_id}
     )

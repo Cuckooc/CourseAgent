@@ -48,8 +48,7 @@ from sqlalchemy import text
 from core.config import settings
 from app.application.ports.kv import get_redis
 from core.sql_guard import safe_execute
-from app.infrastructure.persistence.repositories.session import SessionDAO
-from app.infrastructure.persistence.session import session_scope
+from app.application.ports.persistence import get_session_dao, session_scope
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +211,7 @@ def _do_rollover(client, user_id: int, old_sid: int, old_title: str) -> int:
         return None
 
     # 2) 创建接续会话
-    new_sid = SessionDAO().create_session(user_id, _new_title(old_title))
+    new_sid = get_session_dao().create_session(user_id, _new_title(old_title))
     if not new_sid:
         raise RuntimeError("create continuation session failed")
 

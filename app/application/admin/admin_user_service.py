@@ -22,8 +22,7 @@
 """
 import logging
 
-from app.infrastructure.persistence.repositories.user import Information
-from app.infrastructure.persistence.repositories.read import Information_Read
+from app.application.ports.persistence import get_user_dao, get_read_dao
 
 # 模块级日志器：注销/角色变更等管理动作的审计日志统一走该 logger
 logger = logging.getLogger(__name__)
@@ -53,7 +52,7 @@ def list_all_users() -> list:
           success(users=...) 封装为 JSON 返回管理端前端。
     """
     # 数据来源：dao/read.py 的 Information_Read（只读查询 user_information 表）
-    return Information_Read().get_all_users()
+    return get_read_dao().get_all_users()
 
 
 def update_role(user_id: int, role: str) -> bool:
@@ -71,7 +70,7 @@ def update_role(user_id: int, role: str) -> bool:
           该用户下一个请求经 get_current_user 回库读到新角色。
     """
     # 数据去向：dao/user.py 的 Information.update_role → UPDATE user_information
-    ok = Information().update_role(user_id, role)
+    ok = get_user_dao().update_role(user_id, role)
     if ok:
         logger.info("admin updated role: user_id=%s role=%s", user_id, role)
     return ok
@@ -98,7 +97,7 @@ def deactivate_user(user_id: int) -> bool:
 
     # 数据去向：dao/user.py 的 Information.deactivate_user
     # → dao/soft_delete.py 软删除会话/历史/画像/账号 + 写 account_deletion_schedule
-    ok = Information().deactivate_user(user_id)
+    ok = get_user_dao().deactivate_user(user_id)
     if not ok:
         return False
 

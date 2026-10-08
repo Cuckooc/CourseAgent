@@ -20,8 +20,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
 from app.application.auth.user import UserInformation
-from app.infrastructure.persistence.repositories.session import SessionDAO
-from app.infrastructure.persistence.repositories.read import Information_Read
+from app.application.ports.persistence import get_session_dao, get_read_dao
 from app.auth import account_guard
 from core.audit import audit
 from core.config import settings
@@ -160,7 +159,7 @@ def login_by_account(req: LoginByUsernameRequest, _=Depends(rate_limit(10, 60)))
     result = user_service.login_by_username(req.username, req.password)
     if result["status"] == "success":
         account_guard.reset(req.username)
-        session_dao = SessionDAO()
+        session_dao = get_session_dao()
         result["sessions"] = session_dao.get_session_list(result["user_id"])
     else:
         # 用本次 INCR 返回值即时判定锁定，消除并发批次「检查先于计数」的竞态：
@@ -202,7 +201,7 @@ def me(current_user: dict = Depends(get_current_user), _=Depends(user_rate_limit
     返回：统一 success 结构的 HTTP JSON 响应，含 user_id/user_name/email/role，
           其中 user_name/email/role 实时查询数据库，库内缺失时回退 JWT 字段或默认值。
     """
-    info = Information_Read().get_by_id(current_user["user_id"]) or {}
+    info = get_read_dao().get_by_id(current_user["user_id"]) or {}
     return success(
         user_id=current_user["user_id"],
         user_name=info.get("user_name") or current_user.get("user_name", ""),
@@ -228,6 +227,6 @@ def login_by_email(req: LoginByEmailRequest, _=Depends(rate_limit(10, 60))):
     user_service = UserInformation()
     result = user_service.login_by_email_code(req.email, req.code)
     if result["status"] == "success":
-        session_dao = SessionDAO()
+        session_dao = get_session_dao()
         result["sessions"] = session_dao.get_session_list(result["user_id"])
     return result

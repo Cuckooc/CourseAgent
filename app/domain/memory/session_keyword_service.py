@@ -46,7 +46,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from core.config import settings
 from app.application.ports.kv import get_redis
-from app.infrastructure.persistence.repositories.session_keyword import SessionKeywordDAO
+from app.application.ports.persistence import get_session_keyword_dao
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ class SessionKeywordService:
     client/dao 形参保留给测试注入。
     """
 
-    def __init__(self, client=None, dao: SessionKeywordDAO = None):
+    def __init__(self, client=None, dao=None):
         """
         形参（生产由单例工厂无参构造，以下仅测试注入用）：
         - client：Redis 客户端，None 时由 client 属性惰性取
@@ -101,7 +101,7 @@ class SessionKeywordService:
         _flusher_started 保证后台线程幂等启动一次。
         """
         self._client = client
-        self._dao = dao or SessionKeywordDAO()
+        self._dao = dao or get_session_keyword_dao()
         self._ttl = settings.CONTEXT_TTL_SECONDS
         self._max_keywords = settings.SESSION_KEYWORD_MAX
         self._inject_chars = settings.SESSION_KEYWORD_INJECT_CHARS

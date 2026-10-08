@@ -34,7 +34,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
-from app.infrastructure.persistence.repositories.knowledge import build_stored_filename
+from app.application.ports.persistence import build_stored_filename
 from app.application.files.file_service import FileService
 from app.application.files.mask_service import mask_text
 from app.application.files.preference_service import extract_preferences
@@ -363,9 +363,9 @@ async def upload_file(
         raise BizException("临时知识库必须指定 session_id", http_status=400)
     if scope == "temp":
         # 会话归属校验：会话号为 per-user 序列，仅允许往自己的会话上传临时知识库
-        from app.infrastructure.persistence.repositories.session import SessionDAO
+        from app.application.ports.persistence import get_session_dao
 
-        if not SessionDAO().is_session_owner(user_id, session_id):
+        if not get_session_dao().is_session_owner(user_id, session_id):
             raise BizException("会话不存在或无权限操作", http_status=403)
 
     temp_store = get_temp_store()

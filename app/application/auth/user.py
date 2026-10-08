@@ -28,8 +28,7 @@
       login_by_email）；control 层另外负责审计日志（audit）与会话
       列表装配，本模块只返回业务结果字典。
 """
-from app.infrastructure.persistence.repositories.read import Information_Read
-from app.infrastructure.persistence.repositories.user import Information
+from app.application.ports.persistence import get_read_dao, get_user_dao
 from app.auth import verification
 from app.auth.authentication import create_access_token, hash_password, verify_password
 from typing import Any, Dict
@@ -59,9 +58,9 @@ class UserInformation:
     def __init__(self):
         """无参构造：组装只读 DAO 与写入 DAO 两个成员，无外部形参。"""
         # 只读查询通道：注册查重、登录取用户、聊天身份解析、密码升级
-        self.information_read = Information_Read()
+        self.information_read = get_read_dao()
         # 写入通道：注册入库、token 版本自增
-        self.information = Information()
+        self.information = get_user_dao()
 
     # ---------------- 聊天路径：只读解析用户身份 ----------------
     def user_information(self, data: Dict[str, Any]) -> Dict[str, Any]:

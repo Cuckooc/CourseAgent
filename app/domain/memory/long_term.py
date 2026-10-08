@@ -49,8 +49,7 @@ from typing import List, Optional, Tuple
 
 from core.config import settings
 from app.application.ports.kv import try_acquire_cycle_lock
-from app.infrastructure.persistence.repositories.history import Information_history
-from app.infrastructure.persistence.repositories.information import Information
+from app.application.ports.persistence import get_history_dao, get_information_dao
 from app.domain.memory.short_term import get_short_term_store
 
 logger = logging.getLogger(__name__)
@@ -77,8 +76,8 @@ class LongTermFlusher:
     def __init__(
         self,
         store=None,
-        information_dao: Information = None,
-        history_dao: Information_history = None,
+        information_dao=None,
+        history_dao=None,
         flush_ttl_threshold: int = None,
     ):
         """
@@ -95,8 +94,8 @@ class LongTermFlusher:
         关键属性去向：_started 保证后台线程幂等启动一次。
         """
         self._store = store
-        self._information_dao = information_dao or Information()
-        self._history_dao = history_dao or Information_history()
+        self._information_dao = information_dao or get_information_dao()
+        self._history_dao = history_dao or get_history_dao()
         self._flush_ttl_threshold = (
             flush_ttl_threshold
             if flush_ttl_threshold is not None

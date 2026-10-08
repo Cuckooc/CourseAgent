@@ -33,7 +33,7 @@
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO
+from app.application.ports.persistence import get_document_review_dao
 from app.application.files.mask_service import mask_text
 from app.application.ports.vector import (
     add_parent_child,
@@ -64,7 +64,7 @@ class ReviewService:
 
     def __init__(self):
         # __init__ 无形参：DAO 无状态，每次新建 ReviewService 时随之实例化
-        self._dao = DocumentReviewDAO()
+        self._dao = get_document_review_dao()
 
     def submit_for_review(
         self,

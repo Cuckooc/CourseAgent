@@ -21,8 +21,7 @@ import logging
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
-from core.config import settings
-from app.infrastructure.persistence.repositories.knowledge import KnowledgeDAO
+from app.application.ports.persistence import get_knowledge_dao
 
 # 模块级日志器：文档删除等管理动作的审计日志走该 logger
 logger = logging.getLogger(__name__)
@@ -48,7 +47,7 @@ class KnowledgeService:
     def __init__(self):
         # __init__ 无形参：上传根目录取自 core.config.settings.UPLOAD_DIR
         # 数据去向：KnowledgeDAO 据此定位并清理上传的物理文件
-        self.dao = KnowledgeDAO(settings.UPLOAD_DIR)
+        self.dao = get_knowledge_dao()
 
     def list_documents(self, user_id: int = None, is_admin: bool = False) -> List[Dict[str, Any]]:
         """列出当前用户可见的知识库文档。

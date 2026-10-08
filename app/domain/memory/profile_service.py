@@ -51,7 +51,7 @@ from typing import Any, Dict, Optional
 from core.config import settings
 from app.application.ports.llm import build_chat_model
 from app.application.ports.kv import get_redis, try_acquire_cycle_lock
-from app.infrastructure.persistence.repositories.profile import ProfileDAO
+from app.application.ports.persistence import get_profile_dao
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ class ProfileService:
     构造；client/profile_dao 形参保留给测试注入。
     """
 
-    def __init__(self, client=None, profile_dao: ProfileDAO = None):
+    def __init__(self, client=None, profile_dao=None):
         """
         形参（生产由单例工厂无参构造，以下仅测试注入用）：
         - client：Redis 客户端，None 时由 client 属性惰性取
@@ -190,7 +190,7 @@ class ProfileService:
         _flusher_started 保证后台落库线程幂等启动一次。
         """
         self._client = client
-        self._dao = profile_dao or ProfileDAO()
+        self._dao = profile_dao or get_profile_dao()
         # 2 线程小池：仅跑画像提取 LLM 调用，避免与对话主链路争抢资源
         self._pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="profile")
         # Redis 不可用时的进程内降级（与 Redis 语义一致，仅单机有效）

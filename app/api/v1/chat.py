@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.application.chat.chat_service import get_chat_service
-from app.infrastructure.persistence.repositories.feedback import FeedbackDAO
+from app.application.ports.persistence import get_feedback_dao
 from core.audit import audit
 from app.auth.guards import get_current_user, forbid_admin
 from app.auth.rate_limit import user_rate_limit
@@ -155,7 +155,7 @@ def feedback(req: FeedbackRequest, current_user: dict = Depends(get_current_user
     """
     if req.rating not in (1, -1):
         raise BizException("rating 必须为 1（点赞）或 -1（点踩）")
-    dao = FeedbackDAO()
+    dao = get_feedback_dao()
     ok = dao.insert(
         user_id=current_user["user_id"],
         session_id=req.session_id,

@@ -12,6 +12,23 @@ from app.application.chat.chat_service import get_chat_service
 from app.application.knowledge.knowledge_service import get_knowledge_service
 from app.application.ports.kv import register_cycle_lock, register_redis_provider
 from app.application.ports.llm import register_chat_model_builder
+from app.application.ports import persistence as _persistence_ports
+from app.infrastructure.persistence.repositories import (
+    chain_log as _chain_log_impl,
+    document_review as _document_review_impl,
+    feedback as _feedback_impl,
+    history as _history_impl,
+    information as _information_impl,
+    knowledge as _knowledge_impl,
+    profile as _profile_impl,
+    read as _read_impl,
+    session as _session_impl,
+    session_keyword as _session_keyword_impl,
+    soft_delete as _soft_delete_impl,
+    user as _user_impl,
+)
+from app.infrastructure.persistence.session import session_scope as _session_scope_impl
+from core.config import settings
 from app.application.ports.vector import (
     get_persistent_db,
     get_temp_store,
@@ -46,6 +63,24 @@ register_persistent_db_provider(_get_persistent_db_impl)
 register_persistent_lock_provider(_persistent_lock_impl)
 register_flush_persistent_index(_flush_persistent_index_impl)
 register_persistent_ops(_persistent_ops_impl)
+
+# Port↔Adapter 装配：MySQL 持久化 DAO Port ← infrastructure repositories 实现
+# （DAO 类均为无参构造的无状态类，直接以类本身为零参工厂注册；
+#  KnowledgeDAO 构造需 upload_dir，以闭包注入 settings.UPLOAD_DIR）
+_persistence_ports.register_session_dao(_session_impl.SessionDAO)
+_persistence_ports.register_read_dao(_read_impl.Information_Read)
+_persistence_ports.register_user_dao(_user_impl.Information)
+_persistence_ports.register_information_dao(_information_impl.Information)
+_persistence_ports.register_history_dao(_history_impl.Information_history)
+_persistence_ports.register_feedback_dao(_feedback_impl.FeedbackDAO)
+_persistence_ports.register_knowledge_dao(lambda: _knowledge_impl.KnowledgeDAO(settings.UPLOAD_DIR))
+_persistence_ports.register_chain_log_dao(_chain_log_impl.ChainLogDAO)
+_persistence_ports.register_profile_dao(_profile_impl.ProfileDAO)
+_persistence_ports.register_session_keyword_dao(_session_keyword_impl.SessionKeywordDAO)
+_persistence_ports.register_document_review_dao(_document_review_impl.DocumentReviewDAO)
+_persistence_ports.register_build_stored_filename(_knowledge_impl.build_stored_filename)
+_persistence_ports.register_recover_last_deleted(_soft_delete_impl.recover_last_deleted)
+_persistence_ports.register_session_scope(_session_scope_impl)
 
 __all__ = [
     "get_chat_service",

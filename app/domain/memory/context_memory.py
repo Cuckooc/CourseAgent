@@ -53,7 +53,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from core.config import settings
 from app.application.ports.llm import build_chat_model
 from app.application.ports.kv import get_redis
-from app.infrastructure.persistence.repositories.session import SessionDAO
+from app.application.ports.persistence import get_session_dao
 from app.domain.memory.short_term import get_short_term_store
 
 logger = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ class ContextMemoryService:
         self,
         client=None,
         compressor: Optional[Callable[[str], str]] = None,
-        session_dao: SessionDAO = None,
+        session_dao=None,
         ttl: int = None,
     ):
         """
@@ -133,7 +133,7 @@ class ContextMemoryService:
         self._client = client
         # compressor(str)->str：默认走 LLM 网关，测试可注入假实现
         self._compressor = compressor
-        self._session_dao = session_dao or SessionDAO()
+        self._session_dao = session_dao or get_session_dao()
         self._ttl = ttl if ttl is not None else settings.CONTEXT_TTL_SECONDS
         # 降级内存：key -> {"summary": str, "watermark": int, "expires_at": float}
         self._mem: Dict[str, dict] = {}

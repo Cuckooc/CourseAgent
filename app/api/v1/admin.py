@@ -25,7 +25,7 @@ from app.auth.rate_limit import user_rate_limit
 from app.auth.delete_guard import PendingDeleteStore
 from core.responses import BizException, success
 from core.usage import usage_snapshot, user_usage_snapshot
-from app.infrastructure.persistence.repositories.read import Information_Read
+from app.application.ports.persistence import get_read_dao
 from app.application.admin import admin_user_service
 
 # 管理路由：prefix=/admin；由 control/app.py 的 app.include_router(admin_router) 注册。
@@ -71,7 +71,7 @@ def llm_user_usage(
     """
     target_month = month or datetime.now().strftime("%Y-%m")
     usage = user_usage_snapshot(target_month)
-    user_map = Information_Read().get_by_ids(list(usage.keys())) if usage else {}
+    user_map = get_read_dao().get_by_ids(list(usage.keys())) if usage else {}
     rows = []
     for uid, stat in usage.items():
         info = user_map.get(int(uid), {})
@@ -160,7 +160,7 @@ def update_user_role(
         raise BizException("角色仅支持 user / teacher", http_status=400)
     if user_id == current_user.get("user_id"):
         raise BizException("不能修改当前登录账号的角色", http_status=400)
-    target = Information_Read().get_by_id(user_id)
+    target = get_read_dao().get_by_id(user_id)
     if not target:
         raise BizException("用户不存在或已注销", http_status=404)
     if target.get("role") == "admin":
@@ -198,7 +198,7 @@ def deactivate_user_preview(
     """
     if user_id == current_user.get("user_id"):
         raise BizException("不能注销当前登录的管理员账号", http_status=400)
-    target = Information_Read().get_by_id(user_id)
+    target = get_read_dao().get_by_id(user_id)
     if not target:
         raise BizException("用户不存在或已注销", http_status=404)
     if target.get("role") == "admin":
@@ -243,7 +243,7 @@ def deactivate_user_confirm(
         raise BizException("确认令牌无效或已过期，请重新操作", http_status=400)
     if target_info.get("target_user_id") != user_id:
         raise BizException("确认令牌与目标用户不匹配", http_status=400)
-    target = Information_Read().get_by_id(user_id)
+    target = get_read_dao().get_by_id(user_id)
     if not target:
         raise BizException("用户不存在或已注销", http_status=404)
     if target.get("role") == "admin":

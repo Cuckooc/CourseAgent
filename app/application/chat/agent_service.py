@@ -59,7 +59,7 @@ from app.application.ports.llm import LLMUnavailableError
 from core.config import settings
 from core.degradation_alert import alert_degradation
 from core.metrics import record_agent_execution
-from app.infrastructure.persistence.repositories.chain_log import ChainLogDAO
+from app.application.ports.persistence import get_chain_log_dao
 from core.prompt_registry import get_prompt_version
 
 # 模块级日志器：编排流程的阶段日志、重试/降级/循环检测告警均走该 logger
@@ -110,7 +110,7 @@ class AgentService:
         异常：任何异常仅告警不抛出（后台任务，失败不得影响已返回的对话结果）。
         """
         try:
-            ChainLogDAO().insert(
+            get_chain_log_dao().insert(
                 user_id=sm.user_id,
                 session_id=sm.session_id,
                 task_id=task_id,

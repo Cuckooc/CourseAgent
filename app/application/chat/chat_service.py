@@ -50,8 +50,7 @@ from core.content_filter import filter_text
 from app.application.chat.context import ContextService
 from app.application.chat.title import Title
 from app.util.result import handle_result
-from app.infrastructure.persistence.repositories.session import SessionDAO
-from app.infrastructure.persistence.repositories.history import Information_history
+from app.application.ports.persistence import get_session_dao, get_history_dao
 
 # 模块级日志器：对话链路的阶段日志与各类降级/失败告警统一走该 logger
 logger = logging.getLogger(__name__)
@@ -91,8 +90,8 @@ class ChatService:
         self.embedding_model = get_embedding()
         self.context_service = ContextService()
         self.title_service = Title()
-        self.session_dao = SessionDAO()
-        self.history_dao = Information_history()
+        self.session_dao = get_session_dao()
+        self.history_dao = get_history_dao()
         # 记忆模块：短期记忆（Redis 滑动 TTL）/ 上下文记忆（3/5 轮 + 摘要压缩）/ 用户画像
         self.short_term_store = get_short_term_store()
         self.context_memory = get_context_memory_service()
