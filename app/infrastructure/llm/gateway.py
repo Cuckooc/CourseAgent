@@ -53,6 +53,10 @@ from langchain_openai import ChatOpenAI
 from config.setting import llm
 from core.usage import get_current_user_id, record_usage
 
+# 契约异常定义在横切层 core.exceptions（守卫禁止 infrastructure→application，
+# 业务层经 ports.llm re-export 共用同一类型）；此处 re-export 保持旧路径可用
+from core.exceptions import LLMUnavailableError
+
 logger = logging.getLogger(__name__)
 
 # openai v1 SDK 异常分类（langchain-openai 0.1.x 底层使用 openai>=1.x）
@@ -62,10 +66,6 @@ try:
     _RETRYABLE_EXCEPTIONS = (APITimeoutError, APIConnectionError, RateLimitError)
 except ImportError:  # pragma: no cover - openai 必装，防御性兜底
     _RETRYABLE_EXCEPTIONS = (TimeoutError, ConnectionError)
-
-
-class LLMUnavailableError(Exception):
-    """主模型与全部降级模型均不可用（重试耗尽或致命错误）。"""
 
 
 class _EmptyResponseError(Exception):

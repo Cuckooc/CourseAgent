@@ -55,7 +55,7 @@ from app.domain.agents.state_machine import (
 from app.domain.agents.failure_diagnoser import FailureDiagnoser
 from app.domain.agents.verifier import IntentVerifier
 from app.domain.agents.fallback import FallbackHandler
-from app.infrastructure.llm.gateway import LLMUnavailableError
+from app.application.ports.llm import LLMUnavailableError
 from core.config import settings
 from core.degradation_alert import alert_degradation
 from core.metrics import record_agent_execution

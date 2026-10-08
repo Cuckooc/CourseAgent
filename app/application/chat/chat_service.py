@@ -44,7 +44,7 @@ from app.domain.memory.profile_service import get_profile_service, render_profil
 from app.domain.memory.session_keyword_service import get_session_keyword_service
 from app.domain.memory.session_rollover import maybe_rollover
 from app.domain.memory.short_term import get_short_term_store
-from app.infrastructure.llm.gateway import LLMUnavailableError
+from app.application.ports.llm import LLMUnavailableError
 from core.degradation_alert import alert_degradation
 from core.content_filter import filter_text
 from app.application.chat.context import ContextService

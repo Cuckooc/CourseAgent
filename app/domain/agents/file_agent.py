@@ -45,7 +45,7 @@ from app.infrastructure.document.file import (
     to_documents,
     build_chromadb,
 )
-from app.infrastructure.llm.gateway import build_chat_model
+from app.application.ports.llm import build_chat_model
 from app.domain.agents.retrieval import retrieve_scoped
 from typing import Optional
 from langchain_chroma import Chroma

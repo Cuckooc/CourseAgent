@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from typing import Dict, Optional
 
-from app.infrastructure.llm.gateway import build_chat_model
+from app.application.ports.llm import build_chat_model
 
 # 模块级日志器：偏好提取成功/失败日志走该 logger
 logger = logging.getLogger(__name__)

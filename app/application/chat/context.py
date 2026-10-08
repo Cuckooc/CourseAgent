@@ -24,7 +24,7 @@
 """
 from app.infrastructure.embeddings.text_embedding import get_embedding
 from typing import Dict, Any
-from app.infrastructure.llm.gateway import build_chat_model
+from app.application.ports.llm import build_chat_model
 from app.infrastructure.llm.llm_business import ContextKey
 class ContextService:
     """上下文注入模式判定与查询改写服务。

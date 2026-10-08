@@ -29,7 +29,7 @@ Agent 间数据流：
 """
 from .message_bus import MessageBus
 from config.setting import llm,agent
-from app.infrastructure.llm.gateway import build_chat_model, LLMUnavailableError
+from app.application.ports.llm import build_chat_model, LLMUnavailableError
 from core.degradation_alert import alert_degradation
 from core.output_validator import validate_json_output, SummaryOutput
 from langchain_core.prompts import PromptTemplate

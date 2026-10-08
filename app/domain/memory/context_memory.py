@@ -51,6 +51,7 @@ import time
 from typing import Callable, Dict, List, Optional, Tuple
 
 from core.config import settings
+from app.application.ports.llm import build_chat_model
 from app.infrastructure.redis.redis_client import get_redis
 from app.infrastructure.persistence.repositories.session import SessionDAO
 from app.domain.memory.short_term import get_short_term_store
@@ -401,8 +402,6 @@ class ContextMemoryService:
                     )
                 )
             else:
-                from app.infrastructure.llm.gateway import build_chat_model
-
                 llm = build_chat_model()
                 resp = llm.invoke(
                     _COMPRESS_PROMPT.format(

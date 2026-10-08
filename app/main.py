@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from app.api import deps as _deps  # noqa: F401  # 组合根：注册 Port↔Adapter（LLM 网关等）
 from app.api.v1.chat import chat_router
 from app.api.v1.auth import login_router
 from app.api.v1.files import file_router

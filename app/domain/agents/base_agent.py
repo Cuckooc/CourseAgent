@@ -19,7 +19,7 @@
 """
 from abc import ABC, abstractmethod
 from config.setting import llm,agent
-from app.infrastructure.llm.gateway import build_chat_model
+from app.application.ports.llm import build_chat_model
 from typing import Dict, Any,Optional
 from .message_bus import MessageBus
 
