@@ -48,7 +48,7 @@ import time
 from typing import List, Optional, Tuple
 
 from core.config import settings
-from app.infrastructure.redis.locks import try_acquire_cycle_lock
+from app.application.ports.kv import try_acquire_cycle_lock
 from app.infrastructure.persistence.repositories.history import Information_history
 from app.infrastructure.persistence.repositories.information import Information
 from app.domain.memory.short_term import get_short_term_store

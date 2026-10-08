@@ -46,7 +46,7 @@ from typing import Optional
 from sqlalchemy import text
 
 from core.config import settings
-from app.infrastructure.redis.redis_client import get_redis
+from app.application.ports.kv import get_redis
 from core.sql_guard import safe_execute
 from app.infrastructure.persistence.repositories.session import SessionDAO
 from app.infrastructure.persistence.session import session_scope

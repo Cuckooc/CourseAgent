@@ -71,7 +71,7 @@ class PendingDeleteStore:
             "target_info": target_info,
         }
 
-        from app.infrastructure.redis.redis_client import get_redis
+        from app.application.ports.kv import get_redis
         r = get_redis()
         if r is not None:
             try:
@@ -110,7 +110,7 @@ class PendingDeleteStore:
             交给后续删除逻辑）；令牌不存在/已过期/已使用/user_id 或 action 不匹配时返回 None
             （调用方据此返回确认失败，不执行删除）。
         """
-        from app.infrastructure.redis.redis_client import get_redis
+        from app.application.ports.kv import get_redis
         r = get_redis()
         payload = None
 

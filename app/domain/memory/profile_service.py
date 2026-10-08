@@ -50,8 +50,7 @@ from typing import Any, Dict, Optional
 
 from core.config import settings
 from app.application.ports.llm import build_chat_model
-from app.infrastructure.redis.locks import try_acquire_cycle_lock
-from app.infrastructure.redis.redis_client import get_redis
+from app.application.ports.kv import get_redis, try_acquire_cycle_lock
 from app.infrastructure.persistence.repositories.profile import ProfileDAO
 
 logger = logging.getLogger(__name__)

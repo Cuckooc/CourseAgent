@@ -61,7 +61,7 @@ def reset_rate_limit_store() -> None:
     """
     with _rl_lock:
         _rl_buckets.clear()
-    from app.infrastructure.redis.redis_client import get_redis
+    from app.application.ports.kv import get_redis
 
     r = get_redis()
     if r is not None:
@@ -85,7 +85,7 @@ def _check_window(key: str, max_times: int, window_seconds: int) -> None:
     """
     now = time.time()
 
-    from app.infrastructure.redis.redis_client import get_redis
+    from app.application.ports.kv import get_redis
 
     r = get_redis()
     if r is not None:

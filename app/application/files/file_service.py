@@ -113,7 +113,7 @@ def _dedup_commit_lock(scope: str, user_id: Optional[int], content_hash: str):
     redis_client = None
     redis_key = f"lock:dedup:{key}"
     try:
-        from app.infrastructure.redis.redis_client import get_redis
+        from app.application.ports.kv import get_redis
 
         redis_client = get_redis()
     except Exception:  # noqa: BLE001 - Redis 探测异常按未配置处理
