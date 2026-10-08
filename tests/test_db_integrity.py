@@ -42,11 +42,10 @@ EXPECTED_FK、DOC_TYPES、DOC_STATUS、USER_ROLES、ORPHAN_CHECKS，含义见各
 - 写入用例（事务回滚、字段长度）使用独立临时记录 + 异常强制回滚，不污染业务表；
 - 不依赖业务代码，直接走 SQLAlchemy text() + INFORMATION_SCHEMA。
 """
-import time
 import uuid
 
 import pytest
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 
 # 模块级 marker：全部用例需要真实 DB（MySQL）连通
 pytestmark = pytest.mark.db

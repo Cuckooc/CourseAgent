@@ -108,7 +108,6 @@ def test_chat_recover_no_llm(http, user_acct):
 
     # 取上轮 sid
     sid_from_first = 0
-    s1_body = _
     # recover 用 sid=0 也能跑（无内容时返回 missing）
     status, body, _ = http(
         "POST", "/chat/recover",
@@ -152,7 +151,7 @@ def test_chat_stream_sse(http, user_acct):
     """/chat/stream SSE 流式 → 200 + content-type=text/event-stream + 至少一帧。"""
     import urllib.request
 
-    url = f"http://localhost:8000/chat/stream"
+    url = "http://localhost:8000/chat/stream"
     req = urllib.request.Request(
         url,
         data=json.dumps({"user_input": "你好", "session_id": 0}).encode("utf-8"),

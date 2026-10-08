@@ -29,7 +29,9 @@ POST /file/path；无 asyncio。
 清理：cleanup() 经「删除预览→确认」两步 API 删除 e2e_topic*/e2e_race_same* 文档，
 TC-5.1b 前后各清一次，TC-5.2b 结束再清。
 """
-import requests, io, time
+import requests
+import io
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连）
@@ -39,9 +41,11 @@ def check(name, cond, extra=""):
     """断言辅助：累加全局 PASS/FAIL 并打印，不抛异常。调用方：本脚本全部 TC。"""
     global PASS, FAIL
     if cond:
-        PASS += 1; print(f"  [PASS] {name}")
+        PASS += 1
+        print(f"  [PASS] {name}")
     else:
-        FAIL += 1; print(f"  [FAIL] {name} {extra}")
+        FAIL += 1
+        print(f"  [FAIL] {name} {extra}")
 
 r = requests.post(f"{BASE}/login/account", json={"username": "e2e_tester_2026", "password": "Test1234!"})
 token = r.json()["access_token"]
@@ -136,9 +140,12 @@ with ThreadPoolExecutor(max_workers=4) as ex:
 succ = skp = other = 0
 for idx, code, resp in results:
     fst = resp.get("files", [{}])[0].get("status", "?") if isinstance(resp, dict) and resp.get("files") else f"HTTP{code}"
-    if fst == "success": succ += 1
-    elif fst == "skipped": skp += 1
-    else: other += 1
+    if fst == "success":
+        succ += 1
+    elif fst == "skipped":
+        skp += 1
+    else:
+        other += 1
     print(f"    [{idx}] HTTP {code} file={fst}")
 check("TC-5.2b: 成功数≤1", succ <= 1, f"(success={succ})")
 check("TC-5.2b: 去重生效(skipped≥2 或 1成功其余跳过)", succ + skp >= 3 and skp >= 1, f"(success={succ}, skipped={skp})")

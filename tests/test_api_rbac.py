@@ -44,7 +44,6 @@ test_sql_injection_rejected 直连 db.session.engine 做硬删清理（UNIQUE �
 - 不 mock 任何层，全部走真实后端 + 真实 DB；
 - 全部用例标 `backend` marker，后端不可达时自动 skip。
 """
-import time
 
 import pytest
 

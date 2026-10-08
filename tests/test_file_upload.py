@@ -44,13 +44,10 @@
 - 测试账号测后软删，上传文件物理路径会随账号软删级联清理。
 """
 import io
-import os
-import time
 import uuid
 
 import pytest
 import urllib.request
-from sqlalchemy import text
 
 # 模块级 markers：需后端在线 + 真实 embedding/Chroma（slow）+ 真实 MySQL（db）
 pytestmark = [pytest.mark.backend, pytest.mark.slow, pytest.mark.db]
@@ -251,4 +248,4 @@ def test_upload_persists_to_chroma(http, user_acct, db_engine):
     data = body.get("data") or body
     items = data if isinstance(data, list) else data.get("items") or data.get("list") or []
     found = any("chroma_test" in (str(i.get("filename") or i.get("original_name") or "")) for i in items)
-    assert found, f"Chroma 入库后未在 /knowledge/list 中检索到"
+    assert found, "Chroma 入库后未在 /knowledge/list 中检索到"

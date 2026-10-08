@@ -25,7 +25,6 @@
 - app/api/v1/files.py：临时文件上传后对提取文本脱敏再送偏好提取。
 """
 import re
-from typing import Optional
 
 # 模块级常量：手机号——1 开头，第二位 3-9，共 11 位；前后负向断言防截断长数字
 _PHONE_RE = re.compile(r"(?<!\d)(1[3-9]\d{9})(?!\d)")

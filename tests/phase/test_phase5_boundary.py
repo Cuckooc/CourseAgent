@@ -27,7 +27,8 @@ TC-6.9 无效 JWT（恶意：伪造 token）→ 401
 依赖说明：requests 直发 HTTP，不经 conftest。
 清理：仅 TC-6.3 成功时删除该特殊字符文件；其余被拒请求无落盘无需清理。
 """
-import requests, io, os
+import requests
+import io
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连）
 PASS = 0  # 全局通过断言计数

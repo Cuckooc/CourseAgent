@@ -113,7 +113,6 @@ def echo_tool():
     消费者：test_dispatcher_cross_owner_denied/role_denied/
     identity_injection_stripped/dedup/timeout_degrades。
     """
-    from app.domain.tools.protocol import RISK_READ, RISK_WRITE
     from pydantic import BaseModel
 
     class EchoArgs(BaseModel):

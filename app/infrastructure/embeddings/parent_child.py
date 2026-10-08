@@ -150,7 +150,6 @@ def _split_children(parent_text: str, params: dict) -> List[str]:
     n = len(parent_text)
     if n <= child_chars:
         return [parent_text]
-    step = child_chars - overlap
     pieces: List[str] = []
     i = 0
     while i < n:

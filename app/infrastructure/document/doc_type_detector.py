@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import List
 
 logger = logging.getLogger(__name__)
 

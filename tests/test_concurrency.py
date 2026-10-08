@@ -54,7 +54,6 @@
 """
 import json
 import os
-import threading
 import time
 import urllib.error
 import urllib.request
@@ -130,7 +129,7 @@ class TestConcurrentLogin:
         """5 个不同账号并发登录：全部应 success。
         通过 DAO 直接创建 5 个账号，再并发走 /login/account。
         """
-        from app.auth.authentication import create_access_token, hash_password  # noqa: WPS433
+        from app.auth.authentication import hash_password  # noqa: WPS433
         from app.infrastructure.persistence.repositories.read import Information_Read  # noqa: WPS433
         from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 
@@ -273,16 +272,6 @@ class TestConcurrentSessionCreate:
             assert body.get("status") in ("success", "fail"), \
                 f"业务响应异常：{body}"
 
-        # 按 token 分组：每个用户的 session_id 在自己序列内递增
-        user_sessions = []
-        teacher_sessions = []
-        for r in results:
-            body = r[1]
-            if body.get("status") != "success":
-                continue
-            # 通过比对两个 fixture 的 token 来分组（无法直接拿到 token）
-            # 简化：按 success 状态收集 session_id，只要 len>=4 即可
-            pass
         # 放宽验证：至少 2 个 success（每用户至少 1 个），不要求全局唯一
         success_count = sum(1 for r in results if r[1].get("status") == "success")
         assert success_count >= 2, \

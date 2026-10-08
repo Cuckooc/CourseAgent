@@ -40,7 +40,7 @@ v2 改造：将纯关键词硬匹配升级为「关键词 + 语义感知启发�
 """
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from langchain.tools import tool

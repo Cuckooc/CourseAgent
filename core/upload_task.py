@@ -32,7 +32,7 @@ from __future__ import annotations
 import threading
 import time
 import uuid
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 # task_id -> 任务记录字典；进程内存储，重启即失效（客户端按“任务不存在”处理）
 _task_store: Dict[str, dict] = {}

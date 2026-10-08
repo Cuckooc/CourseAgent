@@ -32,7 +32,6 @@
 - tests/phase/test_all_changes.py：测试 score_relevance 异常默认 1.0。
 """
 import logging
-from typing import Any
 
 from app.application.ports.llm import build_chat_model
 from core.config import settings

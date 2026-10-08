@@ -37,7 +37,6 @@ import numpy as np
 from app.application.chat.agent_service import get_agent_service
 from app.application.ports.embeddings import get_retrying_embedding
 from config.setting import LLMConfig, agent
-from core.config import settings
 from core.usage import reset_current_user_id, set_current_user_id
 from app.domain.memory.context_memory import get_context_memory_service
 from app.domain.memory.profile_service import get_profile_service, render_profile_prefix

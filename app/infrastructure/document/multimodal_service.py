@@ -140,7 +140,6 @@ def _extract_single_page(image_path: str, api_key: str, model: str, prompt: str)
       3 次仍失败则向上抛出，由主入口记为该页失败标记、不中断整体。
     """
     # 延迟导入：仅真正走多模态路径时才加载 dashscope SDK
-    import dashscope
     from dashscope import MultiModalConversation
 
     img_b64 = _encode_image_base64(image_path)

@@ -422,7 +422,7 @@ class TestJWTSecurity:
         """
         from app.infrastructure.persistence.repositories.user import Information
         info = Information()
-        new_ver = info.increment_token_version(user_acct["user_id"])
+        info.increment_token_version(user_acct["user_id"])
         # 旧 token 仍带旧 ver，应被拒
         status, _, _ = http("GET", "/login/me", token=user_acct["token"])
         assert status == 401, f"旧 token 仍可用：{status}（应 401，token_version 互踢失败）"
@@ -498,10 +498,8 @@ class TestInfoLeak:
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 raw = resp.read().decode("utf-8", errors="replace")
-                status = resp.status
         except urllib.error.HTTPError as e:
             raw = e.read().decode("utf-8", errors="replace")
-            status = e.code
         # 不论 200/4xx/5xx，响应文本不应含 traceback / File "/ 路径
         assert "Traceback" not in raw, f"错误响应泄漏堆栈：{raw[:200]}"
         assert 'File "' not in raw, f"错误响应泄漏文件路径：{raw[:200]}"

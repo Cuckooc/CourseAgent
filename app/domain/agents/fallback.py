@@ -30,7 +30,6 @@
   FALLBACK_ERROR 两个状态。
 """
 import logging
-from typing import Any, Dict, Optional
 
 from app.domain.agents.state_machine import AgentState
 

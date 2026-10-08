@@ -34,7 +34,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
-from typing import List, Optional
+from typing import Optional
 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -108,7 +108,6 @@ def _ocr_single_page(image_path: str, api_key: str, model: str) -> str:
       3 次仍失败则向上抛出，由 ocr_pdf 记为该页空文本继续处理。
     """
     # 延迟导入：仅在真正走 OCR 路径时才加载 dashscope SDK
-    import dashscope
     from dashscope import MultiModalConversation
 
     img_b64 = _encode_image_base64(image_path)

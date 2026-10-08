@@ -36,7 +36,6 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
-from typing import Any, Dict, Optional
 
 from app.domain.agents.message_bus import MessageBus
 from app.domain.agents.summary_agent import SummaryAgent

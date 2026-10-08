@@ -29,7 +29,6 @@ model_llm/llm_business.py、core/config.py 的 UPLOAD_DIR。
 """
 import os
 import sys
-import tempfile
 import shutil
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

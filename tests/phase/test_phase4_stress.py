@@ -31,7 +31,11 @@ concurrent.futures.ThreadPoolExecutor 线程池；全仓无 asyncio。
 
 重要根因备注见正文 2026-09-20 注释（相似度 0.8/0.95 阈值导致的历史误判）。
 """
-import os, requests, io, json, time
+import os
+import requests
+import io
+import json
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连）
@@ -155,7 +159,6 @@ def run_tc51():
     n0 = deep_cleanup()  # 先清上次残留（含旧版本块）
     if n0:
         print(f"  预清理 {n0} 个历史测试向量块")
-    before = list_originals()
 
     with ThreadPoolExecutor(max_workers=5) as ex:
         futures = [ex.submit(upload_diff, i) for i in range(5)]
@@ -267,7 +270,7 @@ def chat_one(idx):
                 try:
                     frame = json.loads(line[6:])
                     frame_types.append(frame.get("type"))
-                except:
+                except Exception:
                     pass
         return idx, r.status_code, frame_types
     except Exception as e:

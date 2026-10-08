@@ -380,7 +380,6 @@ class KnowledgeDAO:
         if not is_admin:
             if metadatas:
                 owner = (metadatas[0] or {}).get("user_id")
-                scope = (metadatas[0] or {}).get("scope")
                 if owner is None or int(owner) != int(user_id or 0):
                     return None  # 公共/私有均仅所有者（或 admin）可删
             else:

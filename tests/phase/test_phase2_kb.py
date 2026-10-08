@@ -26,7 +26,9 @@ TC-3.5 update_strategy=replace（正常：替换策略）→ success 且列表�
 清理：依赖后端去重跳过与版本替换语义，不额外删除文档（同一文件始终 1 行）。
 TC-3.1 首次上传 → TC-3.2 重复跳过 → TC-3.3 同名不同内容版本更新 → TC-3.4 full策略 → TC-3.5 replace策略
 """
-import requests, io, json, time
+import requests
+import io
+import time
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连，不经 conftest）
 PASS = 0  # 全局通过断言计数（check 累加，末尾打印汇总）

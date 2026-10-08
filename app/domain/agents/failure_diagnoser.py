@@ -27,7 +27,6 @@
   且 can_retry → RETRYING/RESUME 重跑；重试耗尽 → handle_final_fallback。
 """
 import logging
-from typing import Any, Dict, Optional
 
 from app.application.ports.llm import build_chat_model
 from core.config import settings

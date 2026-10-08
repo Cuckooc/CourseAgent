@@ -30,7 +30,6 @@ import logging
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from sqlalchemy import func as sa_func
 
 from app.infrastructure.persistence.models import DocumentReview, UserInformation
 from app.infrastructure.persistence.session import session_scope

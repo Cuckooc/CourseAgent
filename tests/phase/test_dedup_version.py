@@ -191,7 +191,7 @@ check("build: 子 metadata parent_id 关联", children[0][1] == children[0][2].m
 print("\n=== 5. _check_duplicate — 去重判定逻辑 ===")
 
 from unittest.mock import MagicMock, patch
-from app.application.files.file_service import FileService, _list_existing_files
+from app.application.files.file_service import FileService
 
 fs = FileService()
 

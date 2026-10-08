@@ -20,9 +20,8 @@
 import logging
 import secrets
 import threading
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from core.config import settings
 
 logger = logging.getLogger(__name__)
 
