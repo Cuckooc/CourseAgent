@@ -26,12 +26,12 @@
 ADMIN_ENDPOINTS（仅 admin 的 2 个管理端点），均为参数化数据源。
 
 被测对象来源：
-- 路由守卫：control/login_control.py、profile_control.py、knowledge_control.py、
-  history_control.py（公共接口）；control/admin_control.py（/admin/* + require_admin）；
-  control/review_control.py（/review/list 自审、/review/all 审核员门槛、status 白名单）；
+- 路由守卫：app/api/v1/auth.py、profile_control.py、knowledge_control.py、
+  history_control.py（公共接口）；app/api/v1/admin.py（/admin/* + require_admin）；
+  app/api/v1/review.py（/review/list 自审、/review/all 审核员门槛、status 白名单）；
 - JWT：core/security.py 签发、core/deps.py 校验；dao/user.py 的 increment_token_version、
   dao/read.py 的 get_by_id；
-- 注册：control/login_control.py /login/register（Pydantic 校验 + 参数化 SQL）。
+- 注册：app/api/v1/auth.py /login/register（Pydantic 校验 + 参数化 SQL）。
 
 运行方式：
     pytest tests/test_api_rbac.py              # 需后端 :8000（pytestmark=backend）
@@ -44,7 +44,6 @@ test_sql_injection_rejected 直连 db.session.engine 做硬删清理（UNIQUE �
 - 不 mock 任何层，全部走真实后端 + 真实 DB；
 - 全部用例标 `backend` marker，后端不可达时自动 skip。
 """
-import time
 
 import pytest
 
@@ -236,7 +235,7 @@ def test_jwt_missing_auth_header_rejected(http):
 
 def test_token_version_kick(http, user_acct):
     """token_version 单点互踢：重新登录后旧 token 立即 401，新 token 200。"""
-    from dao.user import Information
+    from app.infrastructure.persistence.repositories.user import Information
 
     # 旧 token 先验证可用
     status, _, _ = http("GET", "/login/me", token=user_acct["token"])
@@ -249,8 +248,8 @@ def test_token_version_kick(http, user_acct):
     assert status_old == 401, f"互踢后旧 token 应 401，实际 {status_old}"
 
     # 用新 ver 签发新 token → 200
-    from core.security import create_access_token
-    from dao.read import Information_Read
+    from app.auth.authentication import create_access_token
+    from app.infrastructure.persistence.repositories.read import Information_Read
     row = Information_Read().get_by_id(user_acct["user_id"])
     new_ver = int(row["token_version"])
     new_token = create_access_token(
@@ -294,7 +293,7 @@ def test_sql_injection_rejected(http):
 
     # UNIQUE 约束覆盖软删行 → 必须硬删才能释放槽位
     from sqlalchemy import text as _t
-    from db.session import engine as _engine
+    from app.infrastructure.persistence.session import engine as _engine
 
     def _hard_delete():
         with _engine.connect() as conn:

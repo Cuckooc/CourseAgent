@@ -17,7 +17,7 @@
     两个来源，保证降级期间的用量不丢失。
 
 用户 id 透传：
-    user_id 通过线程局部变量从请求入口透传：service/chat_service 在调用
+    user_id 通过线程局部变量从请求入口透传：app/application/chat/chat_service 在调用
     LLM 前 set_current_user_id，结束后 reset_current_user_id；
     model_llm/gateway 在 record_usage 时经 get_current_user_id 读取后
     写入用户维度。选用 threading.local 而非 contextvars：Starlette 对同步
@@ -36,9 +36,9 @@
 
 被谁使用（Grep）：
     - model_llm/gateway.py：get_current_user_id、record_usage（LLM 调用收尾）；
-    - service/chat_service.py：set/reset_current_user_id（对话入口）；
-    - control/chat_control.py：check_user_budget（对话前 429 熔断）；
-    - control/admin_control.py：usage_snapshot、user_usage_snapshot（管理看板）；
+    - app/application/chat/chat_service.py：set/reset_current_user_id（对话入口）；
+    - app/api/v1/chat.py：check_user_budget（对话前 429 熔断）；
+    - app/api/v1/admin.py：usage_snapshot、user_usage_snapshot（管理看板）；
     - tests/phase/test_phase8_agent_eval.py：check_user_budget 限额验证。
 """
 import logging
@@ -48,7 +48,7 @@ from datetime import datetime
 from typing import Dict, Optional, Tuple
 
 from core.config import settings
-from core.redis_client import get_redis
+from app.infrastructure.redis.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def set_current_user_id(user_id: Optional[int]) -> None:
 
     功能：把请求用户 id 绑定到工作线程，供随后同线程内 LLM 网关
         record_usage 计量用户维度（模型/月/日）用量。
-    被谁调用：service/chat_service.py 各对话入口（调用 LLM 前设置，
+    被谁调用：app/application/chat/chat_service.py 各对话入口（调用 LLM 前设置，
         finally 中 reset_current_user_id 清理）。
     参数：
         user_id: 当前登录用户 id，来源为 get_current_user 鉴权结果；
@@ -108,7 +108,7 @@ def reset_current_user_id() -> None:
 
     功能：对话请求结束（或异常）后解绑线程局部，避免线程池线程复用时
         把上一用户的 id 串到下一请求的计量里。
-    被谁调用：service/chat_service.py 各对话入口的 finally 块。
+    被谁调用：app/application/chat/chat_service.py 各对话入口的 finally 块。
     返回：None；属性本就不存在时静默忽略。
     """
     try:
@@ -217,7 +217,7 @@ def record_usage(
 def usage_snapshot() -> Dict[str, Dict[str, int]]:
     """按模型聚合的用量快照（Redis + 内存合并）。
 
-    被谁调用：control/admin_control.py 的模型用量看板端点。
+    被谁调用：app/api/v1/admin.py 的模型用量看板端点。
     返回：Dict[str, Dict[str, int]]，形如
         {model: {"requests","prompt_tokens","completion_tokens"}}；
         同一模型在 Redis 与内存降级表中的计数相加，去向为管理接口响应
@@ -247,7 +247,7 @@ def usage_snapshot() -> Dict[str, Dict[str, int]]:
 def user_usage_snapshot(month: Optional[str] = None) -> Dict[int, Dict[str, int]]:
     """按用户聚合的月度用量快照。
 
-    被谁调用：control/admin_control.py 的用户用量看板端点
+    被谁调用：app/api/v1/admin.py 的用户用量看板端点
         （可通过查询参数指定月份）。
     参数：
         month: 月份字符串 YYYY-MM，来源为管理接口的可选查询参数；
@@ -326,7 +326,7 @@ def check_user_budget(user_id: Optional[int]) -> Tuple[bool, Dict[str, int]]:
 
     功能：读取用户今日/本月 token 消耗，与配置的日/月限额比较，
         任一达到限额即建议拒绝。限额为 0 表示不限制。
-    被谁调用：control/chat_control.py 对话入口（allowed=False 时
+    被谁调用：app/api/v1/chat.py 对话入口（allowed=False 时
         端点向客户端返回 HTTP 429）；
         tests/phase/test_phase8_agent_eval.py 验证熔断行为。
     参数：

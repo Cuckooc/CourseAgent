@@ -45,9 +45,9 @@
 辅助函数：_b64url_decode/_b64url_encode/_tamper_token（JWT 篡改）。本文件夹具 _reset_rate_limit。
 
 被测对象来源：
-- 路由/守卫：control/admin_control.py（/admin/* + require_admin）、
-  control/review_control.py（_can_moderate 所有者/审核员判定、/review/all 审核员门槛、approve/reject 状态机）、
-  control/chat_control.py（/chat/send）、control/file_control.py（/file/path magic 校验）；
+- 路由/守卫：app/api/v1/admin.py（/admin/* + require_admin）、
+  app/api/v1/review.py（_can_moderate 所有者/审核员判定、/review/all 审核员门槛、approve/reject 状态机）、
+  app/api/v1/chat.py（/chat/send）、app/api/v1/files.py（/file/path magic 校验）；
 - JWT：core/security.py + core/deps.py 的签名/ver/exp 校验；
 - 审核记录构造：dao/document_review.py 的 DocumentReviewDAO（直接造 pending 数据）；
 - 请求体约束：control 层 Pydantic 模型 max_length。
@@ -83,7 +83,7 @@ def _reset_rate_limit():
     使用方：本文件全部用例（内存炸弹/连发请求等用例不能被 429 干扰防护断言）；
     yield 后无后置清理（账号由 conftest autouse 软删）。
     """
-    from core.deps import reset_rate_limit_store  # noqa: WPS433
+    from app.auth.rate_limit import reset_rate_limit_store  # noqa: WPS433
     reset_rate_limit_store()
     yield
 
@@ -126,7 +126,7 @@ class TestPrivilegeEscalation:
         role in (teacher, admin) 可查看/审核，其余普通用户访问他人记录仍 403。
         """
         from conftest import _make_test_user  # noqa: WPS433
-        from dao.document_review import DocumentReviewDAO  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO  # noqa: WPS433
 
         # user_acct 创建一条 review
         dao = DocumentReviewDAO()
@@ -252,7 +252,7 @@ class TestReplayAttack:
         前置：user_acct 创建 + 第一次 approve（成功）。
         approve 接口有双 Body 参数（edited_text, notes），用 JSON dict 发送。
         """
-        from dao.document_review import DocumentReviewDAO  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO  # noqa: WPS433
 
         dao = DocumentReviewDAO()
         review_id = dao.create(
@@ -286,7 +286,7 @@ class TestReplayAttack:
         """重放 reject 同一 review：第二次应 fail "状态不允许"。
         reject 请求体为 JSON 对象 {"notes": "原因"}（后端 Body(embed=True)）。
         """
-        from dao.document_review import DocumentReviewDAO  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO  # noqa: WPS433
 
         dao = DocumentReviewDAO()
         review_id = dao.create(

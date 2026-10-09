@@ -22,7 +22,7 @@
     - control/app.py：app.add_middleware(MetricsMiddleware) 注册中间件，
       /metrics 端点调用 render_metrics() 并以 METRICS_CONTENT_TYPE 返回（受 settings.METRICS_ENABLED 开关控制）；
     - core/usage.py：record_usage 记账后调用 record_llm_usage；
-    - service/agent_service.py：Agent 执行成功/失败处调用 record_agent_execution。
+    - app/application/chat/agent_service.py：Agent 执行成功/失败处调用 record_agent_execution。
 """
 import time
 from typing import Callable
@@ -141,7 +141,7 @@ def record_llm_usage(model: str, prompt_tokens: int = 0, completion_tokens: int 
 def record_agent_execution(agent_name: str, status: str, duration_seconds: float) -> None:
     """记录 Agent 执行指标：耗时 + 计数。status 为 success/error/retry。
 
-    被谁调用：service/agent_service.py 的 Agent 执行封装处（成功与失败分支各一次）。
+    被谁调用：app/application/chat/agent_service.py 的 Agent 执行封装处（成功与失败分支各一次）。
     参数：
         agent_name: Agent 名称标签（如 vague/analysis/retrieval/summary），来源为编排层；
         status: 执行结果标签，"success" / "error" / "retry"；

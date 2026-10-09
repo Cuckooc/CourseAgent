@@ -23,7 +23,7 @@
 """
 import os
 from pathlib import Path
-from typing import Final, List
+from typing import Final, List, Optional
 
 from dotenv import load_dotenv
 
@@ -32,8 +32,13 @@ from dotenv import load_dotenv
 BASE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
 # 模块级常量：环境变量文件路径（<根>/env/config.env，本地文件、禁止入库）。
 ENV_PATH: Final[Path] = BASE_DIR / "env" / "config.env"
+# 模块级常量：通义千问（DashScope）配置文件路径（<根>/env/qianwen_config.env，本地文件、禁止入库）。
+QIANWEN_ENV_PATH: Final[Path] = BASE_DIR / "env" / "qianwen_config.env"
 # 导入期一次性把 config.env 注入 os.environ；其后 Settings 字段统一用 os.getenv 读取。
 load_dotenv(dotenv_path=ENV_PATH)
+# 导入期一并加载 qianwen_config.env（LLM/Agent 配置同源收敛到本模块，消除 config/setting.py 第二处 load_dotenv；
+# load_dotenv 不覆盖已存在的真实环境变量，config.env 先加载、同名字段优先）。
+load_dotenv(dotenv_path=QIANWEN_ENV_PATH)
 
 
 class Settings:
@@ -90,8 +95,8 @@ class Settings:
     CORS_ORIGINS: Final[str] = os.getenv("cors_origins", "*")
 
     # ================= 文件上传 =================
-    # 被 control/file_control.py（HTTP 大小/扩展名校验、线程池）、service/file_service.py、
-    # service/knowledge_service.py、tools/function_tools.py、service/temp_knowledge_store.py 读取。
+    # 被 app/api/v1/files.py（HTTP 大小/扩展名校验、线程池）、app/application/files/file_service.py、
+    # app/application/knowledge/knowledge_service.py、app/domain/tools/function_tools.py、app/infrastructure/vector_store/temp_store.py 读取。
     # upload_max_mb：单文件大小上限（MB），默认 50；经 UPLOAD_MAX_BYTES property 换算后用于 413 拦截。
     UPLOAD_MAX_MB: Final[int] = int(os.getenv("upload_max_mb", "50"))
     # upload_allowed_ext：允许上传的扩展名，逗号分隔，默认 ".pdf,.txt,.md"
@@ -104,9 +109,9 @@ class Settings:
     UPLOAD_WORKERS: Final[int] = max(1, int(os.getenv("upload_workers", "4")))
 
     # ================= 记忆模块 =================
-    # 本组字段全部由 memory 子包读取：short_term_* → memory/short_term.py、memory/long_term.py；
-    # context_* → memory/context_memory.py；session_auto_rollover_* → memory/session_rollover.py；
-    # profile_* → memory/profile_service.py；session_keyword_* → memory/session_keyword_service.py。
+    # 本组字段全部由 memory 子包读取：short_term_* → app/domain/memory/short_term.py、app/domain/memory/long_term.py；
+    # context_* → app/domain/memory/context_app.domain.memory.py；session_auto_rollover_* → app/domain/memory/session_rollover.py；
+    # profile_* → app/domain/memory/profile_service.py；session_keyword_* → app/domain/memory/session_keyword_service.py。
     # 短期记忆：会话级滑动保留时间（秒）。会话在该时间内无新对话即过期清理；
     # 每次在原会话继续对话都会重新计时（滑动过期）。
     SHORT_TERM_TTL_SECONDS: Final[int] = int(os.getenv("short_term_ttl_seconds", "1800"))
@@ -162,7 +167,7 @@ class Settings:
     # ================= 账号安全（P1） =================
     # 登录失败锁定：窗口期内同一用户名失败达 LOGIN_MAX_FAILURES 次后临时锁定。
     # 仅 Redis 可用时生效（降级放行，有限流兜底）。
-    # 被 core/account_guard.py 与 control/login_control.py 读取。
+    # 被 core/account_guard.py 与 app/api/v1/auth.py 读取。
     # login_max_failures：锁定阈值（次），默认 5。
     LOGIN_MAX_FAILURES: Final[int] = int(os.getenv("login_max_failures", "5"))
     # login_lock_window_seconds：计数窗口/锁定时长（秒），默认 900（15 分钟）。
@@ -204,7 +209,7 @@ class Settings:
     PURGE_INTERVAL_HOURS: Final[int] = int(os.getenv("purge_interval_hours", "6"))
 
     # ================= 知识库去重与版本管理 =================
-    # 被 service/knowledge_service.py 等知识库服务读取（上传去重与文档更新链路）。
+    # 被 app/application/knowledge/knowledge_service.py 等知识库服务读取（上传去重与文档更新链路）。
     # dedup_strategy：去重策略，full=全程扫描 / filename=文件名扫描（默认，更快）。
     DEDUP_STRATEGY: Final[str] = os.getenv("dedup_strategy", "filename")
     # update_strategy：更新策略，replace=先删后增+回滚 / version=版本标记 is_latest（默认）。
@@ -227,7 +232,7 @@ class Settings:
     DEGRADE_WEBHOOK_URL: Final[str] = os.getenv("degradation_webhook_url", "")
 
     # ================= 邮箱验证码（SMTP） =================
-    # 被 core/mailer.py 读取；util/user.py 调用 mailer 发送登录验证码。
+    # 被 core/mailer.py 读取；app/application/auth/user.py 调用 mailer 发送登录验证码。
     # smtp_host：SMTP 服务器地址，留空则降级为日志输出验证码（仅开发环境）。
     SMTP_HOST: Final[str] = os.getenv("smtp_host", "")
     # smtp_port：端口，SSL 默认 465，STARTTLS 一般 587。
@@ -246,7 +251,7 @@ class Settings:
 
     # ================= Agent 策略参数 =================
     # 被 multi_agent 子包读取（state_machine.py、各 *_agent.py、failure_diagnoser.py、
-    # verifier.py）及 service/agent_service.py（重试编排与指标上报）。
+    # verifier.py）及 app/application/chat/agent_service.py（重试编排与指标上报）。
     # 各 Agent 最大重试次数（失败后重试，超限进入兜底）；
     # 环境变量同名小写，默认值见各行。
     AGENT_MAX_RETRIES_VAGUE: Final[int] = int(os.getenv("agent_max_retries_vague", "2"))
@@ -272,12 +277,7 @@ class Settings:
 
     # ================= 工具调用层（function calling） =================
     # 被 tools 子包读取（protocol.py 的 ToolSpec 边界、dispatcher.py 的调度与超时、
-    # function_tools.py 的具体工具）；multi_agent/rag_agent.py、file_agent.py 亦读取。
-    # 影子模式：开启后 RAGAgent/FileAgent 在旧检索链路之外旁路执行新工具决策链，
-    # 仅记录 tool_calls 与新旧结果差异，不改变实际回答（P1 灰度验证用，默认关闭）
-    TOOL_SHADOW_MODE: Final[bool] = os.getenv("tool_shadow_mode", "false").lower() in (
-        "1", "true", "yes",
-    )
+    # function_app.domain.tools.py 的具体工具）。
     # 每个决策层单轮最多执行的工具调用数（防 LLM 无界调用）
     TOOL_MAX_CALLS_PER_TURN: Final[int] = int(os.getenv("tool_max_calls_per_turn", "5"))
     # 检索工具参数边界
@@ -293,14 +293,37 @@ class Settings:
         """把逗号分隔的 CORS_ORIGINS 拆成去空白后的来源列表；被 control/app.py 的 CORSMiddleware 读取。"""
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
-    # upload_dir：上传文件根目录名（相对 BASE_DIR 或绝对路径），默认 "uploads"，与源码目录隔离。
-    # 被 file_control / file_service / knowledge_service / tools 等经 UPLOAD_DIR property 读取。
-    UPLOAD_DIR_NAME: Final[str] = os.getenv("upload_dir", "uploads")
+    # storage_dir：运行时有状态数据根目录（相对 BASE_DIR 或绝对路径），默认 "storage"。
+    # 上传文件与 Chroma 持久化统一收敛到此根下，与源码目录物理隔离（数据/源码分离）；
+    # 可用环境变量 storage_dir 覆盖，绝对路径时直接使用。
+    STORAGE_DIR_NAME: Final[str] = os.getenv("storage_dir", "storage")
+
+    @property
+    def STORAGE_DIR(self) -> Path:
+        """运行时数据根目录绝对路径；STORAGE_DIR_NAME 为绝对路径时直接使用，否则拼到 BASE_DIR 下。"""
+        p = Path(self.STORAGE_DIR_NAME)
+        return p if p.is_absolute() else BASE_DIR / p
+
+    # upload_dir：上传文件根目录（相对 BASE_DIR 或绝对路径），默认 storage/uploads。
+    # 显式配置环境变量 upload_dir 时仍尊重旧值（向后兼容）。
+    # 被 file_control / file_service / knowledge_service / temp_knowledge_store 等经 UPLOAD_DIR 读取。
+    UPLOAD_DIR_NAME: Final[str] = os.getenv("upload_dir", "storage/uploads")
 
     @property
     def UPLOAD_DIR(self) -> Path:
         """上传目录的绝对路径：UPLOAD_DIR_NAME 为绝对路径时直接使用，否则拼到 BASE_DIR 下。"""
         p = Path(self.UPLOAD_DIR_NAME)
+        return p if p.is_absolute() else BASE_DIR / p
+
+    # chroma_dir：Chroma 持久化目录（相对 BASE_DIR 或绝对路径），默认 storage/chromadb。
+    # 公共知识库向量库（app/infrastructure/vector_store/persistent）与文件演示库（app/domain/agents/file_agent）共用此定位；
+    # 取代历史上散落在各模块的 ../chromadb_data/ 相对路径（CWD 依赖）。
+    CHROMA_DIR_NAME: Final[str] = os.getenv("chroma_dir", "storage/chromadb")
+
+    @property
+    def CHROMA_DIR(self) -> Path:
+        """Chroma 持久化目录绝对路径；CHROMA_DIR_NAME 为绝对路径时直接使用，否则拼到 BASE_DIR 下。"""
+        p = Path(self.CHROMA_DIR_NAME)
         return p if p.is_absolute() else BASE_DIR / p
 
     # frontend_dist：前端生产构建产物目录（相对 BASE_DIR 或绝对路径），默认 web/frontend/dist。
@@ -342,3 +365,55 @@ class Settings:
 
 # 模块级全局单例：全仓唯一的配置实例，导入本模块时完成实例化（缺失 jwt_secret 会在此刻抛错阻断启动）。
 settings = Settings()
+
+
+# ================= 通义千问（DashScope）与 Agent 配置 =================
+# 由原 config/setting.py 收敛至此，消除「core/config.py + config/setting.py」双配置中心与双 load_dotenv。
+# env/qianwen_config.env 已在模块顶部随 config.env 一并 load_dotenv。
+
+class LLMConfig:
+    """LLM 配置类：字段在类定义期（模块导入时）从环境变量读取一次并固化。
+
+    实例化位置：模块末尾 llm = LLMConfig() 单例；同时 embedding_model.py 等以类属性方式
+    （LLMConfig.xxx）直接读取——两种方式拿到的是同一份固化值。
+    """
+    # 主模型名，环境变量 model（qianwen_config.env，如 qwen-plus）；
+    # 默认 default_model 仅为未配置时的占位，实际必须由 env 提供。
+    MODEL: Final[Optional[str]] = os.getenv("model", "default_model")
+    # 【密钥类字段】DashScope api_key，环境变量 api_key：仅来自本地 env/qianwen_config.env
+    # 或真实环境变量，禁止入库/打日志/回传前端。
+    API_KEY: Final[Optional[str]] = os.getenv("api_key")
+    # OpenAI 兼容 API 地址，环境变量 base_url（https://dashscope.aliyuncs.com/compatible-mode/v1）
+    BASE_URL: Final[Optional[str]] = os.getenv("base_url")
+    # 采样温度，环境变量 Temperature（注意大写 T），默认 0.9
+    TEMPERATURE: Final[Optional[float]] = float(os.getenv("Temperature", "0.9"))
+    # 上下文相关性余弦相似度阈值，环境变量 similarity_threshold，默认 0.8：
+    # chat_service.py 仅当 query 与上下文相似度 ≥ 该值才拼接 RAG 上下文。
+    # 【注意】该环境变量与 Settings.SIMILARITY_THRESHOLD（知识库去重阈值，默认 0.95）同名重载，
+    # 历史遗留、暂保持原语义；后续应拆分独立环境变量（如 context_similarity_threshold）。
+    SIMILARITY_THRESHOLD: Final[Optional[float]] = float(os.getenv("similarity_threshold", "0.8"))
+
+    # LLM 网关：超时/重试/退避/降级模型链
+    TIMEOUT_SECONDS: Final[float] = float(os.getenv("llm_timeout_seconds", "30"))
+    MAX_RETRIES: Final[int] = int(os.getenv("llm_max_retries", "2"))
+    BACKOFF_BASE_SECONDS: Final[float] = float(os.getenv("llm_backoff_base_seconds", "0.5"))
+    FALLBACK_MODELS: Final[list] = [m.strip() for m in os.getenv("llm_fallback_models", "").split(",") if m.strip()]
+    MAX_TOKENS: Final[int] = int(os.getenv("llm_max_tokens", "2000"))
+
+    # OCR 模型（扫描件 PDF 文字识别，使用 DashScope 多模态 API）
+    OCR_MODEL: Final[str] = os.getenv("OCR_MODEL", "qwen-vl-plus")
+
+
+class AgentConfig:
+    """Agent 行为配置类：字段在类定义期从环境变量读取，模块末尾导出 agent 单例。"""
+    # ReAct Agent 单轮最大工具迭代次数，环境变量 MAX_ITERATIONS，默认 10（防止工具调用死循环）
+    MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "10"))
+    # Agent 详细日志开关，环境变量 VERBOSE，默认 True
+    VERBOSE: bool = os.getenv("VERBOSE", "True").lower() == "true"
+    # 意图判定（Vague/Analysis）是否携带早期对话摘要，环境变量 intent_with_history，默认 true
+    INTENT_WITH_HISTORY: bool = os.getenv("intent_with_history", "true").lower() == "true"
+
+
+# 全仓共享的配置单例：import 后以 llm.xxx / agent.xxx 读取（值在导入期已固化）
+llm = LLMConfig()
+agent = AgentConfig()

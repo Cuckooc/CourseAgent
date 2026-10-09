@@ -14,7 +14,7 @@
       校验失败时把错误回传 LLM 自我修正后重试。
 
 被谁使用：
-    - multi_agent/summary_agent.py：导入 validate_json_output 与 SummaryOutput，
+    - app/domain/agents/summary_agent.py：导入 validate_json_output 与 SummaryOutput，
       解析 SummaryAgent 的 JSON 输出（失败则宽松解析兜底）。
     - 说明（Grep 全仓确认）：DiagnosisOutput 为预留给 FailureDiagnoser 的输出模型，
       validate_with_retry 为通用重试入口，当前仓库内暂无调用方（core/param_validator.py
@@ -22,7 +22,7 @@
 """
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import List
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -36,7 +36,7 @@ class SummaryOutput(BaseModel):
 
     用途：约束总结类 Agent 返回 JSON 必须含非空 summary（1~2000 字）与 keywords 列表；
     作为 output_model 传给 validate_json_output / validate_with_retry。
-    使用位置：multi_agent/summary_agent.py。
+    使用位置：app/domain/agents/summary_agent.py。
     """
     summary: str = Field(..., min_length=1, max_length=2000, description="汇总后的完整总结")
     keywords: List[str] = Field(default_factory=list, description="核心关键词列表")
@@ -64,7 +64,7 @@ def validate_json_output(
 
     功能：剥离 Markdown 代码块包裹 → json 解析（必须是 dict）→ Pydantic v2
     model_validate 校验；环境为 Pydantic v1（无 model_validate）时回退构造方式。
-    被谁调用：multi_agent/summary_agent.py 解析 SummaryAgent 输出；
+    被谁调用：app/domain/agents/summary_agent.py 解析 SummaryAgent 输出；
               本模块 validate_with_retry 内部每轮也调用。
     参数：
         raw_text: LLM 原始返回文本，来源为上游 multi_agent 调 LLM 的响应内容；

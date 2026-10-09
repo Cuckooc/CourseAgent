@@ -15,9 +15,9 @@ TC-7.3 跨用户恢复（恶意/越权）：用户 B 携带自己的 JWT 恢复�
 TC-7.4 异常 session_id（边界：0 与 -1）调 recover，期望 200/400/404/422 优雅处理。
 
 被测对象来源：
-- 路由：control/chat_control.py（POST /chat/stream SSE、POST /chat/recover
+- 路由：app/api/v1/chat.py（POST /chat/stream SSE、POST /chat/recover
   会话恢复与状态判定 completed/missing、/history 本脚本未直接调用）；
-- 业务：service/chat_service.py 的会话状态机与归属校验（user_id 隔离）。
+- 业务：app/application/chat/chat_service.py 的会话状态机与归属校验（user_id 隔离）。
 
 运行方式：
     python tests/phase/test_phase7_network.py
@@ -26,7 +26,9 @@ TC-7.4 异常 session_id（边界：0 与 -1）调 recover，期望 200/400/404/
 依赖说明：requests stream=True 直发 HTTP，不经 conftest。
 清理：临时账号不删除；对话记录留在其会话历史中（账号仅本脚本使用）。
 """
-import requests, json, time
+import requests
+import json
+import time
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连）
 PASS = FAIL = 0  # 全局通过/失败断言计数
@@ -35,9 +37,11 @@ def check(name, cond, extra=""):
     """断言辅助：累加全局 PASS/FAIL 并打印，不抛异常。调用方：本脚本全部 TC。"""
     global PASS, FAIL
     if cond:
-        PASS += 1; print(f"  [PASS] {name}")
+        PASS += 1
+        print(f"  [PASS] {name}")
     else:
-        FAIL += 1; print(f"  [FAIL] {name} {extra}")
+        FAIL += 1
+        print(f"  [FAIL] {name} {extra}")
 
 def register_login(tag):
     """注册并登录临时账号 e2enet<tag>，返回 (用户名, access_token)。

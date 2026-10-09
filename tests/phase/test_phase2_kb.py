@@ -13,9 +13,9 @@ TC-3.4 dedup_strategy=full（正常：全量相似度去重）→ skipped
 TC-3.5 update_strategy=replace（正常：替换策略）→ success 且列表仍 1 行
 
 被测对象来源：
-- 路由：control/file_control.py（POST /file/path，scope/dedup_strategy/update_strategy
-  表单参数）、control/knowledge_control.py（GET /knowledge/list）；
-- 业务：service/file_service.py 与 service/knowledge_service.py 的去重
+- 路由：app/api/v1/files.py（POST /file/path，scope/dedup_strategy/update_strategy
+  表单参数）、app/api/v1/knowledge.py（GET /knowledge/list）；
+- 业务：app/application/files/file_service.py 与 app/application/knowledge/knowledge_service.py 的去重
   （full/content/filename 策略）与版本（version/replace）链路、embedding 向量化。
 
 运行方式：
@@ -26,7 +26,9 @@ TC-3.5 update_strategy=replace（正常：替换策略）→ success 且列表�
 清理：依赖后端去重跳过与版本替换语义，不额外删除文档（同一文件始终 1 行）。
 TC-3.1 首次上传 → TC-3.2 重复跳过 → TC-3.3 同名不同内容版本更新 → TC-3.4 full策略 → TC-3.5 replace策略
 """
-import requests, io, json, time
+import requests
+import io
+import time
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连，不经 conftest）
 PASS = 0  # 全局通过断言计数（check 累加，末尾打印汇总）

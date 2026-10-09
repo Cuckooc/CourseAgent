@@ -1,9 +1,9 @@
 """
-模块名：tests/tools/test_tool_layer_p1.py。
+模块名：tests/app/domain/tools/test_tool_layer_p1.py。
 
 P1 工具调用层单元测试套件（无网络 / 无 LLM / 无 embedding / 无数据库依赖），
 风险类型：工具注册表越权、参数越界、Dispatcher 横切缺口（未知工具/跨域/角色/
-身份注入/重复调用/超时）、业务函数存储旁路错误、影子对比器归一化错误。
+身份注入/重复调用/超时）、业务函数存储旁路错误。
 
 测试函数清单（模块级 pytest 函数，无测试类）：
 - 注册表：test_registry_tools_and_owners（工具归属与 tools_for 决策层隔离）
@@ -15,22 +15,20 @@ P1 工具调用层单元测试套件（无网络 / 无 LLM / 无 embedding / 无
 - 业务函数（monkeypatch 替身，零网络）：test_knowledge_search_business、
   test_knowledge_search_empty_query、test_session_file_search_business、
   test_session_file_search_no_session
-- 影子对比器（fake LLM）：test_shadow_run_report、test_shadow_default_when_no_tool_calls
-夹具：echo_tool（向 tools.registry._REGISTRY 临时注册 ut_echo/ut_slow 两个
+夹具：echo_tool（向 app.domain.tools.registry._REGISTRY 临时注册 ut_echo/ut_slow 两个
 ToolSpec，yield 后 pop 清理）。
 
 被测对象来源：
-- tools/registry.py（get_spec/tools_for/_REGISTRY 注册表）；
-- tools/dispatcher.py（get_tool_dispatcher：归属/角色校验、身份字段剥离、
+- app/domain/tools/registry.py（get_spec/tools_for/_REGISTRY 注册表）；
+- app/domain/tools/dispatcher.py（get_tool_dispatcher：归属/角色校验、身份字段剥离、
   去重、超时降级为 ToolResult.degraded）；
-- tools/protocol.py（ToolSpec/ToolContext/ToolResult/KnowledgeSearchArgs、
+- app/domain/tools/protocol.py（ToolSpec/ToolContext/ToolResult/KnowledgeSearchArgs、
   RISK_READ/RISK_WRITE）；
-- tools/business.py（knowledge_search_fn/session_file_search_fn，
-  retrieve_scoped/get_persistent_db/get_temp_store 三个外部依赖被替身）；
-- tools/shadow.py（run_shadow：tools_for/get_tool_dispatcher 被替身）。
+- app/domain/tools/business.py（knowledge_search_fn/session_file_search_fn，
+  retrieve_scoped/get_persistent_db/get_temp_store 三个外部依赖被替身）。
 
 运行方式：
-    pytest tests/tools/test_tool_layer_p1.py
+    pytest tests/app/domain/tools/test_tool_layer_p1.py
     # 无自定义 marker、无需后端/DB/网络；纯进程内单测，可直接收集运行。
 """
 import time
@@ -38,15 +36,15 @@ import time
 import pytest
 from langchain_core.documents import Document
 
-from tools.protocol import (
+from app.domain.tools.protocol import (
     KnowledgeSearchArgs,
     ToolContext,
     ToolResult,
     ToolSpec,
 )
-from tools import registry as registry_mod
-from tools.dispatcher import get_tool_dispatcher
-from tools.business import knowledge_business
+from app.domain.tools import registry as registry_mod
+from app.domain.tools.dispatcher import get_tool_dispatcher
+from app.domain.tools.business import knowledge_business
 
 
 # ──────────────────────────────────────────────────────────────
@@ -102,7 +100,7 @@ def test_args_clamping():
 # ──────────────────────────────────────────────────────────────
 @pytest.fixture
 def echo_tool():
-    """夹具：向全局 tools.registry._REGISTRY 临时注册两个测试 ToolSpec。
+    """夹具：向全局 app.domain.tools.registry._REGISTRY 临时注册两个测试 ToolSpec。
 
     注册内容：ut_echo（回显 text 与 ctx.user_id，timeout 5s）与
     ut_slow（sleep 1s，timeout 0.2s，用于超时降级）；同时把
@@ -113,7 +111,6 @@ def echo_tool():
     消费者：test_dispatcher_cross_owner_denied/role_denied/
     identity_injection_stripped/dedup/timeout_degrades。
     """
-    from tools.protocol import RISK_READ, RISK_WRITE
     from pydantic import BaseModel
 
     class EchoArgs(BaseModel):
@@ -327,90 +324,3 @@ def test_session_file_search_no_session(monkeypatch):
     result2 = knowledge_business.session_file_search_fn(
         KnowledgeSearchArgs(query="q"), ToolContext(user_id=42, session_id=9))
     assert result2.success and result2.data == []
-
-
-# ──────────────────────────────────────────────────────────────
-# 影子对比器（fake LLM，只验证决策归一化与对比报告）
-# ───────────────────────────────:
-def test_shadow_run_report(monkeypatch):
-    """目的：run_shadow 对新旧链路结果做归一化与交集报告（不调真实 LLM）。
-
-    替身外部依赖（monkeypatch）：shadow_mod.tools_for 返回占位工具；
-    shadow_mod.get_tool_dispatcher 返回 FakeDispatcher（断言调用名为
-    knowledge_search、owner 为 RAGAgent，并回 1 条与 legacy 首条相同的片段）；
-    FakeLLM/FakeBound 模拟 bind_tools().invoke() 产出 1 个 tool_call。
-    数据意图（正常）：legacy 含 2 条（1 条与新链路重叠、1 条旧链路独有）。
-    预期断言：legacy_count=2、shadow_count=1、overlap_count=1、
-    tool_calls[0].name=="knowledge_search"。
-    """
-    from types import SimpleNamespace
-    from tools import shadow as shadow_mod
-
-    # bind_tools(tools).invoke(...) 的假实现
-    class FakeBound:
-        def invoke(self, messages):
-            return SimpleNamespace(tool_calls=[
-                {"name": "knowledge_search", "args": {"query": "python", "top_k": 3}}
-            ])
-
-    class FakeLLM:
-        def bind_tools(self, tools):
-            return FakeBound()
-
-    monkeypatch.setattr(shadow_mod, "tools_for",
-                        lambda owner, ctx: [object()])
-
-    class FakeDispatcher:
-        def execute(self, calls, ctx, owner_agent=None):
-            assert calls[0]["name"] == "knowledge_search"
-            assert owner_agent == "RAGAgent"
-            return [ToolResult(name="knowledge_search", success=True,
-                               data=[{"content": "相同内容片段", "metadata": {}}])]
-
-    monkeypatch.setattr(shadow_mod, "get_tool_dispatcher", lambda: FakeDispatcher())
-
-    payload = {"query": "python", "history_summary": "无"}
-    legacy = {"results": [{"content": "相同内容片段", "metadata": {}},
-                          {"content": "旧链路独有片段"}]}
-    report = shadow_mod.run_shadow(
-        "RAGAgent", FakeLLM(), payload, legacy,
-        ToolContext(user_id=1, session_id=2, task_id="t1"))
-
-    assert report["legacy_count"] == 2
-    assert report["shadow_count"] == 1
-    assert report["overlap_count"] == 1
-    assert report["tool_calls"][0]["name"] == "knowledge_search"
-
-
-def test_shadow_default_when_no_tool_calls(monkeypatch):
-    """目的：模型未产出任何 tool_call 时，FileAgent 影子链路保守兜底。
-
-    替身外部依赖（monkeypatch）：FakeBound.invoke 返回空 tool_calls；
-    tools_for/get_tool_dispatcher 同样替身（dispatcher 回显调用名）。
-    数据意图（边界）：owner=FileAgent、legacy 结果为空。
-    预期断言：归一化后 tool_calls[0].name 兜底为 "session_file_search"。
-    """
-    from types import SimpleNamespace
-    from tools import shadow as shadow_mod
-
-    class FakeBound:
-        def invoke(self, messages):
-            return SimpleNamespace(tool_calls=[])
-
-    class FakeLLM:
-        def bind_tools(self, tools):
-            return FakeBound()
-
-    monkeypatch.setattr(shadow_mod, "tools_for", lambda owner, ctx: [object()])
-
-    class FakeDispatcher:
-        def execute(self, calls, ctx, owner_agent=None):
-            return [ToolResult(name=calls[0]["name"], success=True, data=[])]
-
-    monkeypatch.setattr(shadow_mod, "get_tool_dispatcher", lambda: FakeDispatcher())
-
-    report = shadow_mod.run_shadow(
-        "FileAgent", FakeLLM(), {"query": "q"}, {"results": []},
-        ToolContext(user_id=1, session_id=2))
-    # 模型未给调用 → FileAgent 保守兜底为 session_file_search
-    assert report["tool_calls"][0]["name"] == "session_file_search"

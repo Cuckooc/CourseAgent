@@ -32,12 +32,12 @@
 辅助函数：_sync_post / _sync_get（线程池 worker 专用同步 HTTP 封装）。
 
 被测对象来源：
-- 路由：control/login_control.py（/login/account、/login/me）、
-  control/history_control.py（/history/create、/history/list、/history/update_title）、
-  control/chat_control.py（/chat/feedback）、control/review_control.py（/review/{id}/approve）；
+- 路由：app/api/v1/auth.py（/login/account、/login/me）、
+  app/api/v1/history.py（/history/create、/history/list、/history/update_title）、
+  app/api/v1/chat.py（/chat/feedback）、app/api/v1/review.py（/review/{id}/approve）；
 - 限流：core/deps.py 的 reset_rate_limit_store（每用例前清空窗口）；
 - token_version：dao/user.py 的 Information.increment_token_version（UPDATE ver=ver+1）；
-- 审核：dao/document_review.py 的 DocumentReviewDAO 与 service/review_service.py；
+- 审核：dao/document_review.py 的 DocumentReviewDAO 与 app/application/review/review_service.py；
 - 会话序列：dao/history.py（SessionDAO，以 user_id 为键的 per-user 序列）。
 
 运行方式：
@@ -54,7 +54,6 @@
 """
 import json
 import os
-import threading
 import time
 import urllib.error
 import urllib.request
@@ -130,9 +129,9 @@ class TestConcurrentLogin:
         """5 个不同账号并发登录：全部应 success。
         通过 DAO 直接创建 5 个账号，再并发走 /login/account。
         """
-        from core.security import create_access_token, hash_password  # noqa: WPS433
-        from dao.read import Information_Read  # noqa: WPS433
-        from dao.user import Information  # noqa: WPS433
+        from app.auth.authentication import hash_password  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.read import Information_Read  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 
         # 创建 5 个账号（避免 rate_limit：rate_limit(10, 60) 在并发 5 个请求内安全）
         accounts = []
@@ -185,7 +184,7 @@ class TestTokenVersionKickout:
 
     def test_old_token_invalid_after_increment(self, http, user_acct):
         """单线程：increment → 旧 token 401。验证基础互踢逻辑。"""
-        from dao.user import Information  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
         info = Information()
         info.increment_token_version(user_acct["user_id"])
         status, _, _ = http("GET", "/login/me", token=user_acct["token"])
@@ -195,7 +194,7 @@ class TestTokenVersionKickout:
         """并发 5 次 increment_token_version：返回的 ver 值应严格递增（无重复）。
         验证 SQL UPDATE ... SET ver=ver+1 的原子性。
         """
-        from dao.user import Information  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 
         def _inc_once(_):
             info = Information()
@@ -273,16 +272,6 @@ class TestConcurrentSessionCreate:
             assert body.get("status") in ("success", "fail"), \
                 f"业务响应异常：{body}"
 
-        # 按 token 分组：每个用户的 session_id 在自己序列内递增
-        user_sessions = []
-        teacher_sessions = []
-        for r in results:
-            body = r[1]
-            if body.get("status") != "success":
-                continue
-            # 通过比对两个 fixture 的 token 来分组（无法直接拿到 token）
-            # 简化：按 success 状态收集 session_id，只要 len>=4 即可
-            pass
         # 放宽验证：至少 2 个 success（每用户至少 1 个），不要求全局唯一
         success_count = sum(1 for r in results if r[1].get("status") == "success")
         assert success_count >= 2, \
@@ -305,7 +294,7 @@ class TestRateLimitConcurrency:
         先 reset_rate_limit_store 清状态，确保起点干净。
         """
         # 清空限流窗口（测试间状态隔离）
-        from core.deps import reset_rate_limit_store  # noqa: WPS433
+        from app.auth.rate_limit import reset_rate_limit_store  # noqa: WPS433
         reset_rate_limit_store()
 
         with ThreadPoolExecutor(max_workers=50) as ex:
@@ -418,7 +407,7 @@ class TestConcurrentReview:
         随后并发 update_status 全部成功（每次都把 status 改成 approved）。
         标 xfail：业务漏洞待后续修复，测试本身保留以回归追踪。
         """
-        from dao.document_review import DocumentReviewDAO  # noqa: WPS433
+        from app.infrastructure.persistence.repositories.document_review import DocumentReviewDAO  # noqa: WPS433
 
         dao = DocumentReviewDAO()
         review_id = dao.create(

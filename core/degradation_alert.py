@@ -17,9 +17,9 @@
     - _SINK_ID：模块级全局单例，已注册 sink 的 id（None=未注册/注册失败）。
 
 被谁使用：
-    - multi_agent/summary_agent.py、service/agent_service.py、service/chat_service.py
+    - app/domain/agents/summary_agent.py、app/application/chat/agent_service.py、app/application/chat/chat_service.py
       调用 alert_degradation 记录各 agent 环节降级；
-    - multi_agent/fallback.py 在全链路兜底失败时调用 alert_chain_failure。
+    - app/domain/agents/fallback.py 在全链路兜底失败时调用 alert_chain_failure。
 """
 import json
 import logging
@@ -112,16 +112,16 @@ def alert_degradation(
     功能：写一条结构化降级日志（logs/degradation.log），并对 query/error 截断 500 字；
     severity=critical 且配置了 DEGRADE_WEBHOOK_URL 时额外异步推送 webhook。
     被谁调用：
-        - multi_agent/summary_agent.py（summary 环节降级）；
-        - service/agent_service.py（各 agent 执行失败/重试耗尽）；
-        - service/chat_service.py（对话链路降级，如 retrieval 失败）。
+        - app/domain/agents/summary_agent.py（summary 环节降级）；
+        - app/application/chat/agent_service.py（各 agent 执行失败/重试耗尽）；
+        - app/application/chat/chat_service.py（对话链路降级，如 retrieval 失败）。
 
     参数：
         stage: 降级环节，"vague_agent" | "analysis_agent" | "retrieval" | "summary" | "llm_unavailable"，
                来源为上游 service/agent 传入的环节名；
         severity: 严重级别，"warn"（中间环节降级，用户仍有回答）| "critical"（LLM 整体不可用）；
         query: 用户提问原文，来源为 HTTP 对话请求（截断 500 字），默认空串；
-        user_id: 当前用户 id，来源为 core.deps.get_current_user 的解析结果，可为 None；
+        user_id: 当前用户 id，来源为 app.auth.guards.get_current_user 的解析结果，可为 None；
         session_id: 当前会话 id，来源为上游 service 的会话上下文，可为 None；
         error: 异常/错误描述字符串（截断 500 字），默认空串；
         flow_context: 各 agent 输出快照 dict，用于事后排查，可为 None。
@@ -167,7 +167,7 @@ def alert_chain_failure(
 
     功能：所有 agent 环节与兜底均失败时记录一条 chain_failure 事件（含完整链路日志），
     并在配置 webhook 时无条件异步推送。
-    被谁调用：multi_agent/fallback.py（全链路兜底的最终失败分支）。
+    被谁调用：app/domain/agents/fallback.py（全链路兜底的最终失败分支）。
 
     与 alert_degradation 的区别：
     - 包含完整 chain_log（各 agent 状态转换 + 输出/错误快照）
@@ -175,7 +175,7 @@ def alert_chain_failure(
 
     参数：
         query: 用户提问原文，来源为 HTTP 对话请求（日志内截断 500 字、消息文本截断 100 字）；
-        user_id: 当前用户 id，来源为 core.deps.get_current_user，可为 None；
+        user_id: 当前用户 id，来源为 app.auth.guards.get_current_user，可为 None；
         session_id: 当前会话 id，来源为上游 service 会话上下文，可为 None；
         chain_log: 各 agent 状态转换与输出/错误快照的列表，来源为 multi_agent 状态机流转记录。
     返回：None。DEGRADE_NOTIFY_ENABLED 关闭时直接返回；写入/推送失败只告警不抛出。

@@ -18,7 +18,7 @@
 被谁使用（Grep UndoStore）：
     - dao/soft_delete.py：soft_delete_session、soft_delete_user 成功后
       调用 UndoStore.save 暂存被删对象定位信息；
-    - control/history_control.py：撤销恢复端点调用 UndoStore.consume
+    - app/api/v1/history.py：撤销恢复端点调用 UndoStore.consume
       取出最近一次删除记录后执行恢复。
     peek() 当前全仓无调用方（预留给“查询是否可撤销”类场景）。
 """
@@ -71,7 +71,7 @@ class UndoStore:
             "deleted_at": deleted_at,
         }
         # 延迟 import 避免潜在的模块循环依赖
-        from core.redis_client import get_redis
+        from app.infrastructure.redis.redis_client import get_redis
         r = get_redis()
         if r is not None:
             try:
@@ -89,7 +89,7 @@ class UndoStore:
         """取出并删除撤销记录（一次性消费）。
 
         功能：读取用户最近一条撤销记录并立即删除，保证恢复机会只能使用一次。
-        被谁调用：control/history_control.py 的撤销恢复端点，
+        被谁调用：app/api/v1/history.py 的撤销恢复端点，
             取到记录后执行反软删（is_deleted 置回 0）。
         参数：
             user_id: 当前登录用户 id（来自 get_current_user 鉴权结果）。
@@ -97,7 +97,7 @@ class UndoStore:
             {"table","pk","deleted_at"} 字典供恢复逻辑使用；
             无记录返回 None（端点转为“没有可撤销的删除记录”错误）。
         """
-        from core.redis_client import get_redis
+        from app.infrastructure.redis.redis_client import get_redis
         r = get_redis()
         payload = None
         if r is not None:
@@ -126,7 +126,7 @@ class UndoStore:
         返回：Optional[Dict[str, Any]]；有记录返回其副本（内存路径返回拷贝，
             防止调用方误改内部数据），无记录返回 None。
         """
-        from core.redis_client import get_redis
+        from app.infrastructure.redis.redis_client import get_redis
         r = get_redis()
         if r is not None:
             try:

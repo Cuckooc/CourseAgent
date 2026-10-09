@@ -28,13 +28,13 @@
 本文件夹具：_reset_rate_limit（autouse，每用例前清空限流窗口）。
 
 被测对象来源：
-- 路由：control/login_control.py（/login/register）、control/history_control.py
+- 路由：app/api/v1/auth.py（/login/register）、app/api/v1/history.py
   （/history/create、/history/list 分页 Query 参数、/history/detail）、
-  control/chat_control.py（/chat/send、/chat/feedback）、control/review_control.py
-  （GET /review/{id} 路径参数 int 校验）、control/file_control.py（POST /file/path）；
+  app/api/v1/chat.py（/chat/send、/chat/feedback）、app/api/v1/review.py
+  （GET /review/{id} 路径参数 int 校验）、app/api/v1/files.py（POST /file/path）；
 - 校验：control 层 Pydantic 请求模型（字段 min/max_length、ge/le 约束，违例统一 422）、
   service 层 BizException（rating 等业务值域，违例 400 或 status=fail）；
-- 文件空内容：control/file_control.py 的 _validate_magic。
+- 文件空内容：app/api/v1/files.py 的 _validate_magic。
 
 运行方式：
     pytest tests/test_boundary.py             # 需后端 :8000（pytestmark=backend）
@@ -65,7 +65,7 @@ def _reset_rate_limit():
     清空进程内（或 Redis）限流桶；yield 后无后置动作（账号由 conftest 软删）。
     使用方：本文件全部用例（规避 register 5/60s 与对话 10/60s 限流干扰边界断言）。
     """
-    from core.deps import reset_rate_limit_store  # noqa: WPS433
+    from app.auth.rate_limit import reset_rate_limit_store  # noqa: WPS433
     reset_rate_limit_store()
     yield
 
@@ -225,7 +225,7 @@ class TestFileSizeBoundary:
     """文件大小边界：0 字节 / 1 字节 / 超大（mock 不真上传）。
 
     共同前置：http + user_acct；用 urllib 手工拼最小 multipart 报文。
-    被测接口/防护：POST /file/path → control/file_control.py 的 _validate_magic
+    被测接口/防护：POST /file/path → app/api/v1/files.py 的 _validate_magic
     （0 字节抛「文件内容为空」→ 400/422；1 字节走正常解析链路）。
     """
 

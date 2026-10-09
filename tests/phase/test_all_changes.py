@@ -8,7 +8,7 @@ prompt 检查只做字符串包含；agent 行为用本地临时目录；源码�
 
 覆盖段落（内嵌测试点是模块级语句，非 pytest test_ 函数）：
 1. retrieval.py — 混合检索（关键词提取、RRF 融合、candidate_key 去重、scope 过滤）
-2. function_tools.py — vague / course / file 工具语义判定（内联金标用例表）
+2. function_app.domain.tools.py — vague / course / file 工具语义判定（内联金标用例表）
 3. llm_business.py — 各 prompt 模板包含课程咨询领域语义指引
 4. analysis_agent.py — _check_uploaded_files 检查 UPLOAD_DIR 与 temp 会话目录
 5. file_agent.py — handle() 在 db=None 时仍可检索 temp store（不抛异常）
@@ -17,8 +17,8 @@ prompt 检查只做字符串包含；agent 行为用本地临时目录；源码�
 8. 安全机制 — SummaryAgent 相关性回退（0.6 阈值、最多 3 轮、降级空结果）
 9. verifier.py — score_relevance 存在且 LLM 不可用时默认 1.0 放行
 
-被测对象来源：multi_agent/（retrieval、analysis_agent、file_agent、
-message_bus、verifier、agent_service）、tools/function_tools.py、
+被测对象来源：app/domain/agents/（retrieval、analysis_agent、file_agent、
+message_bus、verifier、agent_service）、app/domain/tools/function_app.domain.tools.py、
 model_llm/llm_business.py、core/config.py 的 UPLOAD_DIR。
 
 运行方式：
@@ -29,11 +29,14 @@ model_llm/llm_business.py、core/config.py 的 UPLOAD_DIR。
 """
 import os
 import sys
-import tempfile
 import shutil
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault("jwt_secret", "test-secret-for-validation")
+
+# Port↔Adapter 组合根装配：本脚本直接实例化 AnalysisAgent/FileAgent 等业务类，
+# 其构造经 application Port 取基础设施实现，必须先 import deps 完成注册
+import app.api.deps  # noqa: F401
 
 PASS = 0  # 全局通过断言计数
 FAIL = 0  # 全局失败断言计数（末尾非 0 则 sys.exit(1)）
@@ -56,7 +59,7 @@ def check(name, condition):
 # ====================== 1. retrieval.py ======================
 print("\n=== 1. retrieval.py — 混合检索 ===")
 
-from multi_agent.retrieval import (
+from app.domain.agents.retrieval import (
     _extract_keywords,
     _rrf_merge,
     _candidate_key,
@@ -108,10 +111,10 @@ check("scope 过滤: 本人 private 可见", _doc_matches_scope(doc_private_ok, 
 check("scope 过滤: 他人 private 不可见", _doc_matches_scope(doc_private_other, where) is False)
 
 
-# ====================== 2. function_tools.py ======================
-print("\n=== 2. function_tools.py — 工具语义判定 ===")
+# ====================== 2. function_app.domain.tools.py ======================
+print("\n=== 2. function_app.domain.tools.py — 工具语义判定 ===")
 
-from tools.function_tools import vague, course, file as file_tool
+from app.domain.tools.function_tools import vague, course, file as file_tool
 
 # 2.1 vague 工具
 # 金标数据（正常/边界）：(query, 期望模糊布尔, 意图说明)，前 3 组模糊正例、后 5 组明确负例
@@ -159,7 +162,7 @@ check("file: 返回有效结果（可能命中 legacy file_analysis/ 目录）",
 # ====================== 3. llm_business.py ======================
 print("\n=== 3. llm_business.py — prompt 领域适配 ===")
 
-from model_llm.llm_business import (
+from app.infrastructure.llm.llm_business import (
     PredictLLM, AnalysisLLM, ChatLLM, RagLLM, FileLLM
 )
 
@@ -190,8 +193,8 @@ check("FileLLM: 临时文件检索", "临时文件" in file_prompt)
 # ====================== 4. analysis_agent.py ======================
 print("\n=== 4. analysis_agent.py — _check_uploaded_files ===")
 
-from multi_agent.analysis_agent import AnalysisAgent
-from multi_agent.message_bus import MessageBus
+from app.domain.agents.analysis_agent import AnalysisAgent
+from app.domain.agents.message_bus import MessageBus
 
 bus = MessageBus()
 agent = AnalysisAgent(bus=bus)
@@ -228,7 +231,7 @@ finally:
 # ====================== 5. file_agent.py ======================
 print("\n=== 5. file_agent.py — db=None 时仍可检索 ===")
 
-from multi_agent.file_agent import FileAgent
+from app.domain.agents.file_agent import FileAgent
 
 # 5.1 db=None 构造不抛异常
 try:
@@ -252,7 +255,7 @@ except Exception as e:
 print("\n=== 6. agent_service.py — FileAgent 不再注入 shared_db ===")
 
 import inspect
-from service.agent_service import AgentService
+from app.application.chat.agent_service import AgentService
 
 source_create = inspect.getsource(AgentService._create_agents)
 check("FileAgent 构造不传入 shared_db", "db=shared_db" not in source_create.split("file_agent")[1].split(")")[0])
@@ -277,7 +280,9 @@ check("_run_summary_with_relevance 方法存在", hasattr(AgentService, "_run_su
 
 source_summary = inspect.getsource(AgentService._run_summary_with_relevance)
 check("相关性回退: 调用 score_relevance", "score_relevance" in source_summary)
-check("相关性回退: 阈值 0.6", "0.6" in source_summary)
+check("相关性回退: 阈值 0.6",
+      "AGENT_SUMMARY_RELEVANCE_THRESHOLD" in source_summary
+      and settings.AGENT_SUMMARY_RELEVANCE_THRESHOLD == 0.6)
 check("相关性回退: 最多 3 轮", "max_rounds" in source_summary)
 check("相关性回退: 超限后降级为空结果", "treating as empty" in source_summary or "fallback_output" in source_summary)
 check("相关性回退: 回退时重新检索", "_run_retrieval" in source_summary)
@@ -286,7 +291,7 @@ check("相关性回退: 回退时重新检索", "_run_retrieval" in source_summa
 # ====================== 9. verifier.score_relevance ======================
 print("\n=== 9. verifier — score_relevance 方法 ===")
 
-from multi_agent.verifier import IntentVerifier
+from app.domain.agents.verifier import IntentVerifier
 
 check("IntentVerifier.score_relevance 存在", hasattr(IntentVerifier, "score_relevance"))
 

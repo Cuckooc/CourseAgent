@@ -4,14 +4,14 @@
 作用：
     Alembic 命令行（alembic upgrade / downgrade / revision --autogenerate 等）
     加载的环境入口。负责两件事：
-    1. 把项目根插入 sys.path 并导入 db.models.Base，使 autogenerate 能拿到
+    1. 把项目根插入 sys.path 并导入 app.infrastructure.persistence.models.Base，使 autogenerate 能拿到
        全部 ORM 表元数据（target_metadata = Base.metadata）；
-    2. 提供离线/在线两种迁移执行模式，数据库连接串复用 db.session._DB_URL
+    2. 提供离线/在线两种迁移执行模式，数据库连接串复用 app.infrastructure.persistence.session._DB_URL
        （来源 env/config.env 经 core/config.py Settings），alembic.ini 中
        不写明文密码。
 
 主要成员：
-    - target_metadata：迁移比对用的 SQLAlchemy 元数据（db.models.Base.metadata）；
+    - target_metadata：迁移比对用的 SQLAlchemy 元数据（app.infrastructure.persistence.models.Base.metadata）；
     - _db_url()：返回与运行时一致的 mysql+pymysql 连接串；
     - run_migrations_offline()：只生成 SQL 不连库（alembic offline 模式）；
     - run_migrations_online()：建连接实际执行迁移（NullPool 短连接）。
@@ -33,7 +33,7 @@ from alembic import context
 sys.path.insert(0, dirname(dirname(__file__)))
 
 # 导入 ORM 基类：其 metadata 注册了 db/models.py 中全部表，供 autogenerate 比对
-from db.models import Base  # noqa: E402
+from app.infrastructure.persistence.models import Base  # noqa: E402
 
 # Alembic 配置对象（对应 alembic.ini 与命令行参数）
 config = context.config
@@ -54,7 +54,7 @@ def _db_url() -> str:
           password/database/charset 拼接，含 charset=utf8mb4），与运行时
           完全一致，避免在 alembic.ini 中明文写密码。
     """
-    from db.session import _DB_URL
+    from app.infrastructure.persistence.session import _DB_URL
 
     return _DB_URL
 

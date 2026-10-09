@@ -23,9 +23,9 @@
 辅助函数：_chat（/chat/send 的薄封装）。模块常量：CHAT_TIMEOUT（单轮超时秒数）。
 
 被测对象来源：
-- 路由：control/chat_control.py（/chat/send、/chat/stream、/chat/recover、/chat/feedback）；
-- 编排：service/agent_service.py 与 multi_agent/ 全链路（chat_agent/rag_agent 等）、
-  memory/（短期/上下文记忆）、model_llm/gateway.py（真实 DashScope）；
+- 路由：app/api/v1/chat.py（/chat/send、/chat/stream、/chat/recover、/chat/feedback）；
+- 编排：app/application/chat/agent_service.py 与 app/domain/agents/ 全链路（chat_agent/rag_agent 等）、
+  app/domain/memory/（短期/上下文记忆）、model_llm/gateway.py（真实 DashScope）；
 - 落库：dao/chain_log.py、dao/history.py、dao/feedback.py；
 - 校验方式：HTTP 断言 + 通过 db/session.py 的 engine 直查真实表（无 mock）。
 
@@ -108,7 +108,6 @@ def test_chat_recover_no_llm(http, user_acct):
 
     # 取上轮 sid
     sid_from_first = 0
-    s1_body = _
     # recover 用 sid=0 也能跑（无内容时返回 missing）
     status, body, _ = http(
         "POST", "/chat/recover",
@@ -138,7 +137,7 @@ def test_chat_feedback_like(http, user_acct):
 
     # 验证落库
     uid = user_acct["user_id"]
-    with __import__("db.session", fromlist=["engine"]).engine.connect() as conn:
+    with __import__("app.infrastructure.persistence.session", fromlist=["engine"]).engine.connect() as conn:
         cnt = conn.execute(
             text(
                 "SELECT COUNT(*) FROM chat_feedback WHERE user_id = :uid AND session_id = :sid AND rating = 1"
@@ -152,7 +151,7 @@ def test_chat_stream_sse(http, user_acct):
     """/chat/stream SSE 流式 → 200 + content-type=text/event-stream + 至少一帧。"""
     import urllib.request
 
-    url = f"http://localhost:8000/chat/stream"
+    url = "http://localhost:8000/chat/stream"
     req = urllib.request.Request(
         url,
         data=json.dumps({"user_input": "你好", "session_id": 0}).encode("utf-8"),

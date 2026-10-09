@@ -15,13 +15,13 @@
 3. 基础设施夹具：base_url / db_engine / http / require_backend；
 4. 测试账号工厂夹具：_created_uids（uid 收集器）、user_acct / teacher_acct / admin_acct
    （三角色账号，直接走 DAO 创建，绕开 register/login 的 rate_limit 与失败计数，
-   用 core.security.create_access_token 签带真实 ver 的 JWT）；
+   用 app.auth.authentication.create_access_token 签带真实 ver 的 JWT）；
 5. autouse 清理夹具 _cleanup_test_accounts：每个用例结束走 dao.soft_delete.soft_delete_user
    软删除本用例创建的全部账号（级联软删业务数据 + 写注销计划表）；
 6. pytest_configure 注册 marker：backend / slow / db。
 
 被测对象来源：
-- HTTP 层：control/app.py 注册的全部路由（control/login_control.py、chat_control.py、
+- HTTP 层：control/app.py 注册的全部路由（app/api/v1/auth.py、chat_control.py、
   history_control.py、file_control.py、review_control.py、knowledge_control.py、
   admin_control.py、profile_control.py），默认监听 http://localhost:8000；
 - 账号链路：dao/user.py 的 Information（save_information/update_role/increment_token_version）、
@@ -143,7 +143,7 @@ def db_engine():
     test_file_upload.py（落库副作用校验）。仅执行 SELECT 的用例无清理；
     写入由用例自行回滚或软删。
     """
-    from db.session import engine  # noqa: WPS433 (测试夹具延迟导入)
+    from app.infrastructure.persistence.session import engine  # noqa: WPS433 (测试夹具延迟导入)
     return engine
 
 
@@ -189,9 +189,9 @@ def _make_test_user(role: str, suffix: str) -> Dict[str, Any]:
 
     user_name 列限 VARCHAR(20)，前缀 `pu_/pt_/pa_` + 13 位毫秒 = 16 字符（安全）。
     """
-    from core.security import create_access_token, hash_password  # noqa: WPS433
-    from dao.read import Information_Read  # noqa: WPS433
-    from dao.user import Information  # noqa: WPS433
+    from app.auth.authentication import create_access_token, hash_password  # noqa: WPS433
+    from app.infrastructure.persistence.repositories.read import Information_Read  # noqa: WPS433
+    from app.infrastructure.persistence.repositories.user import Information  # noqa: WPS433
 
     prefix = {"user": "pu", "teacher": "pt", "admin": "pa"}[role]
     uname = f"{prefix}_{suffix}"  # ≤ 16 字符，< VARCHAR(20)
@@ -293,7 +293,7 @@ def _cleanup_test_accounts(_created_uids):
     yield
     if not _created_uids:
         return
-    from dao.soft_delete import soft_delete_user  # noqa: WPS433
+    from app.infrastructure.persistence.repositories.soft_delete import soft_delete_user  # noqa: WPS433
     for uid in _created_uids:
         try:
             soft_delete_user(uid)

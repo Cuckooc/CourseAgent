@@ -22,7 +22,7 @@
     create_task / update_file_result / get_progress / cleanup_expired。
 
 被谁使用（Grep upload_task）：
-    仅 control/file_control.py：
+    仅 app/api/v1/files.py：
     - upload_file（异步分支）create_task、update_file_result；
     - 后台函数 _run_async_upload 每个文件完成后 update_file_result；
     - get_upload_status 端点 cleanup_expired + get_progress。
@@ -32,7 +32,7 @@ from __future__ import annotations
 import threading
 import time
 import uuid
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 # task_id -> 任务记录字典；进程内存储，重启即失效（客户端按“任务不存在”处理）
 _task_store: Dict[str, dict] = {}
@@ -45,7 +45,7 @@ _TASK_TTL_SECONDS = 3600
 def create_task(total: int) -> str:
     """创建一个新的异步上传任务。
 
-    被谁调用：control/file_control.py 的 upload_file，在判定为大上传
+    被谁调用：app/api/v1/files.py 的 upload_file，在判定为大上传
         （总大小 >10MB 或文件数 >20）转入异步分支时调用。
     参数：
         total: 本批次文件总数（来自 HTTP 上传的文件列表长度），
@@ -73,7 +73,7 @@ def create_task(total: int) -> str:
 def update_file_result(task_id: str, file_result: dict) -> None:
     """记录单个文件的处理结果，并驱动整体状态机更新。
 
-    被谁调用：control/file_control.py 的后台 _run_async_upload
+    被谁调用：app/api/v1/files.py 的后台 _run_async_upload
         （每文件解析/embedding/入库完成或异常后）及 upload_file 中
         文件落盘即失败的分支。
     参数：
@@ -107,7 +107,7 @@ def update_file_result(task_id: str, file_result: dict) -> None:
 def get_progress(task_id: str) -> Optional[dict]:
     """获取任务整体进度（用户侧视图）。
 
-    被谁调用：control/file_control.py 的 get_upload_status 端点
+    被谁调用：app/api/v1/files.py 的 get_upload_status 端点
         （GET /file/status/{task_id}）。
     参数：
         task_id: 前端轮询携带的任务 id（HTTP 路径参数）。
@@ -134,7 +134,7 @@ def get_progress(task_id: str) -> Optional[dict]:
 def cleanup_expired() -> int:
     """清理已超时的任务记录，防止进程内字典无限膨胀。
 
-    被谁调用：control/file_control.py 的 get_upload_status 端点
+    被谁调用：app/api/v1/files.py 的 get_upload_status 端点
         （每次轮询顺手清理一次）。
     返回：int，本轮删除的过期任务数量。
     判定口径：started_at 存在且距当前时间超过 _TASK_TTL_SECONDS（1 小时）；

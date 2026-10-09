@@ -58,9 +58,11 @@ services:
       - "8000" # 仅供 nginx 反代，不对宿主机暴露
     volumes:
       - ./env:/app/env:ro
-      - chromadb_data:/app/chromadb_data
-      - file_data:/app/file_analysis
-      - uploads_data:/app/uploads # 上传文件持久化（缺失会导致重建容器后文件全变孤儿）
+      # 运行时有状态数据统一收敛到 /app/storage（数据/源码分离）；
+      # 卷名沿用 chromadb_data / uploads_data 以兼容存量卷与 scripts 备份脚本，
+      # 仅容器内挂载点从旧的 /app/chromadb_data、/app/uploads 迁移到 /app/storage 下。
+      - chromadb_data:/app/storage/chromadb
+      - uploads_data:/app/storage/uploads # 上传文件持久化（缺失会导致重建容器后文件全变孤儿）
       - ./logs:/app/logs
     depends_on:
       mysql:

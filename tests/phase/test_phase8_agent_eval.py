@@ -13,7 +13,7 @@
     # 主力账号 e2e_tester_2026/Test1234! 须预先存在；自建临时账号
     # e2e_eval_b_<TS>、e2e_eval_adm_<TS>；总耗时约 10 分钟（含对话限流窗口等待）
 依赖说明：requests 直发 HTTP（不经 conftest）+ SQLAlchemy 直连库 +
-直接 import multi_agent / tools.function_tools 做进程内状态机与工具评测。
+直接 import multi_agent / app.domain.tools.function_tools 做进程内状态机与工具评测。
 
 类别            本系统落点
 C1  结果层      真实 LLM 问答任务完成率 / SSE+JSON 字段完整 / 切题（pass@1、格式校验通过率）
@@ -26,12 +26,12 @@ C7  混沌注入    超长/空/脏参数 422 / 他人会话 error 帧 / 网关�
 C8  隔离性      失败上传无残留 / 跨用户会话·知识库隔离 / 失败不产生半截记录
 C9  成本延迟    /metrics 指标 / admin 用量(模型+用户拆账) / 预算熔断 / P50/P99
 C10 回归        黄金数据集重跑（dedup 83 + boundary + roles）版本间退化率
-C11 上线验证    金标集自动评分+人工抽检表 / 点赞点踩纠错链路 / 影子灰度适用性说明
+C11 上线验证    金标集自动评分+人工抽检表 / 点赞点踩纠错链路 / 灰度适用性说明
 
 判定原则：
 - 接口/结构类断言硬性通过/失败；
 - LLM 智能表现用「要点关键词」自动评分，全部原文落盘 phase8_llm_answers.txt 供人工金标抽检；
-- 不适用项（无价目表/无影子设施）显式标注 N/A，不计入失败。
+- 不适用项（无价目表/无灰度设施）显式标注 N/A，不计入失败。
 """
 import glob
 import io
@@ -88,7 +88,7 @@ def check(name, cond, detail=""):
 
 
 def note(name, detail=""):
-    """N/A 记录辅助：用于无价目表/无影子设施等不适用项，累加 NA 且不计失败。"""
+    """N/A 记录辅助：用于无价目表/无灰度设施等不适用项，累加 NA 且不计失败。"""
     global NA
     NA += 1
     print(f"  [N/A ] {name}" + (f"  ({detail})" if detail else ""))
@@ -241,7 +241,7 @@ def db_exec(sql, params=None):
     调用方：set_role 等需要直连 MySQL 的辅助点；连接配置来自 env/config.env。
     """
     from sqlalchemy import text
-    from db.session import session_scope
+    from app.infrastructure.persistence.session import session_scope
     with session_scope() as s:
         return s.execute(text(sql), params or {})
 
@@ -257,7 +257,7 @@ def last_chain_log(uid):
     用于 C2 轨迹层断言（transition/step/error 事件、状态收敛）。
     """
     from sqlalchemy import text
-    from db.session import session_scope
+    from app.infrastructure.persistence.session import session_scope
     with session_scope() as s:
         row = s.execute(
             text("SELECT log_data FROM chain_log WHERE user_id=:u ORDER BY id DESC LIMIT 1"),
@@ -270,9 +270,9 @@ def vector_chunks_like(prefix):
     """直连 Chroma，返回 original_name 以 prefix 开头的全部向量块 metadata 列表。
 
     用于 C8 隔离性：断言失败/越权场景下无残留向量块。
-    被访问外部依赖：service.vector_store.get_persistent_db 的持久化 collection。
+    被访问外部依赖：app.infrastructure.vector_store.persistent.get_persistent_db 的持久化 collection。
     """
-    from service.vector_store import get_persistent_db
+    from app.infrastructure.vector_store.persistent import get_persistent_db
     db = get_persistent_db()
     data = db._collection.get(include=["metadatas"])
     return [m for m in data["metadatas"]
@@ -372,7 +372,7 @@ check("C2.2 status 帧 stage 非空且为字符串",
       bool(stages) and all(isinstance(s, str) and s for s in stages), str(stages))
 
 # 2.3 进程内状态机：死循环/重试边界
-from multi_agent.state_machine import PipelineStateMachine, MAX_RETRIES
+from app.domain.agents.state_machine import PipelineStateMachine, MAX_RETRIES
 
 sm = PipelineStateMachine("q", uid_a, 1)
 # 指纹按 3 种 agent 循环：任意长度 5 的滑动窗口内都有 3 种指纹（>=3 不触发
@@ -404,7 +404,7 @@ check("C2.3 回滚达上限后 can_rollback=False", can is True and sm2.can_roll
 
 # ================================================================ C3 工具调用层
 section("C3 工具调用层：工具选择准确率 / 参数准确率 / 错误码不崩 / 越权拦截")
-from tools.function_tools import vague, course, summary, execute_tool
+from app.domain.tools.function_tools import vague, course, summary, execute_tool
 
 # 金标：course 工具（判定是否走 RAG）；前 5 组为正常/语序/拼音错别字/噪声口语正例，
 # 后 3 组为闲聊负例（电影/去哪玩/笑话），元组第二项为期望的走 RAG 布尔
@@ -596,7 +596,7 @@ def _resolve_stored(original):
         return sn
     try:
         import os as _os
-        from service.vector_store import get_persistent_db
+        from app.infrastructure.vector_store.persistent import get_persistent_db
         _col = get_persistent_db()._collection
         _d = _col.get(include=["metadatas"])
         for m in _d["metadatas"]:
@@ -737,7 +737,7 @@ check("C7.5 错误会话快速失败(<2s, 不进入LLM链路)", time.time() - t0
       f"{time.time()-t0:.1f}s")
 
 # 网关故障分类（纯函数）
-from model_llm.gateway import _is_retryable, _EmptyResponseError, LLMUnavailableError, LLMGateway
+from app.infrastructure.llm.gateway import _is_retryable, _EmptyResponseError, LLMUnavailableError, LLMGateway
 
 
 class _Fake(Exception):
@@ -836,7 +836,7 @@ check("C9.2 admin 按用户月度用量可查且含 A",
 # 预算熔断（进程内：写入超量日计数 + 临时打开日限额开关）
 from core import usage as usage_mod
 from core.config import settings
-from core.redis_client import get_redis
+from app.infrastructure.redis.redis_client import get_redis
 
 r_redis = get_redis()
 date = datetime.now().strftime("%Y-%m-%d")
@@ -899,7 +899,7 @@ print(f"  [指标] 黄金集回归: {reg_total - reg_fail}/{reg_total} 通过, "
       f"版本间退化率={reg_fail}/{reg_total}")
 
 # ================================================================ C11 上线验证
-section("C11 上线验证：金标抽检 / 反馈纠错 / 影子灰度")
+section("C11 上线验证：金标抽检 / 反馈纠错 / 灰度")
 
 # C11 上线金标问答数据集（正常 + 1 条注入回归）：(问题, 判定 lambda 回答->通过布尔)
 GOLD = [
@@ -943,7 +943,7 @@ r_fb_l = requests.post(f"{BASE}/chat/feedback", headers=hdr(tok_a),
                        json={"session_id": sid_long, "message_index": 0, "rating": 1,
                              "comment": "x" * 501}, timeout=30)
 check("C11.2 超长 comment(501) 被拒绝(422)", r_fb_l.status_code == 422, str(r_fb_l.status_code))
-note("C11.3 新旧 Agent 影子跑/灰度小流量：单机无影子/灰度设施，需上线环境实施，N/A")
+note("C11.3 新旧 Agent 灰度小流量：单机无灰度设施，需上线环境实施，N/A")
 
 # ================================================================ 清理
 section("清理：测试数据")
@@ -955,7 +955,7 @@ for nm in (FEYNMAN_DOC, SPACED_DOC, PRIVATE_DOC):
         pass
 # 向量块兜底（含可能的 is_latest=False 旧版本）
 try:
-    from service.vector_store import get_persistent_db, persistent_lock
+    from app.infrastructure.vector_store.persistent import get_persistent_db, persistent_lock
     _db = get_persistent_db()
     _col = _db._collection
     _data = _col.get(include=["metadatas"])

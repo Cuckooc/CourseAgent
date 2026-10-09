@@ -16,9 +16,9 @@
     - _SINK_ID：模块级全局单例，保存已注册 sink 的 id（None 表示尚未注册/注册失败）。
 
 被谁使用：
-    - control/login_control.py：记录注册、登录成功/失败事件；
-    - control/chat_control.py：记录对话相关的安全事件；
-    - control/admin_control.py：记录管理员操作（如用户降权/停用等）。
+    - app/api/v1/auth.py：记录注册、登录成功/失败事件；
+    - app/api/v1/chat.py：记录对话相关的安全事件；
+    - app/api/v1/admin.py：记录管理员操作（如用户降权/停用等）。
 """
 import logging
 from typing import Optional
@@ -80,14 +80,14 @@ def audit(
 
     功能：组装 actor/action/target/result/request_id 字段，以 bind(audit=True) 写入审计 sink。
     被谁调用（Grep audit( 结果）：
-        - control/login_control.py：register（user_registered）、login_by_account
+        - app/api/v1/auth.py：register（user_registered）、login_by_account
           （登录成功 / login_failed）；
-        - control/chat_control.py：对话端点的安全事件；
-        - control/admin_control.py：管理员操作（如 deactivate_user 等）。
+        - app/api/v1/chat.py：对话端点的安全事件；
+        - app/api/v1/admin.py：管理员操作（如 deactivate_user 等）。
 
     参数：
         action: 事件名（字符串常量，调用方约定，如 "login_failed"）；
-        actor: 操作者信息 dict，通常来自 core.deps.get_current_user 的返回值
+        actor: 操作者信息 dict，通常来自 app.auth.guards.get_current_user 的返回值
                {"user_id","user_name","role"}；登录/匿名事件可只传 {"user_name": ...}；
         target: 操作对象（用户 id、用户名、文件名等，可为 dict 或标量），来源为 HTTP 请求参数；
         result: 事件结果，默认 "success"，失败场景调用方传 "fail"；

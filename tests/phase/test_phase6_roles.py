@@ -13,9 +13,9 @@ check() 汇总；pytest 收集时同样按脚本执行）。风险类型：水�
 user_information.role（不走 API），测后无条件恢复为 user。
 
 被测对象来源：
-- 路由：control/admin_control.py（GET /admin/users，admin only）、
-  control/file_control.py（POST /file/path scope=public，teacher/admin）、
-  control/chat_control.py（POST /chat/stream，admin 禁用）；
+- 路由：app/api/v1/admin.py（GET /admin/users，admin only）、
+  app/api/v1/files.py（POST /file/path scope=public，teacher/admin）、
+  app/api/v1/chat.py（POST /chat/stream，admin 禁用）；
 - 守卫：core/deps.py 的 require_role/角色判定（依据 JWT 内/库内 role）。
 
 运行方式：
@@ -27,13 +27,17 @@ user_information.role（不走 API），测后无条件恢复为 user。
 清理：受控账号测后恢复 user 角色但不删除；teacher 上传的公共文件因 user 身份
 无删除权限而保留，需后续统一清理（cleanup_public 当前为空占位）。
 """
-import sys, os, io, time, requests
+import sys
+import os
+import io
+import time
+import requests
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "env", "config.env"))
 load_dotenv(os.path.join(os.path.dirname(__file__), "env", "qianwen_config.env"))
 import core.config  # noqa
-from db.session import session_scope
+from app.infrastructure.persistence.session import session_scope
 from sqlalchemy import text
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连）
@@ -43,9 +47,11 @@ def check(name, cond, extra=""):
     """断言辅助：累加全局 PASS/FAIL 并打印，不抛异常。调用方：本脚本全部检查点。"""
     global PASS, FAIL
     if cond:
-        PASS += 1; print(f"  [PASS] {name}")
+        PASS += 1
+        print(f"  [PASS] {name}")
     else:
-        FAIL += 1; print(f"  [FAIL] {name} {extra}")
+        FAIL += 1
+        print(f"  [FAIL] {name} {extra}")
 
 def set_role(user_id, role):
     """直连数据库把指定用户角色改为 user/teacher/admin。

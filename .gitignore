@@ -6,10 +6,11 @@ env/*.env
 scripts/dev/
 scripts/maintenance/
 
-# 项目文档（随仓库分发部署文档、用户使用说明与文档索引，其余内部文档不入库）
+# 项目文档（随仓库分发部署文档、用户使用说明、架构图与文档索引，其余内部文档不入库）
 docs/*
 !docs/部署文档.md
 !docs/用户使用说明.md
+!docs/架构图.md
 !docs/README.md
 /web/ARCHITECTURE.md
 /data/LearnPlan_Dialogue_Collection/README.md
@@ -23,10 +24,14 @@ docs/*
 /后端API深度测试报告.md
 /安全并发边界对抗测试报告.md
 /数据库层测试报告.md
+/上线与优化审核报告.md
 
 # 临时/测试产物
 /b.txt
-/file_analysis/*.pdf
+.acl-report/
+# 演示 PDF（17.8MB）随数据/源码分离移至 data/samples，但维持「不入库」原约定；
+# data/samples 下其余知识库样本 PDF 正常入库
+/data/samples/1.pdf
 
 # Python
 __pycache__/
@@ -36,9 +41,8 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 
-# 运行时数据
-chromadb_data/
-uploads/
+# 运行时数据（数据/源码分离：上传文件与 Chroma 持久化统一 storage 根）
+storage/
 *.log
 
 # IDE / OS

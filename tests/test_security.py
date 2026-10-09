@@ -30,13 +30,13 @@
 _tamper_payload、_alg_none_token（JWT 拆装/篡改/伪造）。
 
 被测对象来源：
-- 路由：control/login_control.py（/login/account、/login/register、/login/me）、
-  control/history_control.py（/history/create）、control/chat_control.py（/chat/feedback、
-  /chat/send）、control/file_control.py（POST /file/path、GET /file/status/{task_id}）、
-  control/review_control.py（/review/list）、control/admin_control.py（/admin/users）；
+- 路由：app/api/v1/auth.py（/login/account、/login/register、/login/me）、
+  app/api/v1/history.py（/history/create）、app/api/v1/chat.py（/chat/feedback、
+  /chat/send）、app/api/v1/files.py（POST /file/path、GET /file/status/{task_id}）、
+  app/api/v1/review.py（/review/list）、app/api/v1/admin.py（/admin/users）；
 - 鉴权：core/deps.py 的 get_current_user、core/security.py 的 create_access_token；
 - token 互踢：dao/user.py 的 Information.increment_token_version；
-- 上传防护：control/file_control.py 与 service/file_service.py 的扩展名白名单与 magic bytes 校验。
+- 上传防护：app/api/v1/files.py 与 app/application/files/file_service.py 的扩展名白名单与 magic bytes 校验。
 
 运行方式：
     pytest tests/test_security.py            # 需后端 :8000 在线（pytestmark=backend，不可达 skip）
@@ -340,7 +340,7 @@ class TestPathTraversal:
     """路径穿越：文件名 / task_id 等用户输入不应被拼接到文件路径读取/写入。
 
     共同前置：http + user_acct；文件用例经 _multipart_upload 手工构造恶意 filename。
-    被测接口：POST /file/path（service/file_service.py 的 uuid 重命名落盘）、
+    被测接口：POST /file/path（app/application/files/file_service.py 的 uuid 重命名落盘）、
     GET /file/status/{task_id}（core/upload_task.py 内存任务表）。
     """
 
@@ -420,9 +420,9 @@ class TestJWTSecurity:
         """ver 不匹配（用户被踢）：旧 token 失效。
         通过 increment_token_version 后用旧 token 访问，应 401。
         """
-        from dao.user import Information
+        from app.infrastructure.persistence.repositories.user import Information
         info = Information()
-        new_ver = info.increment_token_version(user_acct["user_id"])
+        info.increment_token_version(user_acct["user_id"])
         # 旧 token 仍带旧 ver，应被拒
         status, _, _ = http("GET", "/login/me", token=user_acct["token"])
         assert status == 401, f"旧 token 仍可用：{status}（应 401，token_version 互踢失败）"
@@ -498,10 +498,8 @@ class TestInfoLeak:
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 raw = resp.read().decode("utf-8", errors="replace")
-                status = resp.status
         except urllib.error.HTTPError as e:
             raw = e.read().decode("utf-8", errors="replace")
-            status = e.code
         # 不论 200/4xx/5xx，响应文本不应含 traceback / File "/ 路径
         assert "Traceback" not in raw, f"错误响应泄漏堆栈：{raw[:200]}"
         assert 'File "' not in raw, f"错误响应泄漏文件路径：{raw[:200]}"

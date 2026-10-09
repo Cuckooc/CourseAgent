@@ -41,7 +41,7 @@ def upgrade() -> None:
     被谁调用：`alembic upgrade head` 经 migrations/env.py 在线执行；
     外键 fk_profile_user 引用 user_information.id，故要求库已处于
     0002_user_role（含基线三表）版本。建表后 dao/profile.py 与
-    memory/profile_service.py 方可写入画像数据。
+    app/domain/memory/profile_service.py 方可写入画像数据。
     """
     # DDL：创建用户画像表（字段含义见各 comment；时间戳交由 MySQL 维护）
     op.create_table(

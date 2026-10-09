@@ -25,7 +25,7 @@ EXPECTED_FK、DOC_TYPES、DOC_STATUS、USER_ROLES、ORPHAN_CHECKS，含义见各
 
 被测对象来源：
 - 结构基线：db/models.py 的 ORM 声明（Base.metadata、__table_args__）、
-  db/migrations/*.sql 与 alembic 版本表；
+  migrations/legacy_sql/*.sql 与 alembic 版本表；
 - 连接：db/session.py 的 engine 与 session_scope（conftest db_engine 夹具）；
 - Redis：core/redis_client.py 的 get_redis（未配置时相关用例 skip）；
 - 配置：core/config.py 的 settings.DB_NAME；
@@ -42,11 +42,10 @@ EXPECTED_FK、DOC_TYPES、DOC_STATUS、USER_ROLES、ORPHAN_CHECKS，含义见各
 - 写入用例（事务回滚、字段长度）使用独立临时记录 + 异常强制回滚，不污染业务表；
 - 不依赖业务代码，直接走 SQLAlchemy text() + INFORMATION_SCHEMA。
 """
-import time
 import uuid
 
 import pytest
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 
 # 模块级 marker：全部用例需要真实 DB（MySQL）连通
 pytestmark = pytest.mark.db
@@ -120,7 +119,7 @@ def test_alembic_version_table(db_engine):
 
 def test_redis_ping():
     """Redis PING 成功。"""
-    from core.redis_client import get_redis
+    from app.infrastructure.redis.redis_client import get_redis
     r = get_redis()
     if r is None:
         pytest.skip("Redis 未配置（redis_url 为空），跳过 Redis 用例")
@@ -129,7 +128,7 @@ def test_redis_ping():
 
 def test_redis_dbsize():
     """Redis DBSIZE 可查询（不固定值，只验证连通）。"""
-    from core.redis_client import get_redis
+    from app.infrastructure.redis.redis_client import get_redis
     r = get_redis()
     if r is None:
         pytest.skip("Redis 未配置，跳过 Redis 用例")
@@ -155,7 +154,7 @@ def test_orm_table_exists_in_db(db_engine, table):
 
 def test_orm_model_count_matches_db(db_engine):
     """ORM 声明的表数量 = 库中业务表数量（不含 alembic_version 迁移表）。"""
-    from db.models import Base  # ORM 元数据
+    from app.infrastructure.persistence.models import Base  # ORM 元数据
     orm_tables = set(Base.metadata.tables.keys())
     with db_engine.connect() as conn:
         rows = conn.execute(
@@ -383,7 +382,7 @@ def test_orm_transaction_rollback(db_engine):
     使用临时唯一 user_name，INSERT 不提供 email（NOT NULL）→ MySQL 抛 1364 →
     session_scope 自动 rollback → 验证无残留记录。
     """
-    from db.session import session_scope
+    from app.infrastructure.persistence.session import session_scope
     tmp_name = f"rb_{uuid.uuid4().hex[:8]}"
     with db_engine.connect() as conn:
         before = conn.execute(text("SELECT COUNT(*) FROM user_information WHERE user_name = :n"), {"n": tmp_name}).scalar()
@@ -421,7 +420,7 @@ def test_field_length_constraint(db_engine):
 
 def test_redis_key_sampling():
     """Redis 键抽样：业务前缀查询不报错（不固定键值，只验证可查询）。"""
-    from core.redis_client import get_redis
+    from app.infrastructure.redis.redis_client import get_redis
     r = get_redis()
     if r is None:
         pytest.skip("Redis 未配置，跳过 Redis 用例")

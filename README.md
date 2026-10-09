@@ -45,7 +45,7 @@ cp env/qianwen_config.env.example env/qianwen_config.env
 mysql -u root -p < course.sql
 
 # 6. 启动后端（默认 8000 端口）
-uvicorn control.app:app --reload
+uvicorn app.main:app --reload
 
 # 7. 启动前端（另开终端）
 cd web/frontend
@@ -156,8 +156,7 @@ docker compose up -d --build
 ├── 📁 file_analysis/          # 文档解析 [详见 file_analysis/README.md]
 ├── 📁 dao/                    # 数据访问层 [详见 dao/README.md]
 ├── 📁 db/                     # SQLAlchemy 模型与迁移 SQL [详见 db/README.md]
-├── 📁 util/                   # 通用工具函数 [详见 util/README.md]
-├── 📁 config/                 # 静态配置（setting.py/敏感词表）[详见 config/README.md]
+├── 📁 util/                    # 通用工具函数 [详见 util/README.md]
 ├── 📁 env/                    # 环境变量案例模板 [详见 env/README.md]
 ├── 📁 web/frontend/           # React 18 前端 [详见 web/frontend/README.md]
 ├── 📁 docs/                   # 项目文档 [详见 docs/README.md]

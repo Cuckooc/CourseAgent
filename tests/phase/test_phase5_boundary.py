@@ -16,9 +16,9 @@ TC-6.8 空对话（边界：空字符串）→ 422
 TC-6.9 无效 JWT（恶意：伪造 token）→ 401
 
 被测对象来源：
-- 路由：control/file_control.py（POST /file/path，空内容/超长名/魔数校验）、
-  control/chat_control.py（POST /chat/stream，user_input 长度与 JWT 校验）；
-- 清理：control/knowledge_control.py 的 /knowledge/delete/preview|confirm 两步删除。
+- 路由：app/api/v1/files.py（POST /file/path，空内容/超长名/魔数校验）、
+  app/api/v1/chat.py（POST /chat/stream，user_input 长度与 JWT 校验）；
+- 清理：app/api/v1/knowledge.py 的 /knowledge/delete/preview|confirm 两步删除。
 
 运行方式：
     python tests/phase/test_phase5_boundary.py
@@ -27,7 +27,8 @@ TC-6.9 无效 JWT（恶意：伪造 token）→ 401
 依赖说明：requests 直发 HTTP，不经 conftest。
 清理：仅 TC-6.3 成功时删除该特殊字符文件；其余被拒请求无落盘无需清理。
 """
-import requests, io, os
+import requests
+import io
 
 BASE = "http://127.0.0.1:8000"  # 后端基址常量（脚本直连）
 PASS = 0  # 全局通过断言计数
