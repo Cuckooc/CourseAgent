@@ -28,4 +28,4 @@ alembic current
 alembic revision --autogenerate -m "描述"
 ```
 
-> 注意：`db/migrations/*.sql` 是手工增量 SQL（生产备用），与本目录 Alembic 迁移并存，表结构最终以 models.py 为准。
+> 注意：历史手工增量 SQL（原 `db/migrations/002~007`）已归档至 `legacy_sql/`（生产手工执行备用），与本目录 Alembic 迁移并存，表结构最终以 `app/infrastructure/persistence/models.py` 为准。

@@ -84,12 +84,12 @@ control（路由/鉴权/校验）→ service（业务编排）
 
 ## 4. 数据库变更
 
-1. 修改 `db/models.py` 模型；
+1. 修改 `app/infrastructure/persistence/models.py` 模型；
 2. 在 `migrations/versions/` 新增 Alembic 迁移（`alembic revision --autogenerate -m "描述"` 后人工核对）；
-3. 同步在 `db/migrations/` 补一份增量 SQL（生产手工执行备用），编号接续；
+3. 同步在 `migrations/legacy_sql/` 补一份增量 SQL（生产手工执行备用），编号接续；
 4. 全新部署的基线以根目录 `course.sql` 为准——表结构变更需评估是否同步基线。
 
-软删除必须与关联记录**同事务**标记（参照 `dao/soft_delete.py`），高危删除走 `core/delete_guard.py` 两步式令牌。
+软删除必须与关联记录**同事务**标记（参照 `app/infrastructure/persistence/repositories/soft_delete.py`），高危删除走 `core/delete_guard.py` 两步式令牌。
 
 ## 5. 测试要求
 

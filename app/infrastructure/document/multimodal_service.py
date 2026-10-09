@@ -23,7 +23,7 @@
 
 API Key 来源：
     读环境变量 api_key / DASHSCOPE_API_KEY；进程启动时
-    config/setting.py 的 LLMConfig 通过 load_dotenv 加载
+    core/config.py 的 LLMConfig 通过 load_dotenv 加载
     env/qianwen_config.env 注入该变量（本地密钥文件，禁止入库）。
 
 被谁使用：
@@ -84,7 +84,7 @@ def _get_api_key() -> Optional[str]:
     被谁调用：extract_with_multimodal()。
     返回：环境变量 api_key 或 DASHSCOPE_API_KEY 的值（前者优先），
     均未配置时返回 None，由主入口判定后抛 RuntimeError 终止多模态路径。
-    环境变量来源：config/setting.py 启动时 load_dotenv 加载的
+    环境变量来源：core/config.py 启动时 load_dotenv 加载的
     env/qianwen_config.env（LLMConfig.API_KEY 同源，密钥文件禁止入库）。
     """
     return os.getenv("api_key") or os.getenv("DASHSCOPE_API_KEY")

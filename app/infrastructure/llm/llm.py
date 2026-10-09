@@ -43,7 +43,7 @@ class LLM(ABC):
             **extra_kwargs: 额外透传给 build_chat_model 的 ChatOpenAI 参数
                 （如 temperature/timeout），由各 Agent 按需覆盖默认值。
         关键属性去向：
-            model_name/api_key/base_url 取自 config.setting.llm
+            model_name/api_key/base_url 取自 core.config.llm
             （env/qianwen_config.env 的 model/api_key/base_url），同时在
             app/domain/agents/base_agent.py 等 Agent 基类中被记录用于日志展示；
             self.llm 为 LLMGateway 实例，去向子类组装 LangChain chain

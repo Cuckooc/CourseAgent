@@ -24,7 +24,7 @@
     向量与查询向量无法比较（检索静默失效）。重试耗尽后直接抛原异常，由上层兜底。
 
 密钥来源：
-    api_key 取自 config/setting.py 的 LLMConfig.API_KEY（env/qianwen_config.env
+    api_key 取自 core/config.py 的 LLMConfig.API_KEY（env/qianwen_config.env
     的 api_key，本地密钥文件禁止入库）。
 """
 import logging

@@ -66,7 +66,7 @@ class BaseAgent(ABC):
         - tools：工具管理器实例（预留，需提供 run(tool_name, **params)
           接口；当前调用方传 None）。
         """
-        # LLM 连接配置：来源 config/setting.py 的 llm 配置段（模型名/密钥/网关地址/温度）
+        # LLM 连接配置：来源 core/config.py 的 llm 配置段（模型名/密钥/网关地址/温度）
         self.model_name = llm.MODEL
         self.api_key = llm.API_KEY
         self.base_url = llm.BASE_URL
@@ -76,7 +76,7 @@ class BaseAgent(ABC):
         self.agent_name = agent_name
         self.memory = memory
         self.tools = tools 
-        # Agent 行为配置：VERBOSE 日志开关、MAX_ITERATIONS ReAct 迭代上限（来源 config/setting.py 的 agent 段）
+        # Agent 行为配置：VERBOSE 日志开关、MAX_ITERATIONS ReAct 迭代上限（来源 core/config.py 的 agent 段）
         self.agent_verbose = agent.VERBOSE
         self.max_iterations = agent.MAX_ITERATIONS   
         self.bus=bus 

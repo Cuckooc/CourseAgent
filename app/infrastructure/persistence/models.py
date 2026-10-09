@@ -149,7 +149,7 @@ class UserProfile(Base):
 class DocumentReview(Base):
     """文档审核队列表：OCR/多模态提取结果的人工审核队列，MySQL 表名：document_review。
 
-    由 Base.metadata 建表，结构对应增量脚本 db/migrations/002_document_review.sql，
+    由 Base.metadata 建表，结构对应增量脚本 migrations/legacy_sql/002_document_review.sql，
     被 dao/document_review.py（本仓唯一直接 import ORM 类做读写的 DAO）与
     审核相关 service/路由使用；扫描件/双栏/图文密集文档先入队，人工
     approved 后清洗文本才进入向量化入库链路。
@@ -197,7 +197,7 @@ class SessionKeyword(Base):
     """会话关键词累积表：每 (user_id, session_id) 一行，关键词顿号分隔，
     MySQL 表名：session_keywords。
 
-    由 Base.metadata 建表（对应 db/migrations/004_session_keywords.sql），
+    由 Base.metadata 建表（对应 migrations/legacy_sql/004_session_keywords.sql），
     被 dao/session_keyword.py 与 app/domain/agents/summary_agent.py 的关键词产出
     链路使用；累积关键词注入 ChatLLM 提示词的 {session_keywords}，帮助
     模型锁定会话主题。
@@ -231,7 +231,7 @@ class SessionKeyword(Base):
 class ChatFeedback(Base):
     """用户对 AI 回答的反馈表（点赞/点踩 + 可选文字），MySQL 表名：chat_feedback。
 
-    由 Base.metadata 建表（对应 db/migrations/005_chat_feedback.sql），
+    由 Base.metadata 建表（对应 migrations/legacy_sql/005_chat_feedback.sql），
     被 dao/feedback.py 与反馈接口使用，供后续回答质量离线分析。
     索引：idx_fb_user_session(user_id, session_id) 支撑按会话查反馈。
     关系去向：user_id 逻辑引用 user_information.id；session_id 逻辑对应
@@ -256,7 +256,7 @@ class ChatFeedback(Base):
 class ChainLogRecord(Base):
     """Agent 链路日志持久化表：供离线分析与调试，MySQL 表名：chain_log。
 
-    由 Base.metadata 建表（对应 db/migrations/006_chain_log.sql），
+    由 Base.metadata 建表（对应 migrations/legacy_sql/006_chain_log.sql），
     被 dao/chain_log.py 写入；multi_agent 状态机/各 Agent 的运行轨迹
     （路由、检索、重试、降级等）序列化为 JSON 存 log_data。
     索引：idx_cl_user_session_time(user_id, session_id, created_at)
@@ -282,7 +282,7 @@ class FileMeta(Base):
     """文件元数据表：上传文件的存储位置、内容哈希、向量化进度等，
     MySQL 表名：file_meta。
 
-    由 Base.metadata 建表（对应 db/migrations/007_token_version.sql 等
+    由 Base.metadata 建表（对应 migrations/legacy_sql/007_token_version.sql 等
     增量脚本的版本演进而定），被 dao/knowledge.py 与 app/application/files/file_service.py、
     app/infrastructure/vector_store/persistent.py 的入库/去重/版本管理链路使用：content_hash
     判重、status 驱动向量化流程、vector_count 记录入库向量数。

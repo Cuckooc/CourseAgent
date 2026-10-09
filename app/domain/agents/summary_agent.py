@@ -86,7 +86,7 @@ class SummaryAgent:
         - self.bus：订阅 receiver="SummaryAgent" 邮箱取检索结果，
           汇总后向 receiver="ChatAgent" 邮箱发布产物；
         - self.llm：经 model_llm.gateway 构建的聊天模型（含主备网关）；
-        - self.agent_verbose / self.max_iterations：来源 config/setting.py
+        - self.agent_verbose / self.max_iterations：来源 core/config.py
           的 agent 段（日志开关与 ReAct 迭代上限预留）。
     """
 

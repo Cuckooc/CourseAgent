@@ -115,7 +115,7 @@ class LLMGateway(ChatOpenAI):
         """初始化网关（参数与 ChatOpenAI 一致，另含三个 gateway_*/fallback_* 字段）。
 
         参数：**kwargs —— 由 build_chat_model 组装：model/api_key/base_url/
-              timeout/max_tokens 来自 config.setting.llm，调用方可覆盖
+              timeout/max_tokens 来自 core.config.llm，调用方可覆盖
               （如 temperature、failure_diagnoser 的更短 timeout）。
         """
         # 关闭 openai 客户端内部重试，统一由网关管理，避免重试叠乘
@@ -350,7 +350,7 @@ class LLMGateway(ChatOpenAI):
 def build_chat_model(**overrides: Any) -> LLMGateway:
     """全仓统一的 LLM 构造工厂：默认值来自配置，可按调用点覆盖。
 
-    功能：把 config/setting.py 的 llm 单例（LLMConfig，值来自
+    功能：把 core/config.py 的 llm 单例（LLMConfig，值来自
     env/qianwen_config.env）映射为 LLMGateway 参数——
     model=llm.MODEL（env: model，默认 default_model）、
     api_key=llm.API_KEY（env: api_key，【密钥类字段】仅来自本地 env、禁止入库）、

@@ -34,8 +34,8 @@ db/
 
 ## 🔄 迁移说明
 
-- `db/migrations/*.sql` 为手工增量迁移（002 起步，001 基线由 course.sql 覆盖）
-- `migrations/` 目录为 **Alembic** 版本化迁移（Python），两套并存：
+- `migrations/legacy_sql/*.sql` 为历史手工增量迁移存档（002 起步，001 基线由 course.sql 覆盖）
+- `migrations/versions/` 目录为 **Alembic** 版本化迁移（Python），两套并存：
   - SQL 版：生产手工执行
   - Alembic 版：`alembic upgrade head`（配置见 alembic.ini）
 

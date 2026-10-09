@@ -37,9 +37,9 @@ Agent 间数据流：
     app/infrastructure/vector_store/temp_store 提供，检索细节见 app/domain/agents/retrieval.py。
 """
 import os
+from functools import lru_cache
 
 from core.config import BASE_DIR, settings
-from functools import lru_cache
 from .message_bus import MessageBus
 from app.application.ports.embeddings import (
     build_chromadb,

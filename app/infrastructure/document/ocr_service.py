@@ -8,7 +8,7 @@
     单页调用内置 tenacity 重试（3 次指数退避，2~10 秒）。
 
     API Key 与模型名均读环境变量（api_key / DASHSCOPE_API_KEY /
-    OCR_MODEL）；环境变量由 config/setting.py 的 LLMConfig 在进程
+    OCR_MODEL）；环境变量由 core/config.py 的 LLMConfig 在进程
     启动时通过 load_dotenv 加载 env/qianwen_config.env 注入
     （LLMConfig.API_KEY 同源，本地密钥文件禁止入库）。
 
@@ -57,7 +57,7 @@ def _get_api_key() -> Optional[str]:
 
     被谁调用：ocr_pdf()。返回：环境变量 api_key 或 DASHSCOPE_API_KEY
     的值（前者优先），均未配置时返回 None，由 ocr_pdf 判定后抛
-    RuntimeError 终止 OCR 路径。环境变量来源：config/setting.py 启动
+    RuntimeError 终止 OCR 路径。环境变量来源：core/config.py 启动
     时 load_dotenv 加载的 env/qianwen_config.env（LLMConfig.API_KEY
     同源，密钥文件禁止入库）。
     """

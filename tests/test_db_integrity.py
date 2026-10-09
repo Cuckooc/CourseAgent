@@ -25,7 +25,7 @@ EXPECTED_FK、DOC_TYPES、DOC_STATUS、USER_ROLES、ORPHAN_CHECKS，含义见各
 
 被测对象来源：
 - 结构基线：db/models.py 的 ORM 声明（Base.metadata、__table_args__）、
-  db/migrations/*.sql 与 alembic 版本表；
+  migrations/legacy_sql/*.sql 与 alembic 版本表；
 - 连接：db/session.py 的 engine 与 session_scope（conftest db_engine 夹具）；
 - Redis：core/redis_client.py 的 get_redis（未配置时相关用例 skip）；
 - 配置：core/config.py 的 settings.DB_NAME；
