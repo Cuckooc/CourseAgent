@@ -15,7 +15,7 @@
 接口与 ChatOpenAI 完全一致（bind_app/domain/tools/create_react_agent/chain 无感知）：
 非流式路径汇入 _generate、流式路径汇入 _stream，在此两处统一织入重试与降级。
 
-配置来源（build_chat_model 默认值，env/qianwen_config.env → config/setting.py
+配置来源（build_chat_model 默认值，env/qianwen_config.env → core/config.py
 的 LLMConfig/llm 单例）：
 - model/api_key/base_url：env 的 model/api_key/base_url（主模型名、【密钥类字段】、
   DashScope OpenAI 兼容地址 https://dashscope.aliyuncs.com/compatible-mode/v1）；
@@ -50,7 +50,7 @@ from langchain_core.outputs import ChatResult
 from langchain_core.pydantic_v1 import Field, PrivateAttr
 from langchain_openai import ChatOpenAI
 
-from config.setting import llm
+from core.config import llm
 from core.usage import get_current_user_id, record_usage
 
 # 契约异常定义在横切层 core.exceptions（守卫禁止 infrastructure→application，

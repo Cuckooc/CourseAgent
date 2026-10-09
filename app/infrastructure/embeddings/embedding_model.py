@@ -35,7 +35,7 @@ from functools import lru_cache
 from threading import Lock
 
 import dashscope
-from config.setting import LLMConfig
+from core.config import LLMConfig
 from langchain_community.embeddings import DashScopeEmbeddings
 
 logger = logging.getLogger(__name__)

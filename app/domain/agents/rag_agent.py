@@ -37,6 +37,8 @@ Agent 间数据流：
     app/infrastructure/vector_store/temp_store 提供，检索细节见 app/domain/agents/retrieval.py。
 """
 import os
+
+from core.config import BASE_DIR, settings
 from functools import lru_cache
 from .message_bus import MessageBus
 from app.application.ports.embeddings import (
@@ -53,14 +55,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# 项目根目录（multi_agent 的上一级）：用于把默认资源路径锚定到项目而非 CWD
-_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 项目根目录：包下沉到 app/ 后 __file__ 层级已变，改用 core.config.BASE_DIR 锚定，避免路径漂移
+_BASE_DIR = str(BASE_DIR)
 # 内置公共知识库种子 JSON：首次启动且持久库为空时据此播种课程咨询对话语料
 _DEFAULT_JSON_PATH = os.path.join(
     _BASE_DIR, "data", "LearnPlan_Dialogue_Collection", "LearnPlan_Dialogue_Collection.json"
 )
 # Chroma 持久化目录默认值（向量库落盘位置；主流程实际由 app.infrastructure.vector_store.persistent 统一管理）
-_DEFAULT_PERSIST_PATH = os.path.join(_BASE_DIR, "chromadb_data")
+_DEFAULT_PERSIST_PATH = str(settings.CHROMA_DIR)
 
 
 def load_or_build_db(json_path: str, persist_path: str) -> Chroma:

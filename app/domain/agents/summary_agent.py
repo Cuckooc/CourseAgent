@@ -28,7 +28,7 @@ Agent 间数据流：
       相关性通过后由编排层累积进 app/domain/memory/session_keyword_service）。
 """
 from .message_bus import MessageBus
-from config.setting import llm,agent
+from core.config import llm, agent
 from app.application.ports.llm import build_chat_model, LLMUnavailableError
 from core.degradation_alert import alert_degradation
 from core.output_validator import validate_json_output, SummaryOutput

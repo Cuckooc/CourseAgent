@@ -4,7 +4,7 @@
 作用：
     定义 LLM 抽象基类，统一三件事：
     1. 导入期加载 env/qianwen_config.env（通义千问 DashScope 兼容模式配置）；
-    2. 从 config/setting.py 的 llm 单例读取模型名 / api_key / base_url；
+    2. 从 core/config.py 的 llm 单例读取模型名 / api_key / base_url；
     3. 构造时经 model_llm/gateway.py 的 build_chat_model() 得到带「重试 + 模型降级」
        的 LLMGateway 实例（接口与 ChatOpenAI 一致）。
     子类只需实现 generate() 返回各业务场景的提示词模板。
@@ -21,9 +21,9 @@
 """
 from abc import ABC, abstractmethod
 
-from config.setting import llm
+from core.config import llm
 from app.infrastructure.llm.gateway import build_chat_model
-# 环境变量由 config/setting.py 在导入期统一 load_dotenv(env/qianwen_config.env) 加载，此处不再重复加载
+# 环境变量由 core/config.py 在导入期统一 load_dotenv(env/qianwen_config.env) 加载，此处不再重复加载
 class LLM(ABC):
     """LLM 抽象基类：封装模型配置读取与网关客户端构造，子类只负责提供提示词模板。
 

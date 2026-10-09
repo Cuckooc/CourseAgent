@@ -29,7 +29,7 @@ Agent 间数据流：
       或 yield 文本增量给 SSE 流（最终回答去向：前端用户）。
 """
 from .message_bus import MessageBus
-from config.setting import llm,agent
+from core.config import llm, agent
 from app.application.ports.llm import build_chat_model, LLMUnavailableError
 from app.application.ports.llm_business import build_chat_prompt
 from langchain_core.prompts import ChatPromptTemplate

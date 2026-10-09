@@ -23,7 +23,7 @@
 """
 import os
 from pathlib import Path
-from typing import Final, List
+from typing import Final, List, Optional
 
 from dotenv import load_dotenv
 
@@ -32,8 +32,13 @@ from dotenv import load_dotenv
 BASE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
 # 模块级常量：环境变量文件路径（<根>/env/config.env，本地文件、禁止入库）。
 ENV_PATH: Final[Path] = BASE_DIR / "env" / "config.env"
+# 模块级常量：通义千问（DashScope）配置文件路径（<根>/env/qianwen_config.env，本地文件、禁止入库）。
+QIANWEN_ENV_PATH: Final[Path] = BASE_DIR / "env" / "qianwen_config.env"
 # 导入期一次性把 config.env 注入 os.environ；其后 Settings 字段统一用 os.getenv 读取。
 load_dotenv(dotenv_path=ENV_PATH)
+# 导入期一并加载 qianwen_config.env（LLM/Agent 配置同源收敛到本模块，消除 config/setting.py 第二处 load_dotenv；
+# load_dotenv 不覆盖已存在的真实环境变量，config.env 先加载、同名字段优先）。
+load_dotenv(dotenv_path=QIANWEN_ENV_PATH)
 
 
 class Settings:
@@ -360,3 +365,55 @@ class Settings:
 
 # 模块级全局单例：全仓唯一的配置实例，导入本模块时完成实例化（缺失 jwt_secret 会在此刻抛错阻断启动）。
 settings = Settings()
+
+
+# ================= 通义千问（DashScope）与 Agent 配置 =================
+# 由原 config/setting.py 收敛至此，消除「core/config.py + config/setting.py」双配置中心与双 load_dotenv。
+# env/qianwen_config.env 已在模块顶部随 config.env 一并 load_dotenv。
+
+class LLMConfig:
+    """LLM 配置类：字段在类定义期（模块导入时）从环境变量读取一次并固化。
+
+    实例化位置：模块末尾 llm = LLMConfig() 单例；同时 embedding_model.py 等以类属性方式
+    （LLMConfig.xxx）直接读取——两种方式拿到的是同一份固化值。
+    """
+    # 主模型名，环境变量 model（qianwen_config.env，如 qwen-plus）；
+    # 默认 default_model 仅为未配置时的占位，实际必须由 env 提供。
+    MODEL: Final[Optional[str]] = os.getenv("model", "default_model")
+    # 【密钥类字段】DashScope api_key，环境变量 api_key：仅来自本地 env/qianwen_config.env
+    # 或真实环境变量，禁止入库/打日志/回传前端。
+    API_KEY: Final[Optional[str]] = os.getenv("api_key")
+    # OpenAI 兼容 API 地址，环境变量 base_url（https://dashscope.aliyuncs.com/compatible-mode/v1）
+    BASE_URL: Final[Optional[str]] = os.getenv("base_url")
+    # 采样温度，环境变量 Temperature（注意大写 T），默认 0.9
+    TEMPERATURE: Final[Optional[float]] = float(os.getenv("Temperature", "0.9"))
+    # 上下文相关性余弦相似度阈值，环境变量 similarity_threshold，默认 0.8：
+    # chat_service.py 仅当 query 与上下文相似度 ≥ 该值才拼接 RAG 上下文。
+    # 【注意】该环境变量与 Settings.SIMILARITY_THRESHOLD（知识库去重阈值，默认 0.95）同名重载，
+    # 历史遗留、暂保持原语义；后续应拆分独立环境变量（如 context_similarity_threshold）。
+    SIMILARITY_THRESHOLD: Final[Optional[float]] = float(os.getenv("similarity_threshold", "0.8"))
+
+    # LLM 网关：超时/重试/退避/降级模型链
+    TIMEOUT_SECONDS: Final[float] = float(os.getenv("llm_timeout_seconds", "30"))
+    MAX_RETRIES: Final[int] = int(os.getenv("llm_max_retries", "2"))
+    BACKOFF_BASE_SECONDS: Final[float] = float(os.getenv("llm_backoff_base_seconds", "0.5"))
+    FALLBACK_MODELS: Final[list] = [m.strip() for m in os.getenv("llm_fallback_models", "").split(",") if m.strip()]
+    MAX_TOKENS: Final[int] = int(os.getenv("llm_max_tokens", "2000"))
+
+    # OCR 模型（扫描件 PDF 文字识别，使用 DashScope 多模态 API）
+    OCR_MODEL: Final[str] = os.getenv("OCR_MODEL", "qwen-vl-plus")
+
+
+class AgentConfig:
+    """Agent 行为配置类：字段在类定义期从环境变量读取，模块末尾导出 agent 单例。"""
+    # ReAct Agent 单轮最大工具迭代次数，环境变量 MAX_ITERATIONS，默认 10（防止工具调用死循环）
+    MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "10"))
+    # Agent 详细日志开关，环境变量 VERBOSE，默认 True
+    VERBOSE: bool = os.getenv("VERBOSE", "True").lower() == "true"
+    # 意图判定（Vague/Analysis）是否携带早期对话摘要，环境变量 intent_with_history，默认 true
+    INTENT_WITH_HISTORY: bool = os.getenv("intent_with_history", "true").lower() == "true"
+
+
+# 全仓共享的配置单例：import 后以 llm.xxx / agent.xxx 读取（值在导入期已固化）
+llm = LLMConfig()
+agent = AgentConfig()

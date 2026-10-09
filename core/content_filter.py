@@ -3,13 +3,13 @@
 
 作用：
     输出内容过滤。对 AI 最终输出做关键词黑名单替换（命中词替换为 ***）。
-    词库来自 config/banned_words.txt（每行一个，# 开头为注释），首次使用时惰性加载并缓存。
+    词库来自 core/resources/banned_words.txt（每行一个，# 开头为注释），首次使用时惰性加载并缓存。
     过滤失败时放行（不阻断主流程），仅记录告警日志。
 
 主要成员：
     - filter_text(text)：对外唯一入口，替换文本中的敏感词；
     - _load_words()：内部函数，惰性加载/缓存黑名单词表；
-    - _BANNED_WORDS_PATH：模块级常量，词库文件路径（<根>/config/banned_words.txt）；
+    - _BANNED_WORDS_PATH：模块级常量，词库文件路径（<根>/core/resources/banned_words.txt）；
     - _words_cache：模块级全局单例，加载后的词表缓存（None=尚未加载，[]=词库为空或加载失败）。
 
 被谁使用：
@@ -20,8 +20,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# 模块级常量：敏感词库文件绝对路径（<项目根>/config/banned_words.txt），导入期确定。
-_BANNED_WORDS_PATH = Path(__file__).resolve().parent.parent / "config" / "banned_words.txt"
+# 模块级常量：敏感词库文件绝对路径（<项目根>/core/resources/banned_words.txt），导入期确定。
+_BANNED_WORDS_PATH = Path(__file__).resolve().parent / "resources" / "banned_words.txt"
 
 # 模块级全局单例：词表缓存。None 表示尚未加载（首次过滤时触发读文件），
 # [] 表示词库文件不存在或读取异常（过滤器等价于关闭，直接放行）。

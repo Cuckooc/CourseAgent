@@ -18,7 +18,7 @@
       AgentService._create_agents() 直接实例化。）
 """
 from abc import ABC, abstractmethod
-from config.setting import llm,agent
+from core.config import llm, agent
 from app.application.ports.llm import build_chat_model
 from typing import Dict, Any,Optional
 from .message_bus import MessageBus

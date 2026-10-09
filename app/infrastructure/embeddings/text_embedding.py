@@ -44,7 +44,6 @@ from langchain_core.documents import Document
 from langchain_community.embeddings import DashScopeEmbeddings
 
 from core.config import settings
-import config.setting  # noqa: F401  # 环境变量由 config/setting.py 导入期统一 load_dotenv(env/qianwen_config.env) 加载
 
 # 模块导入时配置根日志：INFO 级别 + 标准时间格式，StreamHandler 强制输出到终端（不依赖外部 logging 配置）
 logging.basicConfig(

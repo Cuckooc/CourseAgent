@@ -10,8 +10,8 @@ __pycache__
 storage
 logs
 
-# 注意：file_analysis（源码包，被 service/multi_agent 导入）与
-# data/（种子 JSON 与 data/samples 样本）必须保留在镜像内，不可排除。
+# 注意：data/（种子 JSON 与 data/samples 样本）必须保留在镜像内，不可排除；
+# app/ 与 core/ 为全部后端源码，随镜像分发。
 
 # 本地密钥（由 compose 只读挂载，不进镜像层）
 env/*.env
